@@ -25,7 +25,7 @@ var HttpTransport = (function (_super) {
      * @param done an callback on Transport done.
      */
     HttpTransport.prototype.action = function (output, done) {
-        done(this.toOrdered(output));
+        done(this.toArray(output));
     };
     /**
      * Query

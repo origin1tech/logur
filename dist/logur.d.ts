@@ -1,9 +1,9 @@
-import { ILogur, ILogurInstanceOptions, ILogurInstance, ILogurOptions, ILogurInstances, ILogurTransports, InstanceConstructor } from './interfaces';
+import { ILogur, ILogurInstanceOptions, ILogurInstance, ILogurOptions, ILogurInstances, ILogurTransports, ILevelMethodsBase, ILevelMethods } from './interfaces';
 declare class Logur implements ILogur {
     static instance: ILogur;
     instances: ILogurInstances;
     transports: ILogurTransports;
-    log: ILogurInstance;
+    log: ILogurInstance & ILevelMethods;
     options: ILogurOptions;
     constructor(options?: ILogurOptions);
     /**
@@ -21,7 +21,7 @@ declare class Logur implements ILogur {
      *
      * @param name the name of the Logur Instance to get.
      */
-    get<T>(name?: string): T;
+    get<T extends ILevelMethodsBase>(name?: string): ILogurInstance & T;
     /**
      * Create
      * Creates and loads a Logur Instance in Logur.
@@ -29,7 +29,7 @@ declare class Logur implements ILogur {
      * @param name the name of the Logur Instance to create.
      * @param options Logur Instance options.
      */
-    create<T extends ILogurInstance, U>(name: string, options: ILogurInstanceOptions | InstanceConstructor<T>, Type?: InstanceConstructor<T>): T;
+    create<T extends ILevelMethodsBase>(name: string, options: ILogurInstanceOptions): ILogurInstance & T;
     /**
      * Remove
      * Destroys the specified Logur Instance.
@@ -39,12 +39,16 @@ declare class Logur implements ILogur {
     remove(name: string): void;
 }
 /**
- * Get
- * Gets an existing Logur instance by name. If
- * no name is passed the 'default' Logur Instance
- * will be returned.
+ * Get Instance
+ * Gets an existing Logur Instance by name.
  *
- * @param name the name of the Logur instance to get.
+ * @param name the name of the Logur Instance to get.
  */
-declare function get(name?: string): ILogurInstance;
-export { Logur, get };
+declare function get<T extends ILevelMethodsBase>(name: string): ILogurInstance & T;
+/**
+ * Get
+ * Gets the default Logur Instance.
+ *
+ */
+declare function getDefault(): ILogurInstance & ILevelMethods;
+export { Logur, get, getDefault };

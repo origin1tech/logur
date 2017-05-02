@@ -11,17 +11,18 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var base_1 = require("./base");
+var u = require("../utils");
 var defaults = {
     padding: 'right',
     pretty: true,
-    colorized: true,
+    colorize: true,
     ministack: true,
     fullstack: false
 };
 var ConsoleTransport = (function (_super) {
     __extends(ConsoleTransport, _super);
     function ConsoleTransport(options, logur) {
-        return _super.call(this, options, logur) || this;
+        return _super.call(this, u.extend({}, defaults, options), logur) || this;
     }
     /**
      * Action
@@ -32,12 +33,20 @@ var ConsoleTransport = (function (_super) {
      */
     ConsoleTransport.prototype.action = function (output, done) {
         var levelObj = this.options.levels[output.level];
-        var level = this.colorize(output.level, levelObj.color);
-        if (output.metadata)
-            output.metadata = this.colorize(output.metadata);
-        output.untyped.forEach(function (item) {
-        });
-        done(this.toOrdered(output));
+        var _console = console[output.level] ? console[output.level] : console.log;
+        var colorize = this.options.colorize ? 'yes' : 'no';
+        // Get ordered array.
+        var ordered = this.toArray(output, 'yes');
+        // Get the index of the level in map.
+        var idx = this.options.map.indexOf('level');
+        if (this.options.colorize && idx > -1) {
+            ordered[idx] = this.colorize(output.level, levelObj.color);
+        }
+        // If console method matches level
+        // name use it for good measure.
+        // Really only makes difference in Browser.
+        _console.apply(console, ordered);
+        done(ordered);
     };
     /**
      * Query

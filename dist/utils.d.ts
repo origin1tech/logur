@@ -1,4 +1,4 @@
-import { ITimestamps, IMetadata, Constructor } from './interfaces';
+import { ITimestamps, IMetadata, Constructor, PadStrategy } from './interfaces';
 /**
  * Noop
  */
@@ -208,81 +208,49 @@ export declare function last(arr: any[]): any;
  */
 export declare function tick(ctx: any, fn: Function, ...args: any[]): (callback: Function, ...args: any[]) => void;
 /**
- * Bytes To Size
- * Converts bytes to normalized size.
+ * Match Index
  *
- * @param bytes the bytes to normalize
- * @param decimals the number of decimal places.
+ * @param prop the property to match.
  */
-export declare function bytesToSize(bytes: number, decimals?: number): {
-    size: number;
-    fixedzero: number;
-    raw: number;
-    type: string;
-    text: string;
-    index: number;
+export declare function matchIndex(prop: any): false | {
+    name: string;
+    index: string;
 };
 /**
- * Timestamp
- * Generates multiple timestamp formats.
+ * Split
+ * Splits a string at character.
+ * Default possible chars to match: ['/', '.', ',', '|']
+ *
+ * @param str the string to be split.
+ * @param char the character to split at.
  */
-export declare function timestamp(): ITimestamps;
+export declare function split(str: string | string[], char?: string): string[];
 /**
- * Check Stat
- * Using stat check if file too large.
+ * Del
+ * Deletes keys in an object.
  *
- * @param filename the file name to stat.
+ * @param obj the object whose keys should be deleted.
+ * @param props the property keys that should be deleted.
  */
-export declare function checkStat(filename: any): boolean;
+export declare function del(obj: any, key: string | string[]): any;
 /**
- * Intersect
- * Intersects two types.
+ * Get
+ * Gets a property within the supplied object.
  *
- * @param first first type.
- * @param second second type.
+ * @param obj the object to inspect.
+ * @param prop
  */
-export declare function intersect<T, U>(first: T, second: U): T & U;
+export declare function get(obj: any, key: string | string[]): any;
 /**
- * Try Require
- * Tries to require module if exists and is NodeJS environment.
+ * Set
+ * Sets a value on an object using dot notation or url path.
  *
- * @param name the name of the module to be required.
+ * @param obj the object to set the value on.
+ * @param key the property used for setting the value.
+ * @param value the value used for updating the property.
+ * @param dynamic when NOT false objects are dynamically created if required.
  */
-export declare function tryRequire(name: string): any;
-/**
- * Fetch
- * Trivial method to fetch url using xmlhttp.
- *
- * @param url the url to be fetched.
- */
-export declare function fetch(url: string): any;
-/**
- * Lookup Function
- * Attempts to lookup function for error handling via
- * xmlhttp request. Not perfect.
- *
- * @param url the url to be looked up.
- * @param line the line of the function.
- */
-export declare function lookupFunction(url: string, line: number): any;
-/**
- * Activate
- * Activates/instantiates a class using generics
- * while passing arguments.
- *
- * Example:
- *
- * class MyClass {
- *  name: string;
- *  age: number
- * }
- *
- * let myClass = activate<MyClass>(MyClass, args here)
- *
- * @param Type the type to be activated.
- * @param args the arguments to pass on init.
- */
-export declare function activate<T>(Type: Constructor<T>, ...args: any[]): T;
+export declare function set(obj: any, key: string | string[], value: any, dynamic?: boolean): any;
 /**
  * UUID
  * Generates a UUID.
@@ -316,25 +284,76 @@ export declare function padRight(str: string, len: number, char?: string | numbe
  * @param char the character to pad with or offset value to add.
  * @param offset an offset value to add.
  */
-export declare function padValues(values: string[], dir?: string, char?: string | number, offset?: number): string[];
+export declare function padValues(values: string[], strategy?: PadStrategy, char?: string | number, offset?: number): string[];
 /**
  * Get Type
  * Gets the type of an object.
  *
  * @param obj the object to get type from.
+ * @param stringToDate when true parses strings to see if they are dates.
  * @param unknown the string name for unknown types.
  */
-export declare function getType(obj: any, unknown?: string): any;
+export declare function getType(obj: any, stringToDate?: boolean | string, unknown?: string): any;
 /**
- * Colorize Metadata
- * This will iterate an object converting to strings
- * colorizing values for displaying in console.
+ * Try Parse Date
+ * Attempts to parse a date from a string.
  *
- * @param obj the object to be colorized
- * @param map the color map that maps type to a color or boolean for pretty.
- * @param pretty when true outputs using returns and tabs.
+ * @param str the string to attempt parsing on.
  */
-export declare function colorizeMetadata(obj: IMetadata, map?: IMetadata | boolean, pretty?: boolean): any;
+export declare function tryParseDate(str: string): string | number;
+/**
+ * Timestamp
+ * Generates multiple timestamp formats.
+ */
+export declare function timestamp(date?: string | number): ITimestamps;
+/**
+ * Bytes To Size
+ * Converts bytes to normalized size.
+ *
+ * @param bytes the bytes to normalize
+ * @param decimals the number of decimal places.
+ */
+export declare function bytesToSize(bytes: number, decimals?: number): {
+    size: number;
+    fixedzero: number;
+    raw: number;
+    type: string;
+    text: string;
+    index: number;
+};
+/**
+ * Check Stat
+ * Using stat check if file too large.
+ *
+ * @param filename the file name to stat.
+ */
+export declare function checkStat(filename: any): boolean;
+/**
+ * Intersect
+ * Intersects two types.
+ *
+ * @param first first type.
+ * @param second second type.
+ */
+export declare function intersect<T, U>(first: T, second: U): T & U;
+/**
+ * Activate
+ * Activates/instantiates a class using generics
+ * while passing arguments.
+ *
+ * Example:
+ *
+ * class MyClass {
+ *  name: string;
+ *  age: number
+ * }
+ *
+ * let myClass = activate<MyClass>(MyClass, args here)
+ *
+ * @param Type the type to be activated.
+ * @param args the arguments to pass on init.
+ */
+export declare function activate<T>(Type: Constructor<T>, ...args: any[]): T;
 /**
  * Colorize
  * Convenience wrapper for chalk. Color can be
@@ -348,9 +367,36 @@ export declare function colorizeMetadata(obj: IMetadata, map?: IMetadata | boole
  */
 export declare function colorize(str: any, color?: string | string[], modifiers?: string | string[]): any;
 /**
+ * Colorize Array
+ * Iterates and array and colorizes each
+ * element by its data type.
+ *
+ * @param arr the array to interate and colorize.
+ * @param map an optional map of type to colors such as util.inspect.styles.
+ */
+export declare function colorizeArray(arr: any[], map?: IMetadata): any[];
+/**
+ * Colorize Metadata
+ * This will iterate an object converting to strings
+ * colorizing values for displaying in console.
+ *
+ * @param obj the object to be colorized
+ * @param map the color map that maps type to a color or boolean for pretty.
+ * @param pretty when true outputs using returns and tabs.
+ */
+export declare function colorizeObject(obj: IMetadata, map?: IMetadata | boolean, pretty?: boolean): any;
+/**
+ * Colorize By Type
+ * Inspects the type then colorizes.
+ *
+ * @param obj the object to inspect for colorization.
+ * @param map an optional map to map types to colors.
+ */
+export declare function colorizeByType(obj: any, map?: IMetadata): any;
+/**
  * Strip Color
  * Strips ansi colors from strings.
  *
  * @param str a string or array of strings to strip color from.
  */
-export declare function stripColor(str: string | string[]): string | string[];
+export declare function stripColors(str: any): any;

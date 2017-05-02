@@ -28,7 +28,8 @@ var defaults = {
         debug: { level: 4, color: 'magenta' },
     },
     map: ['level', 'timestamp', 'message', 'untyped', 'metadata'],
-    timestamp: 'utc'
+    timestamp: 'utc',
+    transports: []
 };
 var profileDefaults = {
     transports: [],
@@ -53,6 +54,26 @@ var LogurInstance = (function (_super) {
         _this._name = name;
         _this._logur = logur;
         _this.options = u.extend({}, defaults, options);
+        // Extend class with log method handlers.
+        u.keys(_this.options.levels).forEach(function (k) {
+            var level = _this.options.levels[k];
+            // If a number convert to object.
+            if (u.isNumber(level))
+                _this.options.levels[k] = { level: level };
+            _this[k] = function () {
+                var args = [];
+                for (var _i = 0; _i < arguments.length; _i++) {
+                    args[_i] = arguments[_i];
+                }
+                _this.logger(k, args);
+                return _this;
+            };
+        });
+        // Iterate Transports in options
+        // and bind to the Instance.
+        _this.options.transports.forEach(function (t) {
+            _this.transports.create(t.name, t.options, t.transport);
+        });
         // Init UAParser, expose it publicly
         // in case user wants to parse headers
         // in http requests.
@@ -73,7 +94,7 @@ var LogurInstance = (function (_super) {
      * @param type the type of log message.
      * @param args array of arguments.
      */
-    LogurInstance.prototype.log = function (transports, type) {
+    LogurInstance.prototype.logger = function (transports, type) {
         var _this = this;
         var args = [];
         for (var _i = 2; _i < arguments.length; _i++) {
@@ -195,23 +216,36 @@ var LogurInstance = (function (_super) {
             // Tranport's action for final output
             // to it's defined target.
             var output = {
+                // Level Info
                 activeid: transport.options.level,
                 levelid: level,
+                levels: _this.options.levels,
+                // Property Map
+                // Used to generate array
+                // of ordered properties.
+                map: _this.options.map,
+                // Primary Fields
                 timestamp: ts,
                 uuid: u.uuid(),
                 level: type,
                 instance: _this._name,
                 transport: t,
                 message: msg,
-                metadata: meta,
-                callback: fn,
-                untyped: untyped,
+                untyped: untyped || [],
                 args: params,
-                map: _this.options.map,
+                // StackTrace
+                // Generated or existing from error.
                 stacktrace: stack,
-                env: sysinfo,
-                levels: _this.options.levels
+                // Environment Info
+                env: sysinfo
             };
+            // Some output properties may not have value.
+            if (meta)
+                output.metadata = meta;
+            if (fn)
+                output.callback = fn;
+            if (err)
+                output.error = err;
             // Call the Transort's action passing
             // the ordered args and the original args.
             var clone = u.clone(output);
@@ -250,7 +284,7 @@ var LogurInstance = (function (_super) {
                 // If not exceptions just exit.
                 if (!_this._exceptions.length)
                     process.exit();
-                _this.log(_this._exceptions, 'error', err);
+                _this.logger(_this._exceptions, 'error', err);
             });
         }
         else if (u.isBrowser()) {
@@ -282,6 +316,17 @@ var LogurInstance = (function (_super) {
             };
         }
     };
+    Object.defineProperty(LogurInstance.prototype, "log", {
+        /**
+         * Log
+         * Gets the internal logger.
+         */
+        get: function () {
+            return this._logur.log;
+        },
+        enumerable: true,
+        configurable: true
+    });
     LogurInstance.prototype.common = function () {
         return {
             args: [].slice.call(arguments),
@@ -400,7 +445,7 @@ var LogurInstance = (function (_super) {
              * @param name the name of the transport to set state on.
              * @param state the state to be set.
              */
-            var setState = function (name, state) {
+            var active = function (name, state) {
                 var trans = _this.transports.get(name);
                 var curState = trans.active();
                 var nextState = !curState;
@@ -430,7 +475,7 @@ var LogurInstance = (function (_super) {
                 create: create,
                 extend: extend,
                 remove: remove,
-                setState: setState,
+                active: active,
                 setOption: setOption
             };
             return methods;
@@ -455,10 +500,8 @@ var LogurInstance = (function (_super) {
              */
             var get = function (name) {
                 var profile = _this._profiles[name];
-                if (!profile) {
-                    _this.warn("cannot get Profile " + name + " of undefined.");
-                    return;
-                }
+                if (!profile)
+                    _this.log.warn("cannot get Profile " + name + " of undefined.").exit();
                 return profile;
             };
             /**
@@ -514,7 +557,7 @@ var LogurInstance = (function (_super) {
                 // Ensure transports.
                 transports = transports || options.transports;
                 if (!transports || !transports.length) {
-                    _this.error("cannot start profile " + name + " using transports of none.");
+                    _this.log.error("cannot start profile " + name + " using transports of none.");
                     return;
                 }
                 var valid = [];
@@ -523,11 +566,11 @@ var LogurInstance = (function (_super) {
                     // Get the transport.
                     var transport = _this.transports.get(t);
                     if (!transport) {
-                        _this.warn("the Transport " + t + " was NOT found, ensure the Transport is loaded.");
+                        _this.log.warn("the Transport " + t + " was NOT found, ensure the Transport is loaded.");
                         return;
                     }
                     if (!transport.options.profiler) {
-                        _this.warn("attempted to load Transport " + t + " but profiling is NOT enabled..");
+                        _this.log.warn("attempted to load Transport " + t + " but profiling is NOT enabled..");
                         return;
                     }
                     valid.push(t);
@@ -560,7 +603,7 @@ var LogurInstance = (function (_super) {
                 if (!profile)
                     return;
                 if (profile.active) {
-                    _this.warn("cannot start already active Profile " + name + ".");
+                    _this.log.warn("cannot start already active Profile " + name + ".");
                     return;
                 }
                 profile.started = Date.now();
@@ -598,7 +641,7 @@ var LogurInstance = (function (_super) {
                 if (!profile)
                     return;
                 if (profile.active && !force) {
-                    _this.warn("cannot remove active Profile " + name + ", stop or set force to true to remove.");
+                    _this.log.warn("cannot remove active Profile " + name + ", stop or set force to true to remove.");
                     return;
                 }
                 delete _this._profiles[name];
@@ -648,7 +691,7 @@ var LogurInstance = (function (_super) {
         if (!u.isPlainObject(key)) {
             // If not value log error.
             if (!value)
-                this.log('error', "cannot set option for key " + key + " using value of undefined.");
+                this.logger('error', "cannot set option for key " + key + " using value of undefined.");
             else
                 this.options[key] = value;
         }
@@ -674,78 +717,6 @@ var LogurInstance = (function (_super) {
         if (u.isUndefined(state))
             return this._active;
         return this._active = state;
-    };
-    // LOG LEVELS
-    /**
-     * Error
-     * Called when log level is error.
-     *
-     * @param args arguments to be passed to logur.log.
-     */
-    LogurInstance.prototype.error = function () {
-        var args = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-            args[_i] = arguments[_i];
-        }
-        this.log('error', args);
-        return this;
-    };
-    /**
-     * Warn
-     * Called when log level is warn.
-     *
-     * @param args arguments to be passed to logur.log.
-     */
-    LogurInstance.prototype.warn = function () {
-        var args = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-            args[_i] = arguments[_i];
-        }
-        this.log('warn', args);
-        return this;
-    };
-    /**
-     * Info
-     * Called when log level is info.
-     *
-     * @param args arguments to be passed to logur.log.
-     */
-    LogurInstance.prototype.info = function () {
-        var args = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-            args[_i] = arguments[_i];
-        }
-        this.log('info', args);
-        return this;
-    };
-    /**
-     * Verbose
-     * Called when log level is verbose.
-     *
-     * @param args arguments to be passed to logur.log.
-     */
-    LogurInstance.prototype.verbose = function () {
-        var args = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-            args[_i] = arguments[_i];
-        }
-        this.log('verbose', args);
-        return this;
-    };
-    /**
-     * Debug
-     * Called when log level is debug or when env
-     * is node and is debugging.
-     *
-     * @param args arguments to be passed to logur.log.
-     */
-    LogurInstance.prototype.debug = function () {
-        var args = [];
-        for (var _i = 0; _i < arguments.length; _i++) {
-            args[_i] = arguments[_i];
-        }
-        this.log('debug', args);
-        return this;
     };
     // EXTENDED LOG METHODS
     /**

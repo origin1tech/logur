@@ -5,6 +5,8 @@ function __export(m) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var utils = require("./utils");
 exports.utils = utils;
+__export(require("./interfaces"));
 __export(require("./transports"));
+__export(require("./instance"));
 __export(require("./logur"));
 //# sourceMappingURL=index.js.map

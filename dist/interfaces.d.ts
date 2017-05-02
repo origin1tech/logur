@@ -14,9 +14,6 @@ export declare type TransportConstructor<T> = {
  * Instance Constructor
  * Generic constructor for Instances.
  */
-export declare type InstanceConstructor<T> = {
-    new (name: string, options: ILogurInstanceOptions, logur: ILogur): T;
-};
 /**
  * Timestamp Callback
  * Type constraint for Timestamp callback.
@@ -80,7 +77,6 @@ export declare type ErrorStrategy = 'log' | 'exit' | 'none';
  * Format Keys
  * Type constraint for availabe property keys for formatting log messages.
  */
-export declare type OutputKeys = 'timestamp' | 'uuid' | 'level' | 'instance' | 'transport' | 'message' | 'untyped' | 'metadata';
 /**
  * Pad Strategy
  * The strategy for padding log levels in console.
@@ -92,24 +88,25 @@ export declare type PadStrategy = 'left' | 'right' | 'none';
  * Remove strategy is inspected on profile stop.
  */
 export declare type ProfileRemoveStrategy = 'stop' | 'never';
+/**
+ * Colorization Strategy
+ * Indicates if should colorize or should strip color.
+ */
+export declare type ColorizationStrategy = 'yes' | 'no' | 'strip';
+export declare const COLOR_TYPE_MAP: {
+    special: string;
+    number: string;
+    boolean: string;
+    undefined: string;
+    null: string;
+    string: string;
+    symbol: string;
+    date: string;
+    regexp: string;
+};
 export interface IError extends ErrorConstructor {
     prepareStackTrace?(_: any, stack: any): any;
-}
-export interface ILevel {
-    level: number;
-    color?: Colors;
-    timestamp?: Colors;
-    uuid?: Colors;
-    instance?: Colors;
-    transport?: Colors;
-    message?: Colors;
-}
-export interface ILevels {
-    error: ILevel;
-    warn: ILevel;
-    info: ILevel;
-    verbose: ILevel;
-    debug: ILevel;
+    __handle__: boolean;
 }
 export interface ITimestamps {
     epoch: number;
@@ -306,11 +303,32 @@ export interface IEnv {
     node: IEnvNode;
     browser: IEnvBrowser;
 }
+export interface ILevel {
+    level: number;
+    color?: Colors;
+}
+export interface ILevels {
+    error: ILevel | number;
+    warn: ILevel | number;
+    info: ILevel | number;
+    verbose: ILevel | number;
+    debug: ILevel | number;
+}
+export interface ILevelMethodsBase {
+    [key: string]: (...args: any[]) => ILogurInstance;
+}
+export interface ILevelMethods extends ILevelMethodsBase {
+    error(...args: any[]): ILogurInstance;
+    warn(...args: any[]): ILogurInstance;
+    info(...args: any[]): ILogurInstance;
+    verbose(...args: any[]): ILogurInstance;
+    debug(...args: any[]): ILogurInstance;
+}
 export interface ILogurBaseOptions {
     active?: boolean;
     level?: number;
     levels?: ILevels;
-    map?: OutputKeys[];
+    map?: string[];
     uuid?: UUIDCallback;
     timestamp?: TimestampCallback | TimestampStrategy;
 }
@@ -329,15 +347,16 @@ export interface ILogurOutput {
     };
     untyped: any[];
     args: any[];
-    map: any[];
+    map: string[];
     levels: ILevels;
+    error?: Error;
     stacktrace?: IStacktrace[];
     env?: IEnvNode | IEnvBrowser;
 }
 export interface IConsoleTransportOptions extends ILogurTransportOptions {
     padding?: PadStrategy;
     pretty?: boolean;
-    colorized?: boolean;
+    colorize?: boolean;
     ministack?: boolean;
     fullstack?: boolean;
 }
@@ -360,7 +379,7 @@ export interface IMemoryTransportOptions extends ILogurTransportOptions {
     max?: number;
 }
 export interface IMemoryTransport extends ILogurTransport {
-    logs: ILogurOutput[];
+    logs: any[];
 }
 export interface ILogurTransportOptions extends ILogurBaseOptions {
     exceptions?: ErrorStrategy;
@@ -376,25 +395,34 @@ export interface ILogurTransport {
     options: ILogurTransportOptions;
     setOption<T extends ILogurTransportOptions>(key: string | T, value?: any): void;
     active(state?: boolean): boolean;
-    toOrdered(obj: ILogurOutput): any[];
-    colorize(str: string, color?: string | string[], bgColor?: string | string[], modifiers?: string | string[]): string;
-    stripColor(str: string | string[]): string | string[];
+    toArray(output: ILogurOutput, colorization?: ColorizationStrategy): any[];
+    toObject<T>(output: ILogurOutput, colorization?: ColorizationStrategy): T;
+    colorize(arr: any[]): any[];
+    colorize(metadata: IMetadata): IMetadata;
+    colorize(str: string, color?: string | string[], modifiers?: string | string[]): string;
+    colorize(str: string | IMetadata | any[], color?: string | string[], modifiers?: string | string[]): any;
+    stripColors(str: any): any;
+    padLevel(level: string, levels: string[], strategy?: PadStrategy): string;
+    padLeft(str: string, len: number, offset?: number): string;
     padLeft(str: string, len: number, char?: string | number, offset?: number): string;
+    padRight(str: string, len: number, offset?: number): string;
     padRight(str: string, len: number, char?: string | number, offset?: number): string;
+    padValues(values: string[], dir?: string, offset?: number): string[];
     padValues(values: string[], dir?: string, char?: string | number, offset?: number): string[];
     action(output: ILogurOutput, done: TransportActionCallback): void;
     query(): void;
 }
 export interface ITransportMethods {
     has(name: string): boolean;
-    get<T>(name: string): T;
+    get<T>(name?: string): T;
     getAll(): ILogurTransports;
     getList(): string[];
-    create<T extends ILogurTransport>(name: string, Type: Constructor<T>): ITransportMethods;
-    create<T extends ILogurTransport>(name: string, options?: IMetadata | Constructor<T>, Transport?: Constructor<T>): ITransportMethods;
+    create<T extends ILogurTransport>(name: string, Transport?: TransportConstructor<T>): ITransportMethods;
+    create<T extends ILogurTransport>(name: string, options?: IMetadata | TransportConstructor<T>, Transport?: TransportConstructor<T>): ITransportMethods;
     extend(name: string): ITransportMethods;
     remove(name: string): ITransportMethods;
-    setState(name: string, state?: boolean): ITransportMethods;
+    active(name: string, state?: boolean): ITransportMethods;
+    setOption<T extends ILogurTransportOptions>(name: string, options: T): ITransportMethods;
     setOption<T extends ILogurTransportOptions>(name: string, key: string | T, value?: any): ITransportMethods;
 }
 export interface IProfileOptions {
@@ -427,46 +455,47 @@ export interface IProfileMethods {
     get(name: string): IProfile;
     active(name: string, state?: boolean): boolean;
     status(name: string): boolean;
+    until(name: string): boolean;
     create(name: string, options: IProfileOptions): IProfile;
     create(name: string, transports: string[] | IProfileOptions, options?: IProfileOptions): IProfile;
-    start(): void;
-    stop(): IProfileResult;
+    start(name: string): void;
+    stop(name: string): IProfileResult;
+    remove(name: string, force?: boolean): void;
 }
 export interface ILogurInstanceOptions extends ILogurBaseOptions {
     cascade?: boolean;
     sync?: boolean;
+    transports?: ILogurOptionsTransport[];
 }
 export interface ILogurInstance extends INotify {
     env: IEnv;
     options: ILogurInstanceOptions;
     transports: ITransportMethods;
+    setOption<T extends ILogurInstanceOptions>(options: T): void;
     setOption<T extends ILogurInstanceOptions>(key: string | T, value?: any): void;
     active(state?: boolean): boolean;
-    error(...args: any[]): void;
-    warn(...args: any[]): void;
-    info(...args: any[]): void;
-    verbose(...args: any[]): void;
-    debug(...args: any[]): void;
-    write(...args: any[]): void;
+    write(...args: any[]): ILogurInstance;
     exit(code?: number): void;
 }
 export interface ILogurInstances {
     [key: string]: any;
 }
+export interface ILogurOptionsTransport {
+    name: string;
+    options?: ILogurTransportOptions;
+    transport: any;
+}
 export interface ILogurOptions {
-    transports?: {
-        name: string;
-        options?: ILogurTransportOptions;
-        transport: ILogurTransport;
-    }[];
+    transports?: ILogurOptionsTransport[];
 }
 export interface ILogur {
     instances: ILogurInstances;
     transports: ILogurTransports;
-    log: ILogurInstance;
+    log: ILogurInstance & ILevelMethods;
     options: ILogurOptions;
+    setOption(options: ILogurOptions): void;
     setOption(key: string | ILogurOptions, value?: any): void;
-    get<T>(name?: string): T;
-    create<T extends ILogurInstance>(name: string, options: ILogurInstanceOptions | Constructor<T>, Type?: Constructor<T>): T;
+    get<T extends ILevelMethodsBase>(name?: string): ILogurInstance & T;
+    create<T extends ILevelMethodsBase>(name: string, options: ILogurInstanceOptions): ILogurInstance & T;
     remove(name: string): void;
 }

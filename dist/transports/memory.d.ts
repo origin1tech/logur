@@ -1,7 +1,7 @@
 import { ILogur, IMemoryTransportOptions, IMemoryTransport, ILogurOutput, TransportActionCallback } from '../interfaces';
 import { LogurTransport } from './base';
 export declare class MemoryTransport extends LogurTransport implements IMemoryTransport {
-    logs: ILogurOutput[];
+    logs: any[];
     options: IMemoryTransportOptions;
     constructor(options: IMemoryTransportOptions, logur: ILogur);
     /**

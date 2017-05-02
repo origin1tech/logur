@@ -6,7 +6,7 @@ const defaults: IConsoleTransportOptions = {
 
   padding: 'right',
   pretty: true,
-  colorized: true,
+  colorize: true,
   ministack: true,
   fullstack: false
 
@@ -17,7 +17,7 @@ export class ConsoleTransport extends LogurTransport implements IConsoleTranspor
   options: IConsoleTransportOptions;
 
   constructor(options: IConsoleTransportOptions, logur: ILogur) {
-    super(options, logur);
+    super(u.extend({}, defaults, options), logur);
   }
 
   /**
@@ -30,16 +30,25 @@ export class ConsoleTransport extends LogurTransport implements IConsoleTranspor
   action(output: ILogurOutput, done: TransportActionCallback): void {
 
     const levelObj: ILevel = this.options.levels[output.level];
-    const level = this.colorize<string>(output.level, levelObj.color);
+    const _console = console[output.level] ? console[output.level] : console.log;
+    const colorize = this.options.colorize ? 'yes' : 'no';
 
-    if (output.metadata)
-      output.metadata = this.colorize<IMetadata>(output.metadata);
+    // Get ordered array.
+    let ordered = this.toArray(output, 'yes');
 
-    output.untyped.forEach((item) => {
+    // Get the index of the level in map.
+    const idx = this.options.map.indexOf('level');
 
-    });
+    if (this.options.colorize && idx > -1) {
+      ordered[idx] = this.colorize(output.level, levelObj.color);
+    }
 
-    done(this.toOrdered(output));
+    // If console method matches level
+    // name use it for good measure.
+    // Really only makes difference in Browser.
+    _console.apply(console, ordered);
+
+    done(ordered);
 
   }
 

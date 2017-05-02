@@ -12,7 +12,7 @@ const defaults: IMemoryTransportOptions = {
 
 export class MemoryTransport extends LogurTransport implements IMemoryTransport {
 
-  logs: ILogurOutput[];
+  logs: any[];
   options: IMemoryTransportOptions;
 
   constructor(options: IMemoryTransportOptions, logur: ILogur) {
@@ -27,7 +27,8 @@ export class MemoryTransport extends LogurTransport implements IMemoryTransport 
    * @param done an callback on Transport done.
    */
   action(output: ILogurOutput, done: TransportActionCallback) {
-    done(this.toOrdered(output));
+    const ordered = this.toArray(output);
+    done(ordered);
   }
 
   /**

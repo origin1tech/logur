@@ -20,7 +20,7 @@ export class FileTransport extends LogurTransport implements IFileTransport {
    * @param done an callback on Transport done.
    */
   action(output: ILogurOutput, done: TransportActionCallback) {
-    done(this.toOrdered(output));
+    done(this.toArray(output));
   }
 
   /**

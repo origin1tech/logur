@@ -1,4 +1,4 @@
-import { ILogurTransport, ILogur, ILogurTransportOptions, ILogurOutput, IMetadata, TransportActionCallback } from '../interfaces';
+import { ILogurTransport, ILogur, ILogurTransportOptions, ILogurOutput, IMetadata, TransportActionCallback, COLOR_TYPE_MAP, ColorizationStrategy, PadStrategy } from '../interfaces';
 import * as u from '../utils';
 
 
@@ -75,67 +75,80 @@ export class LogurTransport implements ILogurTransport {
   // when extending base Transport.
 
   /**
-   * To Ordered
+   * To Array
    * Takes a Logour Output object using map
-   * set in options orders arguments for output
-   * in Transport.
+   * orders in array.
    *
    * @param output the compiled Logour Output object.
+   * @param stripColors when true colors are stripped from values.
    */
-  toOrdered(output: ILogurOutput): any[] {
+  toArray(output: ILogurOutput, colorization?: ColorizationStrategy): any[] {
 
-    const ordered = [];
+    let ordered = [];
+    const ignored = ['callback'];
+
+    const colorize = (val) => {
+      if (colorization === 'no')
+        return val;
+      else if (colorization === 'yes')
+        return this.colorize(val);
+      else
+        return this.stripColors(val);
+    };
 
     // Iterate the output format array
     // adding each element to our ordered
     // result array.
     output.map.forEach((k) => {
 
-      switch (k) {
+      const value = u.get(output, k);
 
-        case 'uuid':
-          ordered.push(output.uuid);
-          break;
+      if (k === 'untyped' && output.untyped && output.untyped.length)
+        output.untyped.forEach((u) => {
+          ordered.push(colorize(u));
+        });
 
-        case 'timestamp':
-          ordered.push(output.timestamp);
-          break;
-
-        case 'level':
-          ordered.push(output.level);
-          break;
-
-        case 'instance':
-          ordered.push(output.instance);
-          break;
-
-        case 'transport':
-          ordered.push(output.transport);
-          break;
-
-        case 'message':
-          if (output.message)
-            ordered.push(output.message);
-          break;
-
-        case 'untyped':
-          if (output.untyped && output.untyped.length) {
-            output.untyped.forEach(u => ordered.push(u));
-          }
-          break;
-
-        case 'metadata':
-          if (output.metadata)
-            ordered.push(output.metadata);
-
-          break;
-
-      }
+      else if (value)
+        ordered.push(colorize(value));
 
     });
 
     return ordered;
 
+  }
+
+  /**
+   * To Object
+   *
+   * @param output the Logur Output generated object.
+   * @param stripColors when true colors are stripped from values.
+   */
+  toObject<T>(output: ILogurOutput, colorization?: ColorizationStrategy): T {
+
+    let obj: any = {};
+    const ignored = ['callback'];
+
+    // Iterate the output and build object.
+    output.map.forEach((k) => {
+
+      let value = u.get(output, k);
+
+      if (value) {
+        if (colorization !== 'no') {
+          if (colorization === 'strip') {
+            value = this.stripColors(value);
+          }
+          else {
+            value = this.colorize(value);
+          }
+        }
+        obj[k] = value;
+      }
+
+
+    });
+
+    return obj;
 
   }
 
@@ -153,8 +166,23 @@ export class LogurTransport implements ILogurTransport {
    * @param color the color to apply, modifiers, shorthand or true for metadata
    * @param modifiers the optional modifier or modifiers.
    */
-  colorize<T>(str: string | IMetadata, color?: string | string[], modifiers?: string | string[]): T {
+  colorize(str: string | IMetadata | any[], color?: string | string[], modifiers?: string | string[]): any {
+
+    // Iterate array and colorize.
+    if (u.isArray(str))
+      return u.colorizeArray(<any[]>str);
+
+    // Iterate an object and colorize.
+    else if (u.isPlainObject(str))
+      return u.colorizeObject(<IMetadata>str);
+
+    // Try to colorize value by its type when no color is specified.
+    else if (!color)
+      return u.colorizeByType(str);
+
+    // Otherwise colorize by the color supplied.
     return u.colorize.apply(null, arguments);
+
   }
 
   /**
@@ -163,8 +191,24 @@ export class LogurTransport implements ILogurTransport {
    *
    * @param str a string or array of strings to strip color from.
    */
-  stripColor(str: string | string[]): string | string[] {
-    return u.stripColor.apply(null, arguments);
+  stripColors(str: any): any {
+    return u.stripColors.apply(null, arguments);
+  }
+
+  /**
+   * Pad Level
+   * Pads the level after calculating pad from possible levels.
+   *
+   * @param level the level to be padded.
+   * @param levels array of levels for calculating padding.
+   * @param strategy the strategy to pad with left, right or none.
+   */
+  padLevel(level: string, levels: string[], strategy?: PadStrategy): string {
+    const idx = levels.indexOf(level);
+    if (idx === -1)
+      return level;
+    const padded = u.padValues(levels, strategy, 1);
+    return padded[idx];
   }
 
   /**
@@ -201,7 +245,7 @@ export class LogurTransport implements ILogurTransport {
    * @param char the character to pad with or offset value to add.
    * @param offset an offset value to add.
    */
-  padValues(values: string[], dir?: string, char?: string | number, offset?: number): string[] {
+  padValues(values: string[], strategy?: PadStrategy, char?: string | number, offset?: number): string[] {
     return u.padValues.apply(null, arguments);
   }
 

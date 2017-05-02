@@ -1,6 +1,6 @@
 import { statSync } from 'fs';
 import { parse } from 'path';
-import { ITimestamps, IError, IMetadata, ILogur, Constructor } from './interfaces';
+import { ITimestamps, IError, IMetadata, ILogur, Constructor, COLOR_TYPE_MAP, PadStrategy } from './interfaces';
 
 let chalk, util;
 
@@ -475,285 +475,184 @@ export function tick(ctx: any, fn: Function, ...args: any[]) {
 
 }
 
-///////////////////////////////
-// LIBRARY UTILS
-///////////////////////////////
-
+/**
+ * Match Index
+ *
+ * @param prop the property to match.
+ */
+export function matchIndex(prop) {
+  const match = new RegExp('(.+)\\[([0-9]*)\\]', 'i').exec(prop);
+  if (match && match.length === 3)
+    return { name: match[1], index: match[2] };
+  return false;
+}
 
 /**
- * Bytes To Size
- * Converts bytes to normalized size.
+ * Split
+ * Splits a string at character.
+ * Default possible chars to match: ['/', '.', ',', '|']
  *
- * @param bytes the bytes to normalize
- * @param decimals the number of decimal places.
+ * @param str the string to be split.
+ * @param char the character to split at.
  */
-export function bytesToSize(bytes: number, decimals?: number): { size: number, fixedzero: number, raw: number, type: string, text: string, index: number } {
+export function split(str: string | string[], char?: string): string[] {
 
-  if (bytes === 0)
-    return {
-      size: 0,
-      fixedzero: 0,
-      raw: 0,
-      type: 'Bytes',
-      text: '0 Bytes',
-      index: 0
-    };
+  if (isArray(str))
+    return str as string[];
 
-  decimals = typeof decimals !== 'undefined' ? decimals : 2;
+  // default characters.
+  let defChars = ['/', '.', ',', '|'];
+  let arr;
 
-  const k = 1000;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  const floated = parseFloat(bytes / Math.pow(k, i) + '');
-  const fixedzero = parseFloat(floated.toFixed(0));
-  const placed = parseFloat(floated.toFixed(decimals));
+  // if no char iterate defaults.
+  if (!char) {
+    while (!char && defChars.length) {
+      const tmpChar = defChars.shift();
+      const exp = new RegExp(tmpChar, 'g');
+      if (exp.test(str as string))
+        char = tmpChar;
+    }
+  }
 
-  return {
-    size: placed,
-    fixedzero: fixedzero,
-    raw: floated,
-    type: sizes[i],
-    text: `${placed} ${sizes[i]}`,
-    index: i
-  };
+  // Set the default arr.
+  let tmp = str as string;
+  arr = [str];
+
+  // If char split.
+  if (char)
+    arr = tmp.split(char);
+
+  // If empty remove first element.
+  // this happens when splitting on
+  // char and is first char in string.
+  if (isEmpty(arr[0]))
+    arr.shift();
+
+  return arr;
 
 }
 
 /**
- * Timestamp
- * Generates multiple timestamp formats.
+ * Del
+ * Deletes keys in an object.
+ *
+ * @param obj the object whose keys should be deleted.
+ * @param props the property keys that should be deleted.
  */
-export function timestamp(): ITimestamps {
+export function del(obj: any, key: string | string[]): any {
 
-  const epoch = Date.now();
-  const date = new Date(epoch);
-  let localDate = date.toLocaleDateString();
-  const localTime = date.toTimeString().split(' ')[0];
-  const iso = date.toISOString();
-  const splitUtc: any = iso.split('T');
-  const utcDate = splitUtc[0];
-  const utcTime = splitUtc[1].split('.')[0];
+  if (arguments.length !== 2 || (!isArray(key) && !isString(key)))
+    return obj;
 
-  // split local date and format in reverse.
-  const splitLocal = localDate.split('/');
-  if (splitLocal[0].length < 2) splitLocal[0] = '0' + splitLocal[0];
-  if (splitLocal[1].length < 2) splitLocal[1] = '0' + splitLocal[1];
-  localDate = `${splitLocal[2]}-${splitLocal[1]}-${splitLocal[0]}`;
+  const props: string[] = split(key);
+  const prop = props.shift();
+  const match = matchIndex(prop);
 
-  const obj: ITimestamps = {
-    epoch: epoch,
-    date: date,
-    iso: iso,
-    localDate: localDate,
-    localTime: localTime,
-    local: localDate + ' ' + localTime,
-    utcDate: utcDate,
-    utcTime: utcTime,
-    utc: utcDate + ' ' + utcTime
-  };
+  let next = obj[prop];
+
+  if (match)
+    next = obj[match.name][match.index];
+
+  if (props.length > 0) {
+    del(next, props);
+  }
+
+  else {
+    if (match) {
+      obj[match.name].splice(match.index, 1);
+    }
+    else {
+      delete obj[prop];
+    }
+
+  }
 
   return obj;
 
 }
 
 /**
- * Check Stat
- * Using stat check if file too large.
+ * Get
+ * Gets a property within the supplied object.
  *
- * @param filename the file name to stat.
+ * @param obj the object to inspect.
+ * @param prop
  */
-export function checkStat(filename) {
+export function get(obj: any, key: string | string[]) {
 
-  const stats = statSync(filename);
-  const normalized = bytesToSize(stats.size, 0);
+  if (arguments.length !== 2 || (!isArray(key) && !isString(key)))
+    return obj;
 
-  if (normalized.index > 2)
-    return false;
+  let _clone = clone(obj);
+  let props: string[] = split(key);
 
-  if (normalized.index === 2 && normalized.fixedzero >= 2)
-    return false;
+  while (props.length && _clone) {
 
-  return true;
+    let prop = props.shift(),
+      match;
 
-}
+    match = matchIndex(prop);
 
-/**
- * Intersect
- * Intersects two types.
- *
- * @param first first type.
- * @param second second type.
- */
-export function intersect<T, U>(first: T, second: U): T & U {
-  let result = <T & U>{};
-  for (let id in first) {
-    (<any>result)[id] = (<any>first)[id];
-  }
-  for (let id in second) {
-    if (!result.hasOwnProperty(id)) {
-      (<any>result)[id] = (<any>second)[id];
-    }
-  }
-  return result;
-}
+    if (match) {
 
-/**
- * Try Require
- * Tries to require module if exists and is NodeJS environment.
- *
- * @param name the name of the module to be required.
- */
-export function tryRequire(name: string) {
-  if (!isNode())
-    return false;
-  try {
-    return require(name);
-  } catch (ex) {
-    return false;
-  }
-}
-
-/**
- * Fetch
- * Trivial method to fetch url using xmlhttp.
- *
- * @param url the url to be fetched.
- */
-export function fetch(url: string) {
-
-  try {
-
-    const xmlHttp = function () {
-
-      try {
-        return new (<any>window).XMLHttpRequest();
-      }
-
-      catch (e) {
-        return new (<any>window).ActiveXObject('Microsoft.XMLHTTP');
-      }
-
-    };
-
-    const req = xmlHttp();
-    req.open('GET', url, false);
-    req.send('');
-    return req.responseText;
-
-  }
-
-  catch (e) {
-
-    return '';
-
-  }
-
-}
-
-/**
- * Lookup Function
- * Attempts to lookup function for error handling via
- * xmlhttp request. Not perfect.
- *
- * @param url the url to be looked up.
- * @param line the line of the function.
- */
-export function lookupFunction(url: string, line: number) {
-
-  const FUNC_ARG_NAMES = /function ([^(]*)\(([^)]*)\)/;
-  const GUESS_FUNC = /['"]?([0-9A-Za-z$_]+)['"]?\s*[:=]\s*(function|eval|new Function)/;
-  const MATCH_EXP = /(.*)\:\/\/([^:\/]+)([:\d]*)\/{0,1}([\s\S]*)/;
-  const UNKNOWN_FUNC = 'Unknown Function';
-  const SOURCE_CACHE = {};
-
-  function getSource(url: string) {
-
-    if (typeof url !== 'string') {
-      return [];
-    }
-
-    if (!SOURCE_CACHE[url]) {
-
-      // URL needs to be able to fetched within the acceptable domain.  Otherwise,
-      // cross-domain errors will be triggered.
-      /*
-          Regex matches:
-          0 - Full Url
-          1 - Protocol
-          2 - Domain
-          3 - Port (Useful for internal applications)
-          4 - Path
-      */
-
-      let source = '';
-      let domain = '';
-
-      try { domain = window.document.domain; } catch (e) { }
-      const match = MATCH_EXP.exec(url);
-
-      if (match && match[2] === domain) {
-        source = fetch(url);
-      }
-
-      SOURCE_CACHE[url] = source ? source.split('\n') : [];
+      if (_clone[match.name] !== undefined)
+        _clone = _clone[match.name][match.index];
 
     }
 
-    return SOURCE_CACHE[url];
-
-  }
-
-  let _line = '',
-    maxLines = 10,
-    source = getSource(url),
-    m;
-
-  if (!source.length)
-    return UNKNOWN_FUNC;
-
-  // Walk backwards from the first line in the function until we find the line which
-  // matches the pattern above, which is the function definition
-  for (let i = 0; i < maxLines; ++i) {
-
-    _line = source[line - i] + _line;
-
-    if (!isUndefined(_line)) {
-
-      if ((m = GUESS_FUNC.exec(_line)))
-        return m[1];
-
-      else if ((m = FUNC_ARG_NAMES.exec(_line)))
-        return m[1];
+    else {
+      _clone = _clone[prop];
 
     }
 
   }
 
-  return UNKNOWN_FUNC;
-
+  return _clone;
 }
 
 /**
- * Activate
- * Activates/instantiates a class using generics
- * while passing arguments.
+ * Set
+ * Sets a value on an object using dot notation or url path.
  *
- * Example:
- *
- * class MyClass {
- *  name: string;
- *  age: number
- * }
- *
- * let myClass = activate<MyClass>(MyClass, args here)
- *
- * @param Type the type to be activated.
- * @param args the arguments to pass on init.
+ * @param obj the object to set the value on.
+ * @param key the property used for setting the value.
+ * @param value the value used for updating the property.
+ * @param dynamic when NOT false objects are dynamically created if required.
  */
-export function activate<T>(Type: Constructor<T>, ...args: any[]): T {
-  let ctor: T = Object.create(Type.prototype);
-  Type.apply(ctor, args);
-  return ctor;
+export function set(obj: any, key: string | string[], value: any, dynamic?: boolean) {
+
+  if (arguments.length !== 3 || (!isArray(key) && !isString(key)))
+    return obj;
+
+  let props: string[] = split(key);
+
+  if (isUndefined(value) && dynamic !== false)
+    value = {};
+
+  const prop = props.shift();
+  const match = matchIndex(prop);
+  let next = obj[prop];
+
+  if (isUndefined(next) && dynamic !== false)
+    next = obj[prop] = {};
+
+  if (match)
+    next = obj[match.name][match.index];
+
+  if (props.length > 0) {
+    set(next, props, value);
+  }
+
+  else {
+    if (match)
+      obj[match.name][match.index] = value;
+    else
+      obj[prop] = value;
+
+  }
+
+  return obj;
+
 }
 
 /**
@@ -835,18 +734,22 @@ export function padRight(str: string, len: number, char?: string | number, offse
  * @param char the character to pad with or offset value to add.
  * @param offset an offset value to add.
  */
-export function padValues(values: string[], dir?: string, char?: string | number, offset?: number): string[] {
+export function padValues(values: string[], strategy?: PadStrategy, char?: string | number, offset?: number): string[] {
 
   if (isNumber(char)) {
     offset = char as number;
     char = undefined;
   }
 
+  // do nothing.
+  if (strategy === 'none')
+    return values;
+
   let len = 0;
-  dir = dir || 'right';
+  strategy = strategy || 'right';
   char = char || ' ';
 
-  const func = dir === 'right' ? padRight : padLeft;
+  const func = strategy === 'right' ? padRight : padLeft;
 
   values.forEach((item) => {
     if (item.length > len)
@@ -869,11 +772,28 @@ export function padValues(values: string[], dir?: string, char?: string | number
  * Gets the type of an object.
  *
  * @param obj the object to get type from.
+ * @param stringToDate when true parses strings to see if they are dates.
  * @param unknown the string name for unknown types.
  */
-export function getType(obj: any, unknown?: string): any {
+export function getType(obj: any, stringToDate?: boolean | string, unknown?: string): any {
 
   const type = typeof obj;
+
+  if (isString(stringToDate)) {
+    unknown = <string>stringToDate;
+    stringToDate = undefined;
+  }
+
+  // USE CAUTION:
+  // This is a bit hacky just to
+  // check if a string can be parsed
+  // as a date for colorization
+  if (type === 'string' && stringToDate) {
+    const d = tryParseDate(obj);
+    if (isNumber(d))
+      return 'date';
+    return type;
+  }
 
   if (type !== 'object')
     return type;
@@ -882,10 +802,283 @@ export function getType(obj: any, unknown?: string): any {
     return 'date';
   else if (obj instanceof RegExp)
     return 'regexp';
+  else if (isArray(obj))
+    return 'array';
+  else if (isPlainObject(obj))
+    return 'object';
   else if (obj === null)
     return 'null';
 
   return unknown || 'unknown';
+
+}
+
+/**
+ * Try Parse Date
+ * Attempts to parse a date from a string.
+ *
+ * @param str the string to attempt parsing on.
+ */
+export function tryParseDate(str: string): string | number {
+  try {
+    const d = Date.parse(str);
+    const dStr = d.toString();
+    if (dStr !== 'Invalid Date' && !isNaN(d))
+      return d;
+    return str;
+  } catch (ex) {
+    return str;
+  }
+}
+
+///////////////////////////////
+// LIBRARY UTILS
+///////////////////////////////
+
+/**
+ * Timestamp
+ * Generates multiple timestamp formats.
+ */
+export function timestamp(date?: string | number): ITimestamps {
+
+  let epoch: number = isNumber(date) ? <number>date : Date.now();
+
+  if (isString(date)) {
+    const d: number = <number>tryParseDate(<string>date);
+    if (isNumber(date))
+      epoch = <number>date;
+  }
+
+  const dt = new Date(epoch);
+  let localDate = dt.toLocaleDateString();
+  const localTime = dt.toTimeString().split(' ')[0];
+  const iso = dt.toISOString();
+  const splitUtc: any = iso.split('T');
+  const utcDate = splitUtc[0];
+  const utcTime = splitUtc[1].split('.')[0];
+
+  // split local date and format in reverse.
+  const splitLocal = localDate.split('/');
+  if (splitLocal[0].length < 2) splitLocal[0] = '0' + splitLocal[0];
+  if (splitLocal[1].length < 2) splitLocal[1] = '0' + splitLocal[1];
+  localDate = `${splitLocal[2]}-${splitLocal[1]}-${splitLocal[0]}`;
+
+  const obj: ITimestamps = {
+    epoch: epoch,
+    date: dt,
+    iso: iso,
+    localDate: localDate,
+    localTime: localTime,
+    local: localDate + ' ' + localTime,
+    utcDate: utcDate,
+    utcTime: utcTime,
+    utc: utcDate + ' ' + utcTime
+  };
+
+  return obj;
+
+}
+
+/**
+ * Bytes To Size
+ * Converts bytes to normalized size.
+ *
+ * @param bytes the bytes to normalize
+ * @param decimals the number of decimal places.
+ */
+export function bytesToSize(bytes: number, decimals?: number): { size: number, fixedzero: number, raw: number, type: string, text: string, index: number } {
+
+  if (bytes === 0)
+    return {
+      size: 0,
+      fixedzero: 0,
+      raw: 0,
+      type: 'Bytes',
+      text: '0 Bytes',
+      index: 0
+    };
+
+  decimals = typeof decimals !== 'undefined' ? decimals : 2;
+
+  const k = 1000;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  const floated = parseFloat(bytes / Math.pow(k, i) + '');
+  const fixedzero = parseFloat(floated.toFixed(0));
+  const placed = parseFloat(floated.toFixed(decimals));
+
+  return {
+    size: placed,
+    fixedzero: fixedzero,
+    raw: floated,
+    type: sizes[i],
+    text: `${placed} ${sizes[i]}`,
+    index: i
+  };
+
+}
+
+/**
+ * Check Stat
+ * Using stat check if file too large.
+ *
+ * @param filename the file name to stat.
+ */
+export function checkStat(filename) {
+
+  const stats = statSync(filename);
+  const normalized = bytesToSize(stats.size, 0);
+
+  if (normalized.index > 2)
+    return false;
+
+  if (normalized.index === 2 && normalized.fixedzero >= 2)
+    return false;
+
+  return true;
+
+}
+
+/**
+ * Intersect
+ * Intersects two types.
+ *
+ * @param first first type.
+ * @param second second type.
+ */
+export function intersect<T, U>(first: T, second: U): T & U {
+  let result = <T & U>{};
+  for (let id in first) {
+    (<any>result)[id] = (<any>first)[id];
+  }
+  for (let id in second) {
+    if (!result.hasOwnProperty(id)) {
+      (<any>result)[id] = (<any>second)[id];
+    }
+  }
+  return result;
+}
+
+/**
+ * Activate
+ * Activates/instantiates a class using generics
+ * while passing arguments.
+ *
+ * Example:
+ *
+ * class MyClass {
+ *  name: string;
+ *  age: number
+ * }
+ *
+ * let myClass = activate<MyClass>(MyClass, args here)
+ *
+ * @param Type the type to be activated.
+ * @param args the arguments to pass on init.
+ */
+export function activate<T>(Type: Constructor<T>, ...args: any[]): T {
+  let ctor: T = Object.create(Type.prototype);
+  Type.apply(ctor, args);
+  return ctor;
+}
+
+///////////////////////////////
+// COLORIZATION
+///////////////////////////////
+
+/**
+ * Colorize
+ * Convenience wrapper for chalk. Color can be
+ * shorthand string ex: 'underline.bold.red'.
+ *
+ * @see https://github.com/chalk/chalk
+ *
+ * @param str the string or metadata to be colorized.
+ * @param color the color to apply, modifiers, shorthand.
+ * @param modifiers the optional modifier or modifiers.
+ */
+export function colorize(str: any, color?: string | string[], modifiers?: string | string[]): any {
+
+  // If not chalk can't colorize
+  // as we are in browser.
+  if (!chalk)
+    return str;
+
+  if (!color && !modifiers)
+    return str;
+
+  if (isArray(color)) {
+    modifiers = <string[]>color;
+    color = undefined;
+  }
+
+  if (isString(modifiers))
+    modifiers = <string[]>[modifiers];
+
+  // Just a loose exp we don't
+  // need much more for this.
+  const exp = /\./g;
+
+  // Array containing all styles.
+  let styles = [];
+
+  // Decorate from shorthand color
+  // when color is shorting format:
+  // bold.underline.red
+  if (exp.test(<string>color))
+    styles = (color as string).split('.');
+
+  // Decorate using args.
+  else
+    styles = styles.concat([color]).concat(modifiers || []);
+
+  // Iterate defined styles and apply.
+  let i = styles.length;
+
+  while (i--) {
+    const style = styles[i];
+    str = chalk[style](str);
+  }
+
+  return str;
+
+}
+
+/**
+ * Colorize Array
+ * Iterates and array and colorizes each
+ * element by its data type.
+ *
+ * @param arr the array to interate and colorize.
+ * @param map an optional map of type to colors such as util.inspect.styles.
+ */
+export function colorizeArray(arr: any[], map?: IMetadata): any[] {
+
+  // Default color map, mimics Node's
+  // util.inspect
+  let stylesMap = COLOR_TYPE_MAP;
+
+  map = map || stylesMap;
+
+  // Iterate the array and colorize by type.
+  return arr.map((item) => {
+
+    let type = getType(item, true);
+
+    // If is object colorize with metadata method.
+    if (isPlainObject(item)) {
+      return colorizeObject(item, map);
+    }
+    else {
+
+      if (!map[type])
+        return item;
+
+      return colorize(item, map[type]);
+
+    }
+
+  });
 
 }
 
@@ -898,7 +1091,7 @@ export function getType(obj: any, unknown?: string): any {
  * @param map the color map that maps type to a color or boolean for pretty.
  * @param pretty when true outputs using returns and tabs.
  */
-export function colorizeMetadata(obj: IMetadata, map?: IMetadata | boolean, pretty?: boolean): any {
+export function colorizeObject(obj: IMetadata, map?: IMetadata | boolean, pretty?: boolean): any {
 
   if (isBoolean(map)) {
     pretty = <boolean>map;
@@ -907,25 +1100,9 @@ export function colorizeMetadata(obj: IMetadata, map?: IMetadata | boolean, pret
 
   // Default color map, mimics Node's
   // util.inspect
+  let stylesMap = COLOR_TYPE_MAP;
 
-  let defaults = {
-    special: 'cyan',
-    number: 'yellow',
-    boolean: 'yellow',
-    undefined: 'grey',
-    null: 'bold',
-    string: 'green',
-    symbol: 'green',
-    date: 'magenta',
-    regexp: 'red'
-  };
-
-  // For good measure in case styles
-  // in inspect ever change.
-  if (util)
-    defaults = util.inspect.styles;
-
-  map = map || defaults;
+  map = map || stylesMap;
 
   let result = '';
 
@@ -1008,7 +1185,7 @@ export function colorizeMetadata(obj: IMetadata, map?: IMetadata | boolean, pret
           else {
 
             // Get the type to match in color map.
-            const type = getType(val, 'special');
+            const type = getType(val, true, 'special');
 
             result += (`${prop}: ${addColor(type, val)}${sep}`);
             // o[prop] = addColor(type, val);
@@ -1032,60 +1209,33 @@ export function colorizeMetadata(obj: IMetadata, map?: IMetadata | boolean, pret
 }
 
 /**
- * Colorize
- * Convenience wrapper for chalk. Color can be
- * shorthand string ex: 'underline.bold.red'.
+ * Colorize By Type
+ * Inspects the type then colorizes.
  *
- * @see https://github.com/chalk/chalk
- *
- * @param str the string or metadata to be colorized.
- * @param color the color to apply, modifiers, shorthand.
- * @param modifiers the optional modifier or modifiers.
+ * @param obj the object to inspect for colorization.
+ * @param map an optional map to map types to colors.
  */
-export function colorize(str: any, color?: string | string[], modifiers?: string | string[]): any {
+export function colorizeByType(obj: any, map?: IMetadata): any {
 
-  // If not chalk can't colorize
-  // as we are in browser.
-  if (!chalk)
-    return str;
+  // Default color map, mimics Node's
+  // util.inspect
+  let stylesMap = COLOR_TYPE_MAP;
 
-  if (!color && !modifiers)
-    return;
+  map = map || stylesMap;
 
-  if (isArray(color)) {
-    modifiers = <string[]>color;
-    color = undefined;
+  const type = getType(obj);
+
+  if (type === 'array') {
+    return colorizeArray(obj, map);
   }
-
-  if (isString(modifiers))
-    modifiers = <string[]>[modifiers];
-
-  // Just a loose exp we don't
-  // need much more for this.
-  const exp = /\./g;
-
-  // Array containing all styles.
-  let styles = [];
-
-  // Decorate from shorthand color
-  // when color is shorting format:
-  // bold.underline.red
-  if (exp.test(<string>color))
-    styles = (color as string).split('.');
-
-  // Decorate using args.
-  else
-    styles = styles.concat([color]).concat(modifiers || []);
-
-  // Iterate defined styles and apply.
-  let i = styles.length;
-
-  while (i--) {
-    const style = styles[i];
-    str = chalk[style](str);
+  else if (type === 'object') {
+    return colorizeObject(obj, map);
   }
-
-  return str;
+  else {
+    if (!map[type])
+      return obj;
+    return colorize(obj, map[type]);
+  }
 
 }
 
@@ -1095,22 +1245,147 @@ export function colorize(str: any, color?: string | string[], modifiers?: string
  *
  * @param str a string or array of strings to strip color from.
  */
-export function stripColor(str: string | string[]): string | string[] {
+export function stripColors(str: any): any {
 
   const exp = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
 
-  if (!isArray(str))
-    return (str as string).replace(exp, '');
+  if (!isArray(str) && isString(str))
+    return str.replace(exp, '');
 
-  let arr = str as string[];
+  let arr = str;
   let i = arr.length;
 
   while (i--)
-    arr[i] = arr[i].replace(exp, '');
+    if (isString(arr[i]))
+      arr[i] = arr[i].replace(exp, '');
 
   return arr;
 
 }
+
+///////////////////////////////
+// PLACEHOLDER
+///////////////////////////////
+
+/**
+ * Fetch
+ * Trivial method to fetch url using xmlhttp.
+ *
+ * @param url the url to be fetched.
+ */
+// export function fetch(url: string) {
+
+//   try {
+
+//     const xmlHttp = function () {
+
+//       try {
+//         return new (<any>window).XMLHttpRequest();
+//       }
+
+//       catch (e) {
+//         return new (<any>window).ActiveXObject('Microsoft.XMLHTTP');
+//       }
+
+//     };
+
+//     const req = xmlHttp();
+//     req.open('GET', url, false);
+//     req.send('');
+//     return req.responseText;
+
+//   }
+
+//   catch (e) {
+
+//     return '';
+
+//   }
+
+// }
+
+/**
+ * Lookup Function
+ * Attempts to lookup function for error handling via
+ * xmlhttp request. Not perfect.
+ *
+ * @param url the url to be looked up.
+ * @param line the line of the function.
+ */
+// export function lookupFunction(url: string, line: number) {
+
+//   const FUNC_ARG_NAMES = /function ([^(]*)\(([^)]*)\)/;
+//   const GUESS_FUNC = /['"]?([0-9A-Za-z$_]+)['"]?\s*[:=]\s*(function|eval|new Function)/;
+//   const MATCH_EXP = /(.*)\:\/\/([^:\/]+)([:\d]*)\/{0,1}([\s\S]*)/;
+//   const UNKNOWN_FUNC = 'Unknown Function';
+//   const SOURCE_CACHE = {};
+
+//   function getSource(url: string) {
+
+//     if (typeof url !== 'string') {
+//       return [];
+//     }
+
+//     if (!SOURCE_CACHE[url]) {
+
+//       // URL needs to be able to fetched within the acceptable domain.  Otherwise,
+//       // cross-domain errors will be triggered.
+//       /*
+//           Regex matches:
+//           0 - Full Url
+//           1 - Protocol
+//           2 - Domain
+//           3 - Port (Useful for internal applications)
+//           4 - Path
+//       */
+
+//       let source = '';
+//       let domain = '';
+
+//       try { domain = window.document.domain; } catch (e) { }
+//       const match = MATCH_EXP.exec(url);
+
+//       if (match && match[2] === domain) {
+//         source = fetch(url);
+//       }
+
+//       SOURCE_CACHE[url] = source ? source.split('\n') : [];
+
+//     }
+
+//     return SOURCE_CACHE[url];
+
+//   }
+
+//   let _line = '',
+//     maxLines = 10,
+//     source = getSource(url),
+//     m;
+
+//   if (!source.length)
+//     return UNKNOWN_FUNC;
+
+//   // Walk backwards from the first line in the function until we find the line which
+//   // matches the pattern above, which is the function definition
+//   for (let i = 0; i < maxLines; ++i) {
+
+//     _line = source[line - i] + _line;
+
+//     if (!isUndefined(_line)) {
+
+//       if ((m = GUESS_FUNC.exec(_line)))
+//         return m[1];
+
+//       else if ((m = FUNC_ARG_NAMES.exec(_line)))
+//         return m[1];
+
+//     }
+
+//   }
+
+//   return UNKNOWN_FUNC;
+
+// }
 
 /* Non-Mutating Array Modifications
 * TODO: consider using non mutating methods.

@@ -55,51 +55,65 @@ var LogurTransport = (function () {
     // utils but more convenient for user
     // when extending base Transport.
     /**
-     * To Ordered
+     * To Array
      * Takes a Logour Output object using map
-     * set in options orders arguments for output
-     * in Transport.
+     * orders in array.
      *
      * @param output the compiled Logour Output object.
+     * @param stripColors when true colors are stripped from values.
      */
-    LogurTransport.prototype.toOrdered = function (output) {
+    LogurTransport.prototype.toArray = function (output, colorization) {
+        var _this = this;
         var ordered = [];
+        var ignored = ['callback'];
+        var colorize = function (val) {
+            if (colorization === 'no')
+                return val;
+            else if (colorization === 'yes')
+                return _this.colorize(val);
+            else
+                return _this.stripColors(val);
+        };
         // Iterate the output format array
         // adding each element to our ordered
         // result array.
         output.map.forEach(function (k) {
-            switch (k) {
-                case 'uuid':
-                    ordered.push(output.uuid);
-                    break;
-                case 'timestamp':
-                    ordered.push(output.timestamp);
-                    break;
-                case 'level':
-                    ordered.push(output.level);
-                    break;
-                case 'instance':
-                    ordered.push(output.instance);
-                    break;
-                case 'transport':
-                    ordered.push(output.transport);
-                    break;
-                case 'message':
-                    if (output.message)
-                        ordered.push(output.message);
-                    break;
-                case 'untyped':
-                    if (output.untyped && output.untyped.length) {
-                        output.untyped.forEach(function (u) { return ordered.push(u); });
-                    }
-                    break;
-                case 'metadata':
-                    if (output.metadata)
-                        ordered.push(output.metadata);
-                    break;
-            }
+            var value = u.get(output, k);
+            if (k === 'untyped' && output.untyped && output.untyped.length)
+                output.untyped.forEach(function (u) {
+                    ordered.push(colorize(u));
+                });
+            else if (value)
+                ordered.push(colorize(value));
         });
         return ordered;
+    };
+    /**
+     * To Object
+     *
+     * @param output the Logur Output generated object.
+     * @param stripColors when true colors are stripped from values.
+     */
+    LogurTransport.prototype.toObject = function (output, colorization) {
+        var _this = this;
+        var obj = {};
+        var ignored = ['callback'];
+        // Iterate the output and build object.
+        output.map.forEach(function (k) {
+            var value = u.get(output, k);
+            if (value) {
+                if (colorization !== 'no') {
+                    if (colorization === 'strip') {
+                        value = _this.stripColors(value);
+                    }
+                    else {
+                        value = _this.colorize(value);
+                    }
+                }
+                obj[k] = value;
+            }
+        });
+        return obj;
     };
     /**
      * Colorize
@@ -116,6 +130,14 @@ var LogurTransport = (function () {
      * @param modifiers the optional modifier or modifiers.
      */
     LogurTransport.prototype.colorize = function (str, color, modifiers) {
+        // Iterate array and colorize.
+        if (u.isArray(str))
+            return u.colorizeArray(str);
+        else if (u.isPlainObject(str))
+            return u.colorizeObject(str);
+        else if (!color)
+            return u.colorizeByType(str);
+        // Otherwise colorize by the color supplied.
         return u.colorize.apply(null, arguments);
     };
     /**
@@ -124,8 +146,23 @@ var LogurTransport = (function () {
      *
      * @param str a string or array of strings to strip color from.
      */
-    LogurTransport.prototype.stripColor = function (str) {
-        return u.stripColor.apply(null, arguments);
+    LogurTransport.prototype.stripColors = function (str) {
+        return u.stripColors.apply(null, arguments);
+    };
+    /**
+     * Pad Level
+     * Pads the level after calculating pad from possible levels.
+     *
+     * @param level the level to be padded.
+     * @param levels array of levels for calculating padding.
+     * @param strategy the strategy to pad with left, right or none.
+     */
+    LogurTransport.prototype.padLevel = function (level, levels, strategy) {
+        var idx = levels.indexOf(level);
+        if (idx === -1)
+            return level;
+        var padded = u.padValues(levels, strategy, 1);
+        return padded[idx];
     };
     /**
      * Pad Left
@@ -159,7 +196,7 @@ var LogurTransport = (function () {
      * @param char the character to pad with or offset value to add.
      * @param offset an offset value to add.
      */
-    LogurTransport.prototype.padValues = function (values, dir, char, offset) {
+    LogurTransport.prototype.padValues = function (values, strategy, char, offset) {
         return u.padValues.apply(null, arguments);
     };
     // MUST OVERRIDE METHODS

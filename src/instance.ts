@@ -1,5 +1,5 @@
 
-import { ILogurInstance, ILogur, ILogurInstanceOptions, ILogurTransportOptions, ILogurTransport, ITransportMethods, ILogurTransports, ILogurInstances, IMetadata, ILevel, TimestampCallback, ILogurOutput, ILoad, MemoryUsage, IProcess, IOS, IEnvBrowser, IEnvNode, IEnv, IProfiles, IProfileMethods, IProfileResult, IProfileOptions, IProfile, IStacktrace, TransportConstructor } from './interfaces';
+import { ILogurInstance, ILogur, ILogurInstanceOptions, ILogurTransportOptions, ILogurTransport, ITransportMethods, ILogurTransports, ILogurInstances, IMetadata, ILevel, TimestampCallback, ILogurOutput, ILoad, MemoryUsage, IProcess, IOS, IEnvBrowser, IEnvNode, IEnv, IProfiles, IProfileMethods, IProfileResult, IProfileOptions, IProfile, IStacktrace, TransportConstructor, ILogurOptionsTransport, ILevels } from './interfaces';
 import { LogurTransport, ConsoleTransport, FileTransport, HttpTransport } from './transports';
 import { Notify } from './notify';
 
@@ -24,7 +24,8 @@ const defaults: ILogurInstanceOptions = {
   },
 
   map: ['level', 'timestamp', 'message', 'untyped', 'metadata'],
-  timestamp: 'utc'
+  timestamp: 'utc',
+  transports: []
 
 };
 
@@ -65,6 +66,28 @@ export class LogurInstance extends Notify implements ILogurInstance {
     this._logur = logur;
     this.options = u.extend({}, defaults, options);
 
+    // Extend class with log method handlers.
+    u.keys(this.options.levels).forEach((k) => {
+
+      const level = this.options.levels[k];
+
+      // If a number convert to object.
+      if (u.isNumber(level))
+        this.options.levels[k] = { level: level };
+
+      this[k] = (...args: any[]) => {
+        this.logger(k, args);
+        return this;
+      };
+
+    });
+
+    // Iterate Transports in options
+    // and bind to the Instance.
+    this.options.transports.forEach((t: ILogurOptionsTransport) => {
+      this.transports.create(t.name, t.options, t.transport);
+    });
+
     // Init UAParser, expose it publicly
     // in case user wants to parse headers
     // in http requests.
@@ -89,7 +112,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
    * @param type the type of log message.
    * @param args array of arguments.
    */
-  protected log(transports: string | string[], type: any, ...args: any[]): void {
+  protected logger(transports: string | string[], type: any, ...args: any[]): void {
 
     // If Logur Instance isn't active return.
     if (!this._active)
@@ -114,7 +137,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
     let untyped = params.slice(0);
 
     // Get level info.
-    const levelObj: ILevel = this.options.levels[type];
+    let levelObj = this.options.levels[type];
 
     // If no level object throw error.
     if (!levelObj)
@@ -255,26 +278,42 @@ export class LogurInstance extends Notify implements ILogurInstance {
       // to it's defined target.
       const output: ILogurOutput = {
 
+        // Level Info
         activeid: transport.options.level,
         levelid: level,
+        levels: this.options.levels,
 
+        // Property Map
+        // Used to generate array
+        // of ordered properties.
+        map: this.options.map,
+
+        // Primary Fields
         timestamp: ts,
         uuid: u.uuid(),
         level: type,
         instance: this._name,
         transport: t,
         message: msg,
-        metadata: meta,
-        callback: fn,
-
-        untyped: untyped,
+        untyped: untyped || [],
         args: params,
-        map: this.options.map,
+
+        // StackTrace
+        // Generated or existing from error.
         stacktrace: stack,
-        env: sysinfo,
-        levels: this.options.levels
+
+        // Environment Info
+        env: sysinfo
 
       };
+
+      // Some output properties may not have value.
+      if (meta)
+        output.metadata = meta;
+      if (fn)
+        output.callback = fn;
+      if (err)
+        output.error = err;
 
       // Call the Transort's action passing
       // the ordered args and the original args.
@@ -327,7 +366,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
         if (!this._exceptions.length)
           process.exit();
 
-        this.log(this._exceptions, 'error', err);
+        this.logger(this._exceptions, 'error', err);
 
       });
 
@@ -379,6 +418,14 @@ export class LogurInstance extends Notify implements ILogurInstance {
 
     }
 
+  }
+
+  /**
+   * Log
+   * Gets the internal logger.
+   */
+  private get log() {
+    return this._logur.log;
   }
 
   private common() {
@@ -528,7 +575,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
      * @param name the name of the transport to set state on.
      * @param state the state to be set.
      */
-    const setState = (name: string, state?: boolean): ITransportMethods => {
+    const active = (name: string, state?: boolean): ITransportMethods => {
 
       const trans = this.transports.get<ILogurTransport>(name);
       const curState = trans.active();
@@ -569,7 +616,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
       create,
       extend,
       remove,
-      setState,
+      active,
       setOption
     };
 
@@ -594,10 +641,8 @@ export class LogurInstance extends Notify implements ILogurInstance {
      */
     const get = (name: string): IProfile => {
       const profile = this._profiles[name];
-      if (!profile) {
-        this.warn(`cannot get Profile ${name} of undefined.`);
-        return;
-      }
+      if (!profile)
+        this.log.warn(`cannot get Profile ${name} of undefined.`).exit();
       return profile;
     };
 
@@ -666,7 +711,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
       transports = transports || options.transports;
 
       if (!transports || !(transports as string[]).length) {
-        this.error(`cannot start profile ${name} using transports of none.`);
+        this.log.error(`cannot start profile ${name} using transports of none.`);
         return;
       }
 
@@ -679,12 +724,12 @@ export class LogurInstance extends Notify implements ILogurInstance {
         const transport = this.transports.get<ILogurTransport>(t);
 
         if (!transport) {
-          this.warn(`the Transport ${t} was NOT found, ensure the Transport is loaded.`);
+          this.log.warn(`the Transport ${t} was NOT found, ensure the Transport is loaded.`);
           return;
         }
 
         if (!transport.options.profiler) {
-          this.warn(`attempted to load Transport ${t} but profiling is NOT enabled..`);
+          this.log.warn(`attempted to load Transport ${t} but profiling is NOT enabled..`);
           return;
         }
 
@@ -728,7 +773,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
         return;
 
       if (profile.active) {
-        this.warn(`cannot start already active Profile ${name}.`);
+        this.log.warn(`cannot start already active Profile ${name}.`);
         return;
       }
 
@@ -777,7 +822,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
       if (!profile)
         return;
       if (profile.active && !force) {
-        this.warn(`cannot remove active Profile ${name}, stop or set force to true to remove.`);
+        this.log.warn(`cannot remove active Profile ${name}, stop or set force to true to remove.`);
         return;
       }
       delete this._profiles[name];
@@ -827,7 +872,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
 
       // If not value log error.
       if (!value)
-        this.log('error', `cannot set option for key ${key} using value of undefined.`);
+        this.logger('error', `cannot set option for key ${key} using value of undefined.`);
 
       else
         this.options[key as string] = value;
@@ -865,64 +910,6 @@ export class LogurInstance extends Notify implements ILogurInstance {
     return this._active = state;
   }
 
-  // LOG LEVELS
-
-  /**
-   * Error
-   * Called when log level is error.
-   *
-   * @param args arguments to be passed to logur.log.
-   */
-  error(...args: any[]) {
-    this.log('error', args);
-    return this;
-  }
-
-  /**
-   * Warn
-   * Called when log level is warn.
-   *
-   * @param args arguments to be passed to logur.log.
-   */
-  warn(...args: any[]) {
-    this.log('warn', args);
-    return this;
-  }
-
-  /**
-   * Info
-   * Called when log level is info.
-   *
-   * @param args arguments to be passed to logur.log.
-   */
-  info(...args: any[]) {
-    this.log('info', args);
-    return this;
-  }
-
-  /**
-   * Verbose
-   * Called when log level is verbose.
-   *
-   * @param args arguments to be passed to logur.log.
-   */
-  verbose(...args: any[]) {
-    this.log('verbose', args);
-    return this;
-  }
-
-  /**
-   * Debug
-   * Called when log level is debug or when env
-   * is node and is debugging.
-   *
-   * @param args arguments to be passed to logur.log.
-   */
-  debug(...args: any[]) {
-    this.log('debug', args);
-    return this;
-  }
-
   // EXTENDED LOG METHODS
 
   /**
@@ -932,7 +919,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
    *
    * @param args arguments to pass to console.log.
    */
-  write(...args: any[]) {
+  write(...args: any[]): ILogurInstance {
     if (console && console.log)
       console.log.apply(console, args);
     return this;

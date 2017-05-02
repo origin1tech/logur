@@ -25,7 +25,7 @@ var FileTransport = (function (_super) {
      * @param done an callback on Transport done.
      */
     FileTransport.prototype.action = function (output, done) {
-        done(this.toOrdered(output));
+        done(this.toArray(output));
     };
     /**
      * Query

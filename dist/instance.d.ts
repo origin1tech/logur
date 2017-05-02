@@ -29,12 +29,17 @@ export declare class LogurInstance extends Notify implements ILogurInstance {
      * @param type the type of log message.
      * @param args array of arguments.
      */
-    protected log(transports: string | string[], type: any, ...args: any[]): void;
+    protected logger(transports: string | string[], type: any, ...args: any[]): void;
     /**
      * Handle Exceptions
      * Enables handling uncaught NodeJS exceptions.
      */
     protected handleExceptions(): void;
+    /**
+     * Log
+     * Gets the internal logger.
+     */
+    private readonly log;
     private common();
     /**
      * Transport
@@ -69,49 +74,13 @@ export declare class LogurInstance extends Notify implements ILogurInstance {
      */
     active(state?: boolean): boolean;
     /**
-     * Error
-     * Called when log level is error.
-     *
-     * @param args arguments to be passed to logur.log.
-     */
-    error(...args: any[]): this;
-    /**
-     * Warn
-     * Called when log level is warn.
-     *
-     * @param args arguments to be passed to logur.log.
-     */
-    warn(...args: any[]): this;
-    /**
-     * Info
-     * Called when log level is info.
-     *
-     * @param args arguments to be passed to logur.log.
-     */
-    info(...args: any[]): this;
-    /**
-     * Verbose
-     * Called when log level is verbose.
-     *
-     * @param args arguments to be passed to logur.log.
-     */
-    verbose(...args: any[]): this;
-    /**
-     * Debug
-     * Called when log level is debug or when env
-     * is node and is debugging.
-     *
-     * @param args arguments to be passed to logur.log.
-     */
-    debug(...args: any[]): this;
-    /**
      * Write
      * The equivalent of calling console.log without
      * any intervention from Logur.
      *
      * @param args arguments to pass to console.log.
      */
-    write(...args: any[]): this;
+    write(...args: any[]): ILogurInstance;
     /**
      * Exit
      * When env is node process.exit() is called.

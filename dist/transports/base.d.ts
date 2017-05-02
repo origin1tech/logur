@@ -1,4 +1,4 @@
-import { ILogurTransport, ILogur, ILogurTransportOptions, ILogurOutput, IMetadata, TransportActionCallback } from '../interfaces';
+import { ILogurTransport, ILogur, ILogurTransportOptions, ILogurOutput, IMetadata, TransportActionCallback, ColorizationStrategy, PadStrategy } from '../interfaces';
 /**
  * Logur Base Transport
  */
@@ -28,14 +28,21 @@ export declare class LogurTransport implements ILogurTransport {
       */
     active(state?: boolean): boolean;
     /**
-     * To Ordered
+     * To Array
      * Takes a Logour Output object using map
-     * set in options orders arguments for output
-     * in Transport.
+     * orders in array.
      *
      * @param output the compiled Logour Output object.
+     * @param stripColors when true colors are stripped from values.
      */
-    toOrdered(output: ILogurOutput): any[];
+    toArray(output: ILogurOutput, colorization?: ColorizationStrategy): any[];
+    /**
+     * To Object
+     *
+     * @param output the Logur Output generated object.
+     * @param stripColors when true colors are stripped from values.
+     */
+    toObject<T>(output: ILogurOutput, colorization?: ColorizationStrategy): T;
     /**
      * Colorize
      * Convenience wrapper for chalk. Color can be
@@ -50,14 +57,23 @@ export declare class LogurTransport implements ILogurTransport {
      * @param color the color to apply, modifiers, shorthand or true for metadata
      * @param modifiers the optional modifier or modifiers.
      */
-    colorize<T>(str: string | IMetadata, color?: string | string[], modifiers?: string | string[]): T;
+    colorize(str: string | IMetadata | any[], color?: string | string[], modifiers?: string | string[]): any;
     /**
      * Strip Color
      * Strips ansi colors from strings.
      *
      * @param str a string or array of strings to strip color from.
      */
-    stripColor(str: string | string[]): string | string[];
+    stripColors(str: any): any;
+    /**
+     * Pad Level
+     * Pads the level after calculating pad from possible levels.
+     *
+     * @param level the level to be padded.
+     * @param levels array of levels for calculating padding.
+     * @param strategy the strategy to pad with left, right or none.
+     */
+    padLevel(level: string, levels: string[], strategy?: PadStrategy): string;
     /**
      * Pad Left
      * Pads a string on the left.
@@ -86,7 +102,7 @@ export declare class LogurTransport implements ILogurTransport {
      * @param char the character to pad with or offset value to add.
      * @param offset an offset value to add.
      */
-    padValues(values: string[], dir?: string, char?: string | number, offset?: number): string[];
+    padValues(values: string[], strategy?: PadStrategy, char?: string | number, offset?: number): string[];
     /**
      * Action
      * The transport action to be called when messages are logged.

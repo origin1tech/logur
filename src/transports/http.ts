@@ -20,7 +20,7 @@ export class HttpTransport extends LogurTransport implements IHttpTransport {
    * @param done an callback on Transport done.
    */
   action(output: ILogurOutput, done: TransportActionCallback) {
-    done(this.toOrdered(output));
+    done(this.toArray(output));
   }
 
   /**
