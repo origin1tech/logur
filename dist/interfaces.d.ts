@@ -403,12 +403,6 @@ export interface ILogurTransport {
     colorize(str: string | IMetadata | any[], color?: string | string[], modifiers?: string | string[]): any;
     stripColors(str: any): any;
     padLevel(level: string, levels: string[], strategy?: PadStrategy): string;
-    padLeft(str: string, len: number, offset?: number): string;
-    padLeft(str: string, len: number, char?: string | number, offset?: number): string;
-    padRight(str: string, len: number, offset?: number): string;
-    padRight(str: string, len: number, char?: string | number, offset?: number): string;
-    padValues(values: string[], dir?: string, offset?: number): string[];
-    padValues(values: string[], dir?: string, char?: string | number, offset?: number): string[];
     action(output: ILogurOutput, done: TransportActionCallback): void;
     query(): void;
 }

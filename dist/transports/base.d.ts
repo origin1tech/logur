@@ -75,35 +75,6 @@ export declare class LogurTransport implements ILogurTransport {
      */
     padLevel(level: string, levels: string[], strategy?: PadStrategy): string;
     /**
-     * Pad Left
-     * Pads a string on the left.
-     *
-     * @param str the string to be padded.
-     * @param len the length to pad.
-     * @param char the character to pad with or offset value to add.
-     * @param offset an offset value to add.
-     */
-    padLeft(str: string, len: number, char?: string | number, offset?: number): string;
-    /**
-     * Pad Right
-     * Pads a string to the right.
-     *
-     * @param str the string to be padded.
-     * @param len the length to pad.
-     * @param char the character to pad with or offset value to add.
-     * @param offset an offset value to add.
-     */
-    padRight(str: string, len: number, char?: string | number, offset?: number): string;
-    /**
-     * Pad Values
-     *
-     * @param values the values to be padded.
-     * @param dir the direction to pad.
-     * @param char the character to pad with or offset value to add.
-     * @param offset an offset value to add.
-     */
-    padValues(values: string[], strategy?: PadStrategy, char?: string | number, offset?: number): string[];
-    /**
      * Action
      * The transport action to be called when messages are logged.
      *

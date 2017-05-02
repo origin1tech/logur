@@ -32,16 +32,21 @@ var ConsoleTransport = (function (_super) {
      * @param done an optional callback on Transport done.
      */
     ConsoleTransport.prototype.action = function (output, done) {
+        // Get list of levels we'll use this for padding.
+        var levels = u.keys(this.options.levels);
+        // Get the level's config object.
         var levelObj = this.options.levels[output.level];
+        // If the log level matches a console type use it.
         var _console = console[output.level] ? console[output.level] : console.log;
+        // Flag if we should colorize.
         var colorize = this.options.colorize ? 'yes' : 'no';
-        // Get ordered array.
+        // Get colorized ordered array.
         var ordered = this.toArray(output, 'yes');
-        // Get the index of the level in map.
+        // Get the index of the level in map, we do
+        // this
         var idx = this.options.map.indexOf('level');
-        if (this.options.colorize && idx > -1) {
+        if (this.options.colorize && idx > -1)
             ordered[idx] = this.colorize(output.level, levelObj.color);
-        }
         // If console method matches level
         // name use it for good measure.
         // Really only makes difference in Browser.

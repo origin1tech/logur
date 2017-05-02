@@ -29,19 +29,27 @@ export class ConsoleTransport extends LogurTransport implements IConsoleTranspor
    */
   action(output: ILogurOutput, done: TransportActionCallback): void {
 
+    // Get list of levels we'll use this for padding.
+    const levels = u.keys(this.options.levels);
+
+    // Get the level's config object.
     const levelObj: ILevel = this.options.levels[output.level];
+
+    // If the log level matches a console type use it.
     const _console = console[output.level] ? console[output.level] : console.log;
+
+    // Flag if we should colorize.
     const colorize = this.options.colorize ? 'yes' : 'no';
 
-    // Get ordered array.
+    // Get colorized ordered array.
     let ordered = this.toArray(output, 'yes');
 
-    // Get the index of the level in map.
+    // Get the index of the level in map, we do
+    // this
     const idx = this.options.map.indexOf('level');
 
-    if (this.options.colorize && idx > -1) {
+    if (this.options.colorize && idx > -1)
       ordered[idx] = this.colorize(output.level, levelObj.color);
-    }
 
     // If console method matches level
     // name use it for good measure.

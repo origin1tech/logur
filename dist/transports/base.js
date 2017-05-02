@@ -164,41 +164,6 @@ var LogurTransport = (function () {
         var padded = u.padValues(levels, strategy, 1);
         return padded[idx];
     };
-    /**
-     * Pad Left
-     * Pads a string on the left.
-     *
-     * @param str the string to be padded.
-     * @param len the length to pad.
-     * @param char the character to pad with or offset value to add.
-     * @param offset an offset value to add.
-     */
-    LogurTransport.prototype.padLeft = function (str, len, char, offset) {
-        return u.padLeft.apply(null, arguments);
-    };
-    /**
-     * Pad Right
-     * Pads a string to the right.
-     *
-     * @param str the string to be padded.
-     * @param len the length to pad.
-     * @param char the character to pad with or offset value to add.
-     * @param offset an offset value to add.
-     */
-    LogurTransport.prototype.padRight = function (str, len, char, offset) {
-        return u.padRight.apply(null, arguments);
-    };
-    /**
-     * Pad Values
-     *
-     * @param values the values to be padded.
-     * @param dir the direction to pad.
-     * @param char the character to pad with or offset value to add.
-     * @param offset an offset value to add.
-     */
-    LogurTransport.prototype.padValues = function (values, strategy, char, offset) {
-        return u.padValues.apply(null, arguments);
-    };
     // MUST OVERRIDE METHODS
     /**
      * Action

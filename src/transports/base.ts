@@ -211,44 +211,6 @@ export class LogurTransport implements ILogurTransport {
     return padded[idx];
   }
 
-  /**
-   * Pad Left
-   * Pads a string on the left.
-   *
-   * @param str the string to be padded.
-   * @param len the length to pad.
-   * @param char the character to pad with or offset value to add.
-   * @param offset an offset value to add.
-   */
-  padLeft(str: string, len: number, char?: string | number, offset?: number): string {
-    return u.padLeft.apply(null, arguments);
-  }
-
-  /**
-   * Pad Right
-   * Pads a string to the right.
-   *
-   * @param str the string to be padded.
-   * @param len the length to pad.
-   * @param char the character to pad with or offset value to add.
-   * @param offset an offset value to add.
-   */
-  padRight(str: string, len: number, char?: string | number, offset?: number): string {
-    return u.padRight.apply(null, arguments);
-  }
-
-  /**
-   * Pad Values
-   *
-   * @param values the values to be padded.
-   * @param dir the direction to pad.
-   * @param char the character to pad with or offset value to add.
-   * @param offset an offset value to add.
-   */
-  padValues(values: string[], strategy?: PadStrategy, char?: string | number, offset?: number): string[] {
-    return u.padValues.apply(null, arguments);
-  }
-
   // MUST OVERRIDE METHODS
 
   /**
