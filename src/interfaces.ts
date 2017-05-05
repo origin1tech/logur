@@ -13,13 +13,7 @@ export type Constructor<T> = new (...args: any[]) => T;
  * Transport Constructor
  * Generic constructor for Transports.
  */
-export type TransportConstructor<T> = { new (options: ILogurTransportOptions, logur: ILogur): T };
-
-/**
- * Instance Constructor
- * Generic constructor for Instances.
- */
-// export type InstanceConstructor<T> = { new (name: string, options: ILogurInstanceOptions, logur: ILogur): T };
+export type TransportConstructor<T> = { new (base: ILogurInstanceOptions, options: ILogurTransportOptions, logur: ILogur): T };
 
 /**
  * Timestamp Callback
@@ -39,6 +33,10 @@ export type StackTraceCallback = { (stacktrace: IStacktrace[]) };
  */
 export type TransportActionCallback = { (ordered: any[], output?: ILogurOutput): void };
 
+/**
+ * Level Method
+ * Constraint for levels interface.
+ */
 export type LevelMethod = { (...args: any[]) };
 
 /**
@@ -46,18 +44,6 @@ export type LevelMethod = { (...args: any[]) };
  * Callback for user defined uuid.
  */
 export type UUIDCallback = { (): string };
-
-/**
- * Colors
- * Type constraint for colors.
- */
-export type Colors = 'red' | 'green' | 'yellow' | 'blue' | 'magenta' | 'cyan' | 'white' | 'gray' | 'black';
-
-/**
- * Background Colors
- * Type constraint for background colors.
- */
-export type BgColors = 'bgRed' | 'bgGreen' | 'bgYellow' | 'bgBlue' | 'bgMagenta' | 'bgCyan' | 'bgWhite'
 
 /**
  * Timestamp Strategy
@@ -81,12 +67,6 @@ export type FileFormatStrategy = 'tab' | 'csv' | 'json';
 export type ErrorStrategy = 'log' | 'exit' | 'none';
 
 /**
- * Format Keys
- * Type constraint for availabe property keys for formatting log messages.
- */
-// export type OutputKeys = 'timestamp' | 'uuid' | 'level' | 'instance' | 'transport' | 'message' | 'untyped' | 'metadata';
-
-/**
  * Pad Strategy
  * The strategy for padding log levels in console.
  */
@@ -105,11 +85,29 @@ export type ProfileRemoveStrategy = 'stop' | 'never';
  */
 export type ColorizationStrategy = 'yes' | 'no' | 'strip';
 
+/**
+ * Output Strategy
+ * Indicates how normalized log event should be output
+ * when handed off to Transport actions.
+ */
+export type OutputStrategy = 'array' | 'object' | 'json';
+
+export type CacheMap = Map<string, any>;
+
 ////////////////////////
 // CONSTANTS
 ////////////////////////
 
-export const COLOR_TYPE_MAP = {
+/**
+ * Style
+ * Styles & colors available via Chalk.
+ * Applicable to strings.
+ *
+ * @see https://github.com/chalk/chalk
+ */
+export const STYLES = 'red, green, yellow, blue, magenta, cyan, white, gray, black, bgRed,bgGreen, bgYellow, bgBlue, bgMagenta, bgCyan, bgWhite, bold, dim, italic, underline, inverse, strikethrough';
+
+export const COLOR_TYPE_MAP: IColorTypeMap = {
   special: 'cyan',
   number: 'yellow',
   boolean: 'yellow',
@@ -118,12 +116,28 @@ export const COLOR_TYPE_MAP = {
   string: 'green',
   symbol: 'green',
   date: 'magenta',
-  regexp: 'red'
+  regexp: 'red',
+  error: 'bold.underline.red',
+  ministack: 'gray'
 };
 
 ////////////////////////
 // MISC INTERFACES
 ////////////////////////
+
+export interface IColorTypeMap {
+  special: string;
+  number: string;
+  boolean: string;
+  undefined: string;
+  null: string;
+  string: string;
+  symbol: string;
+  date: string;
+  regexp: string;
+  error: string;
+  ministack: string;
+}
 
 export interface IError extends ErrorConstructor {
   prepareStackTrace?(_: any, stack: any);
@@ -171,7 +185,9 @@ export interface INotify {
 
 export interface IStacktrace {
   column: number;
-  file: string;
+  path: string;
+  file?: string;
+  url?: string;
   line: number;
   method: string;
   function: string;
@@ -182,6 +198,20 @@ export interface IMetadata {
   [key: string]: any;
 }
 
+export interface IStreamrollerOptions {
+  filename: string;         // filename.
+  max?: number;              // max size in bytes.
+  backups?: number;          // number of backups to keep.
+  pattern?: string;          // date pattern for DateRollingStream.
+  options?: {
+    encoding?: string;       // defaults to 'utf8'.
+    mode?: number;           // defaults to 0644.
+    flags?: string;          // defaults to 'a'.
+    compress?: boolean;      // when True log files will be compressed w/ .gz exten.
+    alwaysIncludePattern: boolean;  // extend file with pattern defaults to false.
+  };
+}
+
 ////////////////////////
 // NODEJS
 ////////////////////////
@@ -189,6 +219,16 @@ export interface IMetadata {
 // Duplication here really so we don't need
 // to deal with importing NodeJS typings.
 // also stripped some props.
+
+export interface IParsedPath {
+
+  root?: string;    // NODE Only root of the path such as '/' or 'c:\'
+  dir?: string;     // NODE Only full directory such as '/home/user/dir' or 'c:\path\dir'
+  base: string;     // The file name including extension (if any) such as 'index.html'
+  ext: string;      // The file extension (if any) such as '.html'
+  name: string;     // The file name without extension (if any) such as 'index'
+
+}
 
 export interface MemoryUsage {
   rss: number;
@@ -372,7 +412,7 @@ export interface IEnv {
 
 export interface ILevel {
   level: number;                // the level number.
-  color?: Colors;               // the level color.
+  color?: string;               // the level color.
 }
 
 export interface ILevels {
@@ -393,20 +433,6 @@ export interface ILevelMethods extends ILevelMethodsBase {
   info(...args: any[]): ILogurInstance;
   verbose(...args: any[]): ILogurInstance;
   debug(...args: any[]): ILogurInstance;
-}
-
-export interface ILogurBaseOptions {
-
-  active?: boolean;             // when NOT false is active.
-  level?: number;               // the active log level.
-  levels?: ILevels;             // Log levels configuration.
-  map?: string[];               // ordered properties for building log output.
-
-  // When uuid is undefined internal
-  // method is used.
-  uuid?: UUIDCallback;                    // how uuid's should be generated.
-  timestamp?: TimestampCallback | TimestampStrategy; // timestamp strategy.
-
 }
 
 export interface ILogurOutput {
@@ -435,11 +461,82 @@ export interface ILogurOutput {
   map: string[];                                // array of ordered props for output.
   levels: ILevels;                              // the levels configuration.
 
-  error?: Error;                                // exists when Error was logged.
   stacktrace?: IStacktrace[];                   // parsed stacktrace frame.
 
   env?: IEnvNode | IEnvBrowser;                 // browser, os, process environment info.
 
+}
+
+/////////////////////////////////
+// TRANSPORT & INSTANCE OPTIONS
+/////////////////////////////////
+
+export interface ILogurBaseOptions {
+
+  active?: boolean;             // when NOT false is active.
+  level?: number;               // the active log level.
+  levels?: ILevels;             // Log levels configuration.
+  uuid?: UUIDCallback;          // when has value callsback to get generated uuid.
+  timestamp?: TimestampCallback | TimestampStrategy; // timestamp strategy.
+  colorTypeMap?: IMetadata;     // mimics util.inspect.styles for mapping type to color.
+  strategy?: OutputStrategy;    // the strategy for normalized output.
+
+}
+
+export interface ILogurInstanceOptions extends ILogurBaseOptions {
+
+  cascade?: boolean;      // when NOT false cascade settings down to transports.
+  sync?: boolean;         // when True transports are called synchronously.
+
+  // An array of transports to
+  // be bound to Instance.
+  transports?: ILogurOptionsTransport[];
+
+}
+
+export interface ILogurTransportOptions extends ILogurBaseOptions {
+
+  map?: string[];               // array containing properties in order of output.
+  pretty?: boolean;             // when true objects are pretty printed.
+  ministack?: boolean;          // When NOT false log append msgs w/ (file:line:col)
+  exceptions?: ErrorStrategy;   // strategy for how errors should be handled.
+  fullstack?: boolean;          // when true full stack shown on errors.
+  profiler?: boolean;           // when true transport can be used for profiling.
+
+}
+
+export interface IConsoleTransportOptions extends ILogurTransportOptions {
+  padding?: PadStrategy;        // the strategy for pading levels.
+  colorize?: boolean;           // when NOT false colorization is applied.
+}
+
+export interface IFileTransportOptions extends ILogurTransportOptions {
+  filename: string;             // filename.
+  max?: number;                 // max size in bytes.
+  backups?: number;             // number of backups to keep.
+  pattern?: string;             // date pattern for DateRollingStream.
+  options?: {
+    encoding?: string;          // defaults to 'utf8'.
+    mode?: number;              // defaults to 0644.
+    flags?: string;             // defaults to 'a'.
+    compress?: boolean;         // when True log files will be compressed w/ .gz exten.
+    alwaysIncludePattern: boolean;  // extend file with pattern defaults to false.
+  };
+  json?: boolean;               // when true logged output is JSON.
+}
+
+export interface IMemoryTransportOptions extends ILogurTransportOptions {
+  padding?: PadStrategy;        // the strategy for pading levels.
+  colorize?: boolean;           // when NOT false colorization is applied.
+  max?: number;                 // maximum number of logs.
+}
+
+export interface IHttpTransportOptions extends ILogurTransportOptions {
+  url?: string;
+  host?: string;
+  port?: number;
+  ssl?: boolean;
+  params?: IMetadata;
 }
 
 ////////////////////////
@@ -449,16 +546,6 @@ export interface ILogurOutput {
 /* Console
 *******************/
 
-export interface IConsoleTransportOptions extends ILogurTransportOptions {
-
-  padding?: PadStrategy;        // the strategy for pading levels.
-  pretty?: boolean;             // pretty prints objects.
-  colorize?: boolean;           // when NOT false colorization is applied.
-  ministack?: boolean;          // When NOT false log append msgs w/ (file:line:col)
-  fullstack?: boolean;          // when True caught errors will display full stacktrace.
-
-}
-
 export interface IConsoleTransport extends ILogurTransport {
   //
 }
@@ -466,23 +553,15 @@ export interface IConsoleTransport extends ILogurTransport {
 /* File
 *******************/
 
-export interface IFileTransportOptions extends ILogurTransportOptions {
-
-  filename: string;               // the filename/path to output to.
-  filesize: number;               // the max filesize.
-
-}
 
 export interface IFileTransport extends ILogurTransport {
-  //
+  streamroller: any;
+  options: IFileTransportOptions;
 }
 
 /* Http
 *******************/
 
-export interface IHttpTransportOptions extends ILogurTransportOptions {
-  //
-}
 
 export interface IHttpTransport extends ILogurTransport {
   //
@@ -491,14 +570,7 @@ export interface IHttpTransport extends ILogurTransport {
 /* Memory
 *******************/
 
-export interface IMemoryTransportOptions extends ILogurTransportOptions {
 
-  padding?: PadStrategy;        // the strategy for pading levels.
-  pretty?: boolean;             // pretty prints objects.
-  colorized?: boolean;          // when NOT false colorization is applied.
-  max?: number;                 // maximum number of logs.
-
-}
 
 export interface IMemoryTransport extends ILogurTransport {
   logs: any[];
@@ -507,15 +579,6 @@ export interface IMemoryTransport extends ILogurTransport {
 ////////////////////////
 // TRANSPORT
 ////////////////////////
-
-export interface ILogurTransportOptions extends ILogurBaseOptions {
-  exceptions?: ErrorStrategy;      // strategy for how errors are handled.
-  profiler?: boolean;              // when true transport can be used for profiling.
-}
-
-// export interface ILogurTransportCtor extends ILogurTransport {
-//   new (options: ILogurTransportOptions, logur: ILogur);
-// }
 
 export interface ILogurTransports {
   [key: string]: {
@@ -530,16 +593,14 @@ export interface ILogurTransport {
   setOption<T extends ILogurTransportOptions>(key: string | T, value?: any): void;
   active(state?: boolean): boolean;
 
-  toArray(output: ILogurOutput, colorization?: ColorizationStrategy): any[];
-  toObject<T>(output: ILogurOutput, colorization?: ColorizationStrategy): T;
+  colorize(obj: any, color?: string | string[], modifiers?: string | string[]): any;
+  toArray(output: ILogurOutput, pretty?: boolean, colors?: boolean, map?: IMetadata): any[];
+  toObject<T>(output: ILogurOutput, pretty?: boolean, colors?: boolean, map?: IMetadata): T;
 
-  colorize(arr: any[]): any[];
-  colorize(metadata: IMetadata): IMetadata;
-  colorize(str: string, color?: string | string[], modifiers?: string | string[]): string;
-  colorize(str: string | IMetadata | any[], color?: string | string[], modifiers?: string | string[]): any;
   stripColors(str: any): any;
 
   padLevel(level: string, levels: string[], strategy?: PadStrategy): string;
+  toOutput(options: any, output: ILogurOutput): any[];
 
   // Must Override Methods
 
@@ -607,20 +668,6 @@ export interface IProfileMethods {
   stop(name: string): IProfileResult;
   remove(name: string, force?: boolean): void;
 }
-
-export interface ILogurInstanceOptions extends ILogurBaseOptions {
-  cascade?: boolean;      // when NOT false cascade settings down to transports.
-  sync?: boolean;         // when True transports are called synchronously.
-
-  // An array of transports to
-  // be bound to Instance.
-  transports?: ILogurOptionsTransport[];
-
-}
-
-// export interface ILogurInstanceCtor extends ILogurInstance {
-//   new (name: string, options: ILogurInstanceOptions, logur: ILogur): ILogurInstance;
-// }
 
 export interface ILogurInstance extends INotify {
 

@@ -1,5 +1,5 @@
 
-import { ILogurInstance, ILogur, ILogurInstanceOptions, ILogurTransportOptions, ILogurTransport, ITransportMethods, ILogurTransports, ILogurInstances, IMetadata, ILevel, TimestampCallback, ILogurOutput, ILoad, MemoryUsage, IProcess, IOS, IEnvBrowser, IEnvNode, IEnv, IProfiles, IProfileMethods, IProfileResult, IProfileOptions, IProfile, IStacktrace, TransportConstructor, ILogurOptionsTransport, ILevels } from './interfaces';
+import { ILogurInstance, ILogur, ILogurInstanceOptions, ILogurTransportOptions, ILogurTransport, ITransportMethods, ILogurTransports, ILogurInstances, IMetadata, ILevel, TimestampCallback, ILogurOutput, ILoad, MemoryUsage, IProcess, IOS, IEnvBrowser, IEnvNode, IEnv, IProfiles, IProfileMethods, IProfileResult, IProfileOptions, IProfile, IStacktrace, TransportConstructor, ILogurOptionsTransport, ILevels, CacheMap, ILevelMethods, COLOR_TYPE_MAP } from './interfaces';
 import { LogurTransport, ConsoleTransport, FileTransport, HttpTransport } from './transports';
 import { Notify } from './notify';
 
@@ -10,10 +10,10 @@ import { UAParser } from 'ua-parser-js';
 
 const defaults: ILogurInstanceOptions = {
 
-  level: 2,
+  level: 5,
   active: true,
   cascade: true,
-  sync: false,
+  strategy: 'array',
 
   levels: {
     error: { level: 0, color: 'red' },
@@ -23,9 +23,10 @@ const defaults: ILogurInstanceOptions = {
     debug: { level: 4, color: 'magenta' },
   },
 
-  map: ['level', 'timestamp', 'message', 'untyped', 'metadata'],
   timestamp: 'utc',
-  transports: []
+  uuid: undefined,
+  transports: [],
+  colorTypeMap: COLOR_TYPE_MAP
 
 };
 
@@ -153,7 +154,25 @@ export class LogurInstance extends Notify implements ILogurInstance {
     transports = this._transports;
 
     let msg = untyped[0];
-    let fn, meta, stack;
+    let fn, meta, stack, err;
+
+    /* Check if msg is error
+    ****************************************/
+
+    if (u.isError(msg)) {
+      untyped.shift();
+      err = msg;
+    }
+
+    // Check if we should offset stacktrace frames.
+    // const shouldOffset = u.isNode() && !err ? true : false;
+
+    // Offsets the returned frames to trim out
+    // some bloat from stack when generating frames.
+    // const offset = shouldOffset ? 3 : 0;
+
+    // Get the stacktrace for calling log method.
+    stack = env.stacktrace(3);
 
     /* Check Last is Callback
     ****************************************/
@@ -164,10 +183,11 @@ export class LogurInstance extends Notify implements ILogurInstance {
     /* Check Last is Metadata
     ****************************************/
 
-    if (u.isObject(u.last(untyped)))
+    if (u.isObject(u.last(untyped)) && !u.isError(u.last(untyped)))
       meta = untyped.pop();
 
-    /* Normalize Arguments
+
+    /* Normalize Message Arguments
     **************************************/
 
     // If string inspect/format.
@@ -211,30 +231,6 @@ export class LogurInstance extends Notify implements ILogurInstance {
     else
       sysinfo = this.env.browser;
 
-    /* Handle Error, Offset & Stacktrace
-    *****************************************/
-
-    // Get the stack info then iterate transports.
-    // ignore getting stack for manually created
-    // stack.
-    let err = u.isError(msg) ? msg : undefined;
-
-    // If an error was passed then set the message
-    // to the error's message.
-    if (err) {
-      msg = err.message || 'Unknown error.';
-    }
-
-    // Check if we should offset stacktrace frames.
-    const shouldOffset = u.isNode() && !err ? true : false;
-
-    // Offsets the returned frames to trim out
-    // some bloat from stack when generating frames.
-    const offset = shouldOffset ? 3 : 0;
-
-    // Get the stacktrace for error or generated stack.
-    stack = env.stacktrace(err, offset);
-
     /* Iterate Transports
     *****************************************/
 
@@ -249,7 +245,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
 
       // Return if the level is greater
       // that the transport's level.
-      if (!debugOverride && level > transport.options.level)
+      if (!debugOverride && level > this.options.level)
         return;
 
       /* Timestamp or User Defined Timestamp
@@ -261,15 +257,15 @@ export class LogurInstance extends Notify implements ILogurInstance {
 
       // If is function call to get timestamp
       // and format from user.
-      if (u.isFunction(transport.options.timestamp)) {
-        const func: TimestampCallback = <TimestampCallback>transport.options.timestamp;
+      if (u.isFunction(this.options.timestamp)) {
+        const func: TimestampCallback = <TimestampCallback>this.options.timestamp;
         ts = func(timestamps);
       }
 
       // Otherwise get timestamp from Logur
       // defined timestamp.
       else {
-        ts = timestamps[transport.options.timestamp as string];
+        ts = timestamps[this.options.timestamp as string];
       }
 
       // Construct object with all possible
@@ -279,14 +275,14 @@ export class LogurInstance extends Notify implements ILogurInstance {
       const output: ILogurOutput = {
 
         // Level Info
-        activeid: transport.options.level,
+        activeid: this.options.level,
         levelid: level,
         levels: this.options.levels,
 
         // Property Map
         // Used to generate array
         // of ordered properties.
-        map: this.options.map,
+        map: transport.options.map,
 
         // Primary Fields
         timestamp: ts,
@@ -295,11 +291,10 @@ export class LogurInstance extends Notify implements ILogurInstance {
         instance: this._name,
         transport: t,
         message: msg,
-        untyped: untyped || [],
+        untyped: untyped,
         args: params,
 
-        // StackTrace
-        // Generated or existing from error.
+        // Error & Stack
         stacktrace: stack,
 
         // Environment Info
@@ -307,17 +302,18 @@ export class LogurInstance extends Notify implements ILogurInstance {
 
       };
 
-      // Some output properties may not have value.
+      // Set meta if exists.
       if (meta)
         output.metadata = meta;
+
+      // Set callback if exists.
       if (fn)
         output.callback = fn;
-      if (err)
-        output.error = err;
 
       // Call the Transort's action passing
       // the ordered args and the original args.
       const clone = u.clone<ILogurOutput>(output);
+
       transport.action(clone, (ordered, modified) => {
 
         // User may have mutated the output
@@ -333,6 +329,9 @@ export class LogurInstance extends Notify implements ILogurInstance {
         // const loggedClone = ordered.slice(0);
         // loggedClone.unshift('logged');
         this.emit.call(this, 'logged', ordered, modified);
+
+        if (fn)
+          fn(ordered, modified);
 
       });
 
@@ -424,15 +423,8 @@ export class LogurInstance extends Notify implements ILogurInstance {
    * Log
    * Gets the internal logger.
    */
-  private get log() {
+  private get log(): ILogurInstance & ILevelMethods {
     return this._logur.log;
-  }
-
-  private common() {
-    return {
-      args: [].slice.call(arguments),
-
-    };
   }
 
   /**
@@ -507,22 +499,21 @@ export class LogurInstance extends Notify implements ILogurInstance {
       if (!Transport)
         throw new Error(`Cannot create Transport ${name} using Type of undefined.`);
 
-      // Merging base/global options.
-      const merged = u.extend<ILogurTransportOptions>({}, this.options, options);
+      const transport = new Transport(this.options, options, this._logur);
 
       // If transport handles exception add
       // to list of transport exceptions.
-      if (merged.exceptions)
+      if (transport.options.exceptions)
         this._exceptions.push(name);
+
+      // Add the transport to local collection.
+      this._transports.push(name);
 
       // If Transport create and save instance.
       this._logur.transports[name] = {
         Transport: Transport,
-        instance: new Transport(merged, this._logur)
+        instance: transport
       };
-
-      // Add the transport to local collection.
-      this._transports.push(name);
 
       return methods;
 

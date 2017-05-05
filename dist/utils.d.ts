@@ -1,4 +1,4 @@
-import { ITimestamps, IMetadata, Constructor, PadStrategy } from './interfaces';
+import { ITimestamps, Constructor, PadStrategy, IParsedPath } from './interfaces';
 /**
  * Noop
  */
@@ -63,6 +63,19 @@ export declare function isObject(obj: any): boolean;
  */
 export declare function isError(obj: any): boolean;
 /**
+ * Is Reg Expression
+ * Tests if object is regular expression.
+ */
+export declare function isRegExp(obj: any): boolean;
+/**
+ * Is Date
+ * Parses value inspecting if is Date.
+ *
+ * @param obj the value to inspect/test if is Date.
+ * @param parse when True parsing is allowed to parse/check if string is Date.
+ */
+export declare function isDate(obj: any, parse?: boolean): boolean;
+/**
  * Is Undefined
  * Tests if value is undefined.
  *
@@ -89,15 +102,6 @@ export declare function isNumber(obj: any): boolean;
  * @param Type the instance type to match.
  */
 export declare function isInstance(obj: any, Type: any): boolean;
-/**
- * Duplicates
- * Counts the number of duplicates in an array.
- *
- * @param arr the array to check for duplicates.
- * @param value the value to match.
- * @param breakable when true allows breaking at first duplicate.
- */
-export declare function duplicates(arr: any[], value: any, breakable?: boolean): number;
 /**
  * Is Unique
  * Tests if the value is unique in the collection.
@@ -131,6 +135,15 @@ export declare function isDebug(debugging?: boolean): boolean;
  * @param loose when true == is used instead of ===.
  */
 export declare function isEqual(value: any, compare: any, loose?: boolean): boolean;
+/**
+ * Duplicates
+ * Counts the number of duplicates in an array.
+ *
+ * @param arr the array to check for duplicates.
+ * @param value the value to match.
+ * @param breakable when true allows breaking at first duplicate.
+ */
+export declare function duplicates(arr: any[], value: any, breakable?: boolean): number;
 /**
  * Contains
  * Tests if array contains value.
@@ -179,14 +192,14 @@ export declare function extend<T>(obj: any, ...args: any[]): T;
 export declare function flatten(args: any[]): any[];
 /**
  * Clone
- * Please use caution this is meant to
- * clone simple objects. It fits the
- * need. Use _.clone from lodash for
- * complete solution.
+ * Performs deep cloning of objects, arrays
+ * numbers, strings, maps, promises etc..
  *
  * @param obj object to be cloned.
+ * @param circular whether or not to clone circular set false if certain no circular refs.
+ * @param depth the depth to clone defaults to infinity.
  */
-export declare function clone<T>(obj: any): T;
+export declare function clone<T>(obj: any, circular?: boolean, depth?: number): T;
 /**
  * First
  * Simple method to get first element just
@@ -302,6 +315,13 @@ export declare function getType(obj: any, stringToDate?: boolean | string, unkno
  */
 export declare function tryParseDate(str: string): string | number;
 /**
+ * Parse Path
+ * Universal method to parse a file path or url.
+ *
+ * @param path the file path or url to parse.
+ */
+export declare function parsePath(path: string): IParsedPath;
+/**
  * Timestamp
  * Generates multiple timestamp formats.
  */
@@ -361,42 +381,15 @@ export declare function activate<T>(Type: Constructor<T>, ...args: any[]): T;
  *
  * @see https://github.com/chalk/chalk
  *
- * @param str the string or metadata to be colorized.
+ * @param obj the value to be colorized.
  * @param color the color to apply, modifiers, shorthand.
  * @param modifiers the optional modifier or modifiers.
  */
-export declare function colorize(str: any, color?: string | string[], modifiers?: string | string[]): any;
+export declare function colorize(obj: any, color?: string | string[], modifiers?: string | string[]): any;
 /**
- * Colorize Array
- * Iterates and array and colorizes each
- * element by its data type.
+ * Strip Colors
+ * Strips ansi colors from string, object, arrays etc.
  *
- * @param arr the array to interate and colorize.
- * @param map an optional map of type to colors such as util.inspect.styles.
+ * @param str the object to strip color from.
  */
-export declare function colorizeArray(arr: any[], map?: IMetadata): any[];
-/**
- * Colorize Metadata
- * This will iterate an object converting to strings
- * colorizing values for displaying in console.
- *
- * @param obj the object to be colorized
- * @param map the color map that maps type to a color or boolean for pretty.
- * @param pretty when true outputs using returns and tabs.
- */
-export declare function colorizeObject(obj: IMetadata, map?: IMetadata | boolean, pretty?: boolean): any;
-/**
- * Colorize By Type
- * Inspects the type then colorizes.
- *
- * @param obj the object to inspect for colorization.
- * @param map an optional map to map types to colors.
- */
-export declare function colorizeByType(obj: any, map?: IMetadata): any;
-/**
- * Strip Color
- * Strips ansi colors from strings.
- *
- * @param str a string or array of strings to strip color from.
- */
-export declare function stripColors(str: any): any;
+export declare function stripColors(obj: any): any;

@@ -113,9 +113,14 @@ export function system(): IOS {
  * @param offset a number of frames to trim from begining or callback.
  * @param done the callback to call when done.
  */
-export function stacktrace(err: Error = undefined, offset: number): IStacktrace[] | void {
+export function stacktrace(err: Error | number, offset?: number): IStacktrace[] | void {
 
   let mapped = [];
+
+  if (u.isNumber(err)) {
+    offset = <number>err;
+    err = undefined;
+  }
 
   // Stack trace in NodeJS.
   if (u.isNode()) {
@@ -123,9 +128,11 @@ export function stacktrace(err: Error = undefined, offset: number): IStacktrace[
     let trace = err ? stackTrace.parse(err) : stackTrace.get();
 
     mapped = trace.map((site) => {
+      const filename = site.getFileName();
       return {
         type: site.getTypeName(),
-        path: site.getFileName(),
+        path: filename,
+        file: filename,               // user may expect "file".
         line: site.getLineNumber(),
         column: site.getColumnNumber(),
         function: site.getFunctionName(),
@@ -150,9 +157,10 @@ export function stacktrace(err: Error = undefined, offset: number): IStacktrace[
 
     err = err || generateError();
 
-    mapped = parseError(err).map((f) => {
+    mapped = parseError(<Error>err).map((f) => {
       return {
         path: f.fileName,
+        url: f.fileName,        // user may expect "url"
         line: f.lineNumber,
         column: f.columnNumber,
         function: f.functionName,

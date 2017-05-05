@@ -1,13 +1,14 @@
-import { ILogurTransport, ILogur, IConsoleTransportOptions, IConsoleTransport, ILogurOutput, ILevel, IMetadata, TransportActionCallback } from '../interfaces';
+import { ILogurTransport, ILogur, IConsoleTransportOptions, IConsoleTransport, ILogurOutput, TransportActionCallback, ILogurInstanceOptions } from '../interfaces';
 import { LogurTransport } from './base';
 import * as u from '../utils';
 
 const defaults: IConsoleTransportOptions = {
 
+  map: ['level', 'message', 'untyped', 'metadata'],
   padding: 'right',
-  pretty: true,
+  pretty: false,
   colorize: true,
-  ministack: true,
+  ministack: false,
   fullstack: false
 
 };
@@ -16,8 +17,15 @@ export class ConsoleTransport extends LogurTransport implements IConsoleTranspor
 
   options: IConsoleTransportOptions;
 
-  constructor(options: IConsoleTransportOptions, logur: ILogur) {
-    super(u.extend({}, defaults, options), logur);
+  /**
+    * Console Transport Constructor
+    *
+    * @param base the base options/defaults instantiated by Logur Instance.
+    * @param options the Logur Transport options.
+    * @param logur the common Logur instance.
+    */
+  constructor(base: ILogurInstanceOptions, options: IConsoleTransportOptions, logur: ILogur) {
+    super(base, u.extend({}, defaults, options), logur);
   }
 
   /**
@@ -29,27 +37,11 @@ export class ConsoleTransport extends LogurTransport implements IConsoleTranspor
    */
   action(output: ILogurOutput, done: TransportActionCallback): void {
 
-    // Get list of levels we'll use this for padding.
-    const levels = u.keys(this.options.levels);
-
-    // Get the level's config object.
-    const levelObj: ILevel = this.options.levels[output.level];
-
     // If the log level matches a console type use it.
     const _console = console[output.level] ? console[output.level] : console.log;
 
-    // Flag if we should colorize.
-    const colorize = this.options.colorize ? 'yes' : 'no';
-
     // Get colorized ordered array.
-    let ordered = this.toArray(output, 'yes');
-
-    // Get the index of the level in map, we do
-    // this
-    const idx = this.options.map.indexOf('level');
-
-    if (this.options.colorize && idx > -1)
-      ordered[idx] = this.colorize(output.level, levelObj.color);
+    let ordered = this.toOutput(this.options, output);
 
     // If console method matches level
     // name use it for good measure.

@@ -29,7 +29,7 @@ export declare function system(): IOS;
  * @param offset a number of frames to trim from begining or callback.
  * @param done the callback to call when done.
  */
-export declare function stacktrace(err: Error, offset: number): IStacktrace[] | void;
+export declare function stacktrace(err: Error | number, offset?: number): IStacktrace[] | void;
 /**
  * Browser
  * Returns browser environment information.

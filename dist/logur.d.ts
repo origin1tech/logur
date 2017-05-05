@@ -1,10 +1,14 @@
 import { ILogur, ILogurInstanceOptions, ILogurInstance, ILogurOptions, ILogurInstances, ILogurTransports, ILevelMethodsBase, ILevelMethods } from './interfaces';
-declare class Logur implements ILogur {
-    static instance: ILogur;
+export declare class Logur implements ILogur {
+    static instance: Logur;
     instances: ILogurInstances;
     transports: ILogurTransports;
     log: ILogurInstance & ILevelMethods;
     options: ILogurOptions;
+    /**
+     * Constructs Logur
+     * @param options the Logur options.
+     */
     constructor(options?: ILogurOptions);
     /**
      * Set Option
@@ -39,6 +43,13 @@ declare class Logur implements ILogur {
     remove(name: string): void;
 }
 /**
+ * Init
+ * Initializes Logur.
+ *
+ * @param options Logur options to initialize with.
+ */
+declare function init(options?: ILogurOptions): ILogur;
+/**
  * Get Instance
  * Gets an existing Logur Instance by name.
  *
@@ -48,7 +59,6 @@ declare function get<T extends ILevelMethodsBase>(name: string): ILogurInstance 
 /**
  * Get
  * Gets the default Logur Instance.
- *
  */
 declare function getDefault(): ILogurInstance & ILevelMethods;
-export { Logur, get, getDefault };
+export { init, get, getDefault };

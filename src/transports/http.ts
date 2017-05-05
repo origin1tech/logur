@@ -1,4 +1,4 @@
-import { ILogurTransport, ILogur, IHttpTransportOptions, IHttpTransport, ILogurOutput, TransportActionCallback } from '../interfaces';
+import { ILogurTransport, ILogur, IHttpTransportOptions, IHttpTransport, ILogurOutput, TransportActionCallback, ILogurInstanceOptions } from '../interfaces';
 import { LogurTransport } from './base';
 import * as u from '../utils';
 
@@ -8,8 +8,15 @@ export class HttpTransport extends LogurTransport implements IHttpTransport {
 
   options: IHttpTransportOptions;
 
-  constructor(options: IHttpTransportOptions, logur: ILogur) {
-    super(options, logur);
+  /**
+   * Http Transport Constructor
+   *
+   * @param base the base options/defaults instantiated by Logur Instance.
+   * @param options the Transport options.
+   * @param logur the common Logur instance.
+   */
+  constructor(base: ILogurInstanceOptions, options: IHttpTransportOptions, logur: ILogur) {
+    super(base, u.extend({}, defaults, options), logur);
   }
 
   /**

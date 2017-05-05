@@ -10,16 +10,17 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+var interfaces_1 = require("./interfaces");
 var notify_1 = require("./notify");
 var env = require("./env");
 var u = require("./utils");
 var sprintf = require("sprintf-js");
 var ua_parser_js_1 = require("ua-parser-js");
 var defaults = {
-    level: 2,
+    level: 5,
     active: true,
     cascade: true,
-    sync: false,
+    strategy: 'array',
     levels: {
         error: { level: 0, color: 'red' },
         warn: { level: 1, color: 'yellow' },
@@ -27,9 +28,10 @@ var defaults = {
         verbose: { level: 3, color: 'green' },
         debug: { level: 4, color: 'magenta' },
     },
-    map: ['level', 'timestamp', 'message', 'untyped', 'metadata'],
     timestamp: 'utc',
-    transports: []
+    uuid: undefined,
+    transports: [],
+    colorTypeMap: interfaces_1.COLOR_TYPE_MAP
 };
 var profileDefaults = {
     transports: [],
@@ -127,16 +129,29 @@ var LogurInstance = (function (_super) {
         // Get all Transports for the Instance.
         transports = this._transports;
         var msg = untyped[0];
-        var fn, meta, stack;
+        var fn, meta, stack, err;
+        /* Check if msg is error
+        ****************************************/
+        if (u.isError(msg)) {
+            untyped.shift();
+            err = msg;
+        }
+        // Check if we should offset stacktrace frames.
+        // const shouldOffset = u.isNode() && !err ? true : false;
+        // Offsets the returned frames to trim out
+        // some bloat from stack when generating frames.
+        // const offset = shouldOffset ? 3 : 0;
+        // Get the stacktrace for calling log method.
+        stack = env.stacktrace(3);
         /* Check Last is Callback
         ****************************************/
         if (u.isFunction(u.last(untyped)))
             fn = untyped.pop();
         /* Check Last is Metadata
         ****************************************/
-        if (u.isObject(u.last(untyped)))
+        if (u.isObject(u.last(untyped)) && !u.isError(u.last(untyped)))
             meta = untyped.pop();
-        /* Normalize Arguments
+        /* Normalize Message Arguments
         **************************************/
         // If string inspect/format.
         if (u.isString(msg)) {
@@ -167,24 +182,6 @@ var LogurInstance = (function (_super) {
             sysinfo = env.node();
         else
             sysinfo = this.env.browser;
-        /* Handle Error, Offset & Stacktrace
-        *****************************************/
-        // Get the stack info then iterate transports.
-        // ignore getting stack for manually created
-        // stack.
-        var err = u.isError(msg) ? msg : undefined;
-        // If an error was passed then set the message
-        // to the error's message.
-        if (err) {
-            msg = err.message || 'Unknown error.';
-        }
-        // Check if we should offset stacktrace frames.
-        var shouldOffset = u.isNode() && !err ? true : false;
-        // Offsets the returned frames to trim out
-        // some bloat from stack when generating frames.
-        var offset = shouldOffset ? 3 : 0;
-        // Get the stacktrace for error or generated stack.
-        stack = env.stacktrace(err, offset);
         /* Iterate Transports
         *****************************************/
         var run = function (t) {
@@ -195,7 +192,7 @@ var LogurInstance = (function (_super) {
                 return;
             // Return if the level is greater
             // that the transport's level.
-            if (!debugOverride && level > transport.options.level)
+            if (!debugOverride && level > _this.options.level)
                 return;
             /* Timestamp or User Defined Timestamp
             *****************************************/
@@ -204,12 +201,12 @@ var LogurInstance = (function (_super) {
             var ts;
             // If is function call to get timestamp
             // and format from user.
-            if (u.isFunction(transport.options.timestamp)) {
-                var func = transport.options.timestamp;
+            if (u.isFunction(_this.options.timestamp)) {
+                var func = _this.options.timestamp;
                 ts = func(timestamps);
             }
             else {
-                ts = timestamps[transport.options.timestamp];
+                ts = timestamps[_this.options.timestamp];
             }
             // Construct object with all possible
             // properties, we'll use this in our
@@ -217,13 +214,13 @@ var LogurInstance = (function (_super) {
             // to it's defined target.
             var output = {
                 // Level Info
-                activeid: transport.options.level,
+                activeid: _this.options.level,
                 levelid: level,
                 levels: _this.options.levels,
                 // Property Map
                 // Used to generate array
                 // of ordered properties.
-                map: _this.options.map,
+                map: transport.options.map,
                 // Primary Fields
                 timestamp: ts,
                 uuid: u.uuid(),
@@ -231,21 +228,19 @@ var LogurInstance = (function (_super) {
                 instance: _this._name,
                 transport: t,
                 message: msg,
-                untyped: untyped || [],
+                untyped: untyped,
                 args: params,
-                // StackTrace
-                // Generated or existing from error.
+                // Error & Stack
                 stacktrace: stack,
                 // Environment Info
                 env: sysinfo
             };
-            // Some output properties may not have value.
+            // Set meta if exists.
             if (meta)
                 output.metadata = meta;
+            // Set callback if exists.
             if (fn)
                 output.callback = fn;
-            if (err)
-                output.error = err;
             // Call the Transort's action passing
             // the ordered args and the original args.
             var clone = u.clone(output);
@@ -261,6 +256,8 @@ var LogurInstance = (function (_super) {
                 // const loggedClone = ordered.slice(0);
                 // loggedClone.unshift('logged');
                 _this.emit.call(_this, 'logged', ordered, modified);
+                if (fn)
+                    fn(ordered, modified);
             });
         };
         // We don't really care about order of transports
@@ -327,11 +324,6 @@ var LogurInstance = (function (_super) {
         enumerable: true,
         configurable: true
     });
-    LogurInstance.prototype.common = function () {
-        return {
-            args: [].slice.call(arguments),
-        };
-    };
     Object.defineProperty(LogurInstance.prototype, "transports", {
         /**
          * Transport
@@ -394,19 +386,18 @@ var LogurInstance = (function (_super) {
                 }
                 if (!Transport)
                     throw new Error("Cannot create Transport " + name + " using Type of undefined.");
-                // Merging base/global options.
-                var merged = u.extend({}, _this.options, options);
+                var transport = new Transport(_this.options, options, _this._logur);
                 // If transport handles exception add
                 // to list of transport exceptions.
-                if (merged.exceptions)
+                if (transport.options.exceptions)
                     _this._exceptions.push(name);
+                // Add the transport to local collection.
+                _this._transports.push(name);
                 // If Transport create and save instance.
                 _this._logur.transports[name] = {
                     Transport: Transport,
-                    instance: new Transport(merged, _this._logur)
+                    instance: transport
                 };
-                // Add the transport to local collection.
-                _this._transports.push(name);
                 return methods;
             };
             /**

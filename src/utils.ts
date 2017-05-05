@@ -1,12 +1,18 @@
-import { statSync } from 'fs';
-import { parse } from 'path';
-import { ITimestamps, IError, IMetadata, ILogur, Constructor, COLOR_TYPE_MAP, PadStrategy } from './interfaces';
 
-let chalk, util;
+import { ITimestamps, IError, IMetadata, ILogur, Constructor, COLOR_TYPE_MAP, PadStrategy, IParsedPath } from './interfaces';
+import * as _clone from 'lodash.clonedeep';
+
+let chalk, util, statSync, parse, EOL;
 
 if (!process.env.BROWSER) {
   chalk = require('chalk');
   util = require('util');
+  parse = require('path').parse;
+  statSync = require('fs').statSync;
+  EOL = require('os').EOL;
+}
+else {
+  EOL = '\n';
 }
 
 declare var v8debug;
@@ -124,14 +130,56 @@ export function isObject(obj: any): boolean {
  *
  * @param obj the value/object to be inspected.
  */
-export function isError(obj: any) {
+export function isError(obj: any): boolean {
   if (isUndefined(obj) || isNull(obj))
     return false;
-  const type = toString.call(obj);
+  const type = toString.call(obj).toLowerCase();
   // NOTE __exception__ is a custom property
   // used to denoted an object literall as
   // an error.
   return type === '[object error]' || type === '[object domexception]' || isBoolean(obj.__exception__);
+}
+
+/**
+ * Is Reg Expression
+ * Tests if object is regular expression.
+ */
+export function isRegExp(obj: any): boolean {
+  return (obj instanceof RegExp);
+}
+
+/**
+ * Is Date
+ * Parses value inspecting if is Date.
+ *
+ * @param obj the value to inspect/test if is Date.
+ * @param parse when True parsing is allowed to parse/check if string is Date.
+ */
+export function isDate(obj: any, parse?: boolean): boolean {
+
+  if (!parse)
+    return obj instanceof Date;
+
+  // If is string try to parse date.
+  if (isString(obj) && parse) {
+
+    // Ignore if only numbers string.
+    if (/^[0-9]+$/.test(obj))
+      return false;
+
+    if (!/[0-9]/g)
+      return false;
+
+    // Ignore if no date or time delims.
+    if (!/(\.|\/|-|:)/g.test(obj))
+      return false;
+
+    // Parse and ensure is number/epoch.
+    return isNumber(tryParseDate(obj));
+
+  }
+
+  return false;
 }
 
 /**
@@ -173,32 +221,6 @@ export function isNumber(obj: any): boolean {
  */
 export function isInstance(obj: any, Type: any): boolean {
   return obj instanceof Type;
-}
-
-/**
- * Duplicates
- * Counts the number of duplicates in an array.
- *
- * @param arr the array to check for duplicates.
- * @param value the value to match.
- * @param breakable when true allows breaking at first duplicate.
- */
-export function duplicates(arr: any[], value: any, breakable?: boolean): number {
-
-  let i = arr.length;
-  let dupes = 0;
-
-  while (i--) {
-    if (breakable && dupes > 1)
-      break;
-    if (isEqual(arr[i], value))
-      dupes += 1;
-  }
-
-  dupes -= 1;
-
-  return dupes < 0 ? 0 : dupes;
-
 }
 
 /**
@@ -276,6 +298,32 @@ export function isEqual(value: any, compare: any, loose?: boolean): boolean {
   if (!loose)
     return value === compare;
   return value == compare;
+}
+
+/**
+ * Duplicates
+ * Counts the number of duplicates in an array.
+ *
+ * @param arr the array to check for duplicates.
+ * @param value the value to match.
+ * @param breakable when true allows breaking at first duplicate.
+ */
+export function duplicates(arr: any[], value: any, breakable?: boolean): number {
+
+  let i = arr.length;
+  let dupes = 0;
+
+  while (i--) {
+    if (breakable && dupes > 1)
+      break;
+    if (isEqual(arr[i], value))
+      dupes += 1;
+  }
+
+  dupes -= 1;
+
+  return dupes < 0 ? 0 : dupes;
+
 }
 
 /**
@@ -404,33 +452,15 @@ export function flatten(args: any[]): any[] {
 
 /**
  * Clone
- * Please use caution this is meant to
- * clone simple objects. It fits the
- * need. Use _.clone from lodash for
- * complete solution.
+ * Performs deep cloning of objects, arrays
+ * numbers, strings, maps, promises etc..
  *
  * @param obj object to be cloned.
+ * @param circular whether or not to clone circular set false if certain no circular refs.
+ * @param depth the depth to clone defaults to infinity.
  */
-export function clone<T>(obj: any): T {
-
-  // Return if not object.
-  if (!isObject(obj))
-    return obj;
-
-  if (Object.create && obj.prototype)
-    return Object.create(obj.prototype);
-
-  // Clone via constructor.
-  let _clone = new obj.constructor();
-
-  // Iterate and add properties.
-  for (let key in obj) {
-    if (obj.hasOwnProperty(key)) {
-      _clone[key] = clone(obj[key]);
-    }
-  }
-
-  return _clone;
+export function clone<T>(obj: any, circular?: boolean, depth?: number): T {
+  return _clone(obj, circular, depth);
 }
 
 /**
@@ -784,28 +814,30 @@ export function getType(obj: any, stringToDate?: boolean | string, unknown?: str
     stringToDate = undefined;
   }
 
-  // USE CAUTION:
-  // This is a bit hacky just to
-  // check if a string can be parsed
-  // as a date for colorization
-  if (type === 'string' && stringToDate) {
-    const d = tryParseDate(obj);
-    if (isNumber(d))
+  if (type !== 'object' && type !== 'string')
+    return type;
+
+  else if (type === 'string' && stringToDate) {
+    if (isDate(obj, true))
       return 'date';
     return type;
   }
 
-  if (type !== 'object')
-    return type;
-
-  if (obj instanceof Date)
+  else if (isDate(obj))
     return 'date';
-  else if (obj instanceof RegExp)
+
+  else if (isRegExp(obj))
     return 'regexp';
+
   else if (isArray(obj))
     return 'array';
+
   else if (isPlainObject(obj))
     return 'object';
+
+  else if (isError(obj))
+    return 'error';
+
   else if (obj === null)
     return 'null';
 
@@ -822,8 +854,7 @@ export function getType(obj: any, stringToDate?: boolean | string, unknown?: str
 export function tryParseDate(str: string): string | number {
   try {
     const d = Date.parse(str);
-    const dStr = d.toString();
-    if (dStr !== 'Invalid Date' && !isNaN(d))
+    if ((d + '') !== 'Invalid Date' && !isNaN(d))
       return d;
     return str;
   } catch (ex) {
@@ -834,6 +865,34 @@ export function tryParseDate(str: string): string | number {
 ///////////////////////////////
 // LIBRARY UTILS
 ///////////////////////////////
+
+/**
+ * Parse Path
+ * Universal method to parse a file path or url.
+ *
+ * @param path the file path or url to parse.
+ */
+export function parsePath(path: string): IParsedPath {
+  if (parse) {
+    return parse(path);
+  }
+  else {
+    const exp = /\.[0-9a-z]{2,5}$/i;
+    const ext = exp.exec(path);
+    // Can't parse not a file.
+    if (!ext)
+      return <IParsedPath>{};
+    let idx = path.lastIndexOf('/');
+    idx = idx >= 0 ? idx += 1 : 0;
+    const basename = path.slice(idx);
+    const split = basename.split('.');
+    return {
+      base: basename,
+      ext: '.' + split[1],
+      name: split[0]
+    };
+  }
+}
 
 /**
  * Timestamp
@@ -982,6 +1041,7 @@ export function activate<T>(Type: Constructor<T>, ...args: any[]): T {
   return ctor;
 }
 
+
 ///////////////////////////////
 // COLORIZATION
 ///////////////////////////////
@@ -993,19 +1053,19 @@ export function activate<T>(Type: Constructor<T>, ...args: any[]): T {
  *
  * @see https://github.com/chalk/chalk
  *
- * @param str the string or metadata to be colorized.
+ * @param obj the value to be colorized.
  * @param color the color to apply, modifiers, shorthand.
  * @param modifiers the optional modifier or modifiers.
  */
-export function colorize(str: any, color?: string | string[], modifiers?: string | string[]): any {
+export function colorize(obj: any, color?: string | string[], modifiers?: string | string[]): any {
 
   // If not chalk can't colorize
   // as we are in browser.
   if (!chalk)
-    return str;
+    return obj;
 
   if (!color && !modifiers)
-    return str;
+    return obj;
 
   if (isArray(color)) {
     modifiers = <string[]>color;
@@ -1037,229 +1097,56 @@ export function colorize(str: any, color?: string | string[], modifiers?: string
 
   while (i--) {
     const style = styles[i];
-    str = chalk[style](str);
+    obj = chalk[style](obj);
   }
 
-  return str;
+  return obj;
 
 }
 
 /**
- * Colorize Array
- * Iterates and array and colorizes each
- * element by its data type.
+ * Strip Colors
+ * Strips ansi colors from string, object, arrays etc.
  *
- * @param arr the array to interate and colorize.
- * @param map an optional map of type to colors such as util.inspect.styles.
+ * @param str the object to strip color from.
  */
-export function colorizeArray(arr: any[], map?: IMetadata): any[] {
-
-  // Default color map, mimics Node's
-  // util.inspect
-  let stylesMap = COLOR_TYPE_MAP;
-
-  map = map || stylesMap;
-
-  // Iterate the array and colorize by type.
-  return arr.map((item) => {
-
-    let type = getType(item, true);
-
-    // If is object colorize with metadata method.
-    if (isPlainObject(item)) {
-      return colorizeObject(item, map);
-    }
-    else {
-
-      if (!map[type])
-        return item;
-
-      return colorize(item, map[type]);
-
-    }
-
-  });
-
-}
-
-/**
- * Colorize Metadata
- * This will iterate an object converting to strings
- * colorizing values for displaying in console.
- *
- * @param obj the object to be colorized
- * @param map the color map that maps type to a color or boolean for pretty.
- * @param pretty when true outputs using returns and tabs.
- */
-export function colorizeObject(obj: IMetadata, map?: IMetadata | boolean, pretty?: boolean): any {
-
-  if (isBoolean(map)) {
-    pretty = <boolean>map;
-    map = undefined;
-  }
-
-  // Default color map, mimics Node's
-  // util.inspect
-  let stylesMap = COLOR_TYPE_MAP;
-
-  map = map || stylesMap;
-
-  let result = '';
-
-  // Adds color mapped from type.
-  function addColor(type, val) {
-    if (isString(val))
-      val = "'" + val + "'";
-    if (!map[type])
-      return val;
-    return colorize(val, map[type]);
-  }
-
-  // Iterate the metadata.
-  function colorizer(o, depth?) {
-
-    const len = keys(o).length;
-    let ctr = 0;
-    depth = depth || 1;
-
-    let base = 2;
-    let pad = depth * base;
-
-    for (let prop in o) {
-
-      ctr += 1;
-      const sep = ctr < len ? ', ' : '';
-
-      if (o.hasOwnProperty(prop)) {
-
-        const val = o[prop];
-
-        if (isPlainObject(val)) {
-
-          // result += '\n    { ';
-
-          result += ('\n' + padLeft('', pad * 2) + '{ ');
-
-          colorizer(val, depth + 1);
-
-          result += ' }';
-
-        }
-
-        else {
-
-          if (pretty) {
-            const offset = ctr > 1 && depth > 1 ? 2 : 0;
-            if (ctr > 1) {
-              result += ('\n' + padLeft('', pad, offset));
-            }
-          }
-
-          // Iterate array and colorize
-          // by type.
-          if (isArray(val)) {
-
-            const arrLen = val.length;
-
-            result += `${prop}: [ `;
-
-            val.forEach((v, i) => {
-
-              const arrSep = i + 1 < arrLen ? ', ' : '';
-
-              // Get the type to match in color map.
-              const type = getType(v, 'special');
-
-              result += (`${addColor(type, v)}${arrSep}`);
-
-              // Add color.
-              // o[prop][i] = addColor(type, v);
-
-            });
-
-            result += ' ]';
-
-          }
-
-          // Colorize value.
-          else {
-
-            // Get the type to match in color map.
-            const type = getType(val, true, 'special');
-
-            result += (`${prop}: ${addColor(type, val)}${sep}`);
-            // o[prop] = addColor(type, val);
-
-          }
-
-        }
-
-      }
-
-    }
-
-    return o;
-
-  }
-
-  colorizer(obj);
-
-  return `{ ${result} }`;
-
-}
-
-/**
- * Colorize By Type
- * Inspects the type then colorizes.
- *
- * @param obj the object to inspect for colorization.
- * @param map an optional map to map types to colors.
- */
-export function colorizeByType(obj: any, map?: IMetadata): any {
-
-  // Default color map, mimics Node's
-  // util.inspect
-  let stylesMap = COLOR_TYPE_MAP;
-
-  map = map || stylesMap;
-
-  const type = getType(obj);
-
-  if (type === 'array') {
-    return colorizeArray(obj, map);
-  }
-  else if (type === 'object') {
-    return colorizeObject(obj, map);
-  }
-  else {
-    if (!map[type])
-      return obj;
-    return colorize(obj, map[type]);
-  }
-
-}
-
-/**
- * Strip Color
- * Strips ansi colors from strings.
- *
- * @param str a string or array of strings to strip color from.
- */
-export function stripColors(str: any): any {
+export function stripColors(obj: any): any {
 
   const exp = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
 
-  if (!isArray(str) && isString(str))
-    return str.replace(exp, '');
+  if (isString(obj))
+    return obj.replace(exp, '');
 
-  let arr = str;
-  let i = arr.length;
+  // Strip object.
+  if (isPlainObject(obj)) {
 
-  while (i--)
-    if (isString(arr[i]))
-      arr[i] = arr[i].replace(exp, '');
+    for (let prop in obj) {
+      const val = obj[prop];
+      if (isString(val))
+        obj[prop] = val.replace(exp, '');
+      else
+        obj[prop] = stripColors(val);
+    }
 
-  return arr;
+  }
+  else {
+
+    let arr = obj;
+    let i = arr.length;
+
+    while (i--)
+
+      // If string replace
+      if (isString(arr[i]))
+        arr[i] = arr[i].replace(exp, '');
+
+      // Otherwise call stripColors again.
+      else
+        arr[i] = stripColors(arr[i]);
+
+    return arr;
+
+  }
 
 }
 

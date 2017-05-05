@@ -40,7 +40,6 @@ export declare class LogurInstance extends Notify implements ILogurInstance {
      * Gets the internal logger.
      */
     private readonly log;
-    private common();
     /**
      * Transport
      * Exposes methods for adding, removing and getting transports.

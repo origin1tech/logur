@@ -3,7 +3,14 @@ import { LogurTransport } from './base';
 export declare class MemoryTransport extends LogurTransport implements IMemoryTransport {
     logs: any[];
     options: IMemoryTransportOptions;
-    constructor(options: IMemoryTransportOptions, logur: ILogur);
+    /**
+     * Memory Transport Constructor
+     *
+     * @param base the base options/defaults instantiated by Logur Instance.
+     * @param options the Transport options.
+     * @param logur the common Logur instance.
+     */
+    constructor(base: any, ILogurInstanceOptions: any, options: IMemoryTransportOptions, logur: ILogur);
     /**
      * Action
      * The transport action to be called when messages are logged.

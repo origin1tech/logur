@@ -11,11 +11,19 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var base_1 = require("./base");
+var u = require("../utils");
 var defaults = {};
 var HttpTransport = (function (_super) {
     __extends(HttpTransport, _super);
-    function HttpTransport(options, logur) {
-        return _super.call(this, options, logur) || this;
+    /**
+     * Http Transport Constructor
+     *
+     * @param base the base options/defaults instantiated by Logur Instance.
+     * @param options the Transport options.
+     * @param logur the common Logur instance.
+     */
+    function HttpTransport(base, options, logur) {
+        return _super.call(this, base, u.extend({}, defaults, options), logur) || this;
     }
     /**
      * Action

@@ -11,11 +11,26 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var base_1 = require("./base");
-var defaults = {};
+var u = require("../utils");
+var streamroller_1 = require("streamroller");
+var defaults = {
+    filename: './logs/app.log',
+    max: '100000',
+    json: true
+};
 var FileTransport = (function (_super) {
     __extends(FileTransport, _super);
-    function FileTransport(options, logur) {
-        return _super.call(this, options, logur) || this;
+    /**
+     * File Transport Constructor
+     *
+     * @param base the base options/defaults instantiated by Logur Instance.
+     * @param options the Transport options.
+     * @param logur the common Logur instance.
+     */
+    function FileTransport(base, options, logur) {
+        var _this = _super.call(this, base, u.extend({}, defaults, options), logur) || this;
+        _this.streamroller = new streamroller_1.RollingFileStream(_this.options.filename, _this.options.max, _this.options.backups);
+        return _this;
     }
     /**
      * Action
@@ -25,7 +40,9 @@ var FileTransport = (function (_super) {
      * @param done an callback on Transport done.
      */
     FileTransport.prototype.action = function (output, done) {
-        done(this.toArray(output));
+        // Get colorized ordered array.
+        var ordered = this.toOutput(this.options, output);
+        done(ordered);
     };
     /**
      * Query

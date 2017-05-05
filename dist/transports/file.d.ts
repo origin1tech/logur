@@ -1,8 +1,17 @@
-import { ILogur, IFileTransportOptions, IFileTransport, TransportActionCallback, ILogurOutput } from '../interfaces';
+/// <reference types="node" />
+import { ILogur, IFileTransportOptions, IFileTransport, TransportActionCallback, ILogurOutput, ILogurInstanceOptions } from '../interfaces';
 import { LogurTransport } from './base';
 export declare class FileTransport extends LogurTransport implements IFileTransport {
+    streamroller: NodeJS.WritableStream;
     options: IFileTransportOptions;
-    constructor(options: IFileTransportOptions, logur: ILogur);
+    /**
+     * File Transport Constructor
+     *
+     * @param base the base options/defaults instantiated by Logur Instance.
+     * @param options the Transport options.
+     * @param logur the common Logur instance.
+     */
+    constructor(base: ILogurInstanceOptions, options: IFileTransportOptions, logur: ILogur);
     /**
      * Action
      * The transport action to be called when messages are logged.

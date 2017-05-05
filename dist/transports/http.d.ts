@@ -1,8 +1,15 @@
-import { ILogur, IHttpTransportOptions, IHttpTransport, ILogurOutput, TransportActionCallback } from '../interfaces';
+import { ILogur, IHttpTransportOptions, IHttpTransport, ILogurOutput, TransportActionCallback, ILogurInstanceOptions } from '../interfaces';
 import { LogurTransport } from './base';
 export declare class HttpTransport extends LogurTransport implements IHttpTransport {
     options: IHttpTransportOptions;
-    constructor(options: IHttpTransportOptions, logur: ILogur);
+    /**
+     * Http Transport Constructor
+     *
+     * @param base the base options/defaults instantiated by Logur Instance.
+     * @param options the Transport options.
+     * @param logur the common Logur instance.
+     */
+    constructor(base: ILogurInstanceOptions, options: IHttpTransportOptions, logur: ILogur);
     /**
      * Action
      * The transport action to be called when messages are logged.

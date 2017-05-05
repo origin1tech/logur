@@ -13,16 +13,24 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var base_1 = require("./base");
 var u = require("../utils");
 var defaults = {
+    map: ['level', 'message', 'untyped', 'metadata'],
     padding: 'right',
-    pretty: true,
+    pretty: false,
     colorize: true,
-    ministack: true,
+    ministack: false,
     fullstack: false
 };
 var ConsoleTransport = (function (_super) {
     __extends(ConsoleTransport, _super);
-    function ConsoleTransport(options, logur) {
-        return _super.call(this, u.extend({}, defaults, options), logur) || this;
+    /**
+      * Console Transport Constructor
+      *
+      * @param base the base options/defaults instantiated by Logur Instance.
+      * @param options the Logur Transport options.
+      * @param logur the common Logur instance.
+      */
+    function ConsoleTransport(base, options, logur) {
+        return _super.call(this, base, u.extend({}, defaults, options), logur) || this;
     }
     /**
      * Action
@@ -32,21 +40,10 @@ var ConsoleTransport = (function (_super) {
      * @param done an optional callback on Transport done.
      */
     ConsoleTransport.prototype.action = function (output, done) {
-        // Get list of levels we'll use this for padding.
-        var levels = u.keys(this.options.levels);
-        // Get the level's config object.
-        var levelObj = this.options.levels[output.level];
         // If the log level matches a console type use it.
         var _console = console[output.level] ? console[output.level] : console.log;
-        // Flag if we should colorize.
-        var colorize = this.options.colorize ? 'yes' : 'no';
         // Get colorized ordered array.
-        var ordered = this.toArray(output, 'yes');
-        // Get the index of the level in map, we do
-        // this
-        var idx = this.options.map.indexOf('level');
-        if (this.options.colorize && idx > -1)
-            ordered[idx] = this.colorize(output.level, levelObj.color);
+        var ordered = this.toOutput(this.options, output);
         // If console method matches level
         // name use it for good measure.
         // Really only makes difference in Browser.

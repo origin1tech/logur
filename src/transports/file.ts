@@ -1,15 +1,29 @@
-import { ILogurTransport, ILogur, IFileTransportOptions, IFileTransport, TransportActionCallback, ILogurOutput } from '../interfaces';
+import { ILogurTransport, ILogur, IFileTransportOptions, IFileTransport, TransportActionCallback, ILogurOutput, ILogurInstanceOptions } from '../interfaces';
 import { LogurTransport } from './base';
 import * as u from '../utils';
+import { RollingFileStream } from 'streamroller';
 
-const defaults = {};
+const defaults = {
+  filename: './logs/app.log',
+  max: '100000',
+  json: true
+};
 
 export class FileTransport extends LogurTransport implements IFileTransport {
 
+  streamroller: NodeJS.WritableStream;
   options: IFileTransportOptions;
 
-  constructor(options: IFileTransportOptions, logur: ILogur) {
-    super(options, logur);
+  /**
+   * File Transport Constructor
+   *
+   * @param base the base options/defaults instantiated by Logur Instance.
+   * @param options the Transport options.
+   * @param logur the common Logur instance.
+   */
+  constructor(base: ILogurInstanceOptions, options: IFileTransportOptions, logur: ILogur) {
+    super(base, u.extend({}, defaults, options), logur);
+    this.streamroller = new RollingFileStream(this.options.filename, this.options.max, this.options.backups);
   }
 
   /**
@@ -20,7 +34,12 @@ export class FileTransport extends LogurTransport implements IFileTransport {
    * @param done an callback on Transport done.
    */
   action(output: ILogurOutput, done: TransportActionCallback) {
-    done(this.toArray(output));
+
+    // Get colorized ordered array.
+    let ordered = this.toOutput(this.options, output);
+
+    done(ordered);
+
   }
 
   /**

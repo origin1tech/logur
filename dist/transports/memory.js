@@ -11,15 +11,25 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var base_1 = require("./base");
+var u = require("../utils");
 var defaults = {
-    padding: 'right',
     pretty: true,
-    colorized: true
+    colorize: true,
+    max: 100
 };
 var MemoryTransport = (function (_super) {
     __extends(MemoryTransport, _super);
-    function MemoryTransport(options, logur) {
-        return _super.call(this, options, logur) || this;
+    /**
+     * Memory Transport Constructor
+     *
+     * @param base the base options/defaults instantiated by Logur Instance.
+     * @param options the Transport options.
+     * @param logur the common Logur instance.
+     */
+    function MemoryTransport(base, ILogurInstanceOptions, options, logur) {
+        var _this = _super.call(this, base, u.extend({}, defaults, options), logur) || this;
+        _this.logs = [];
+        return _this;
     }
     /**
      * Action
@@ -29,7 +39,11 @@ var MemoryTransport = (function (_super) {
      * @param done an callback on Transport done.
      */
     MemoryTransport.prototype.action = function (output, done) {
-        var ordered = this.toArray(output);
+        // Get colorized ordered array.
+        var ordered = this.toOutput(this.options, output);
+        // Add ordered to the collection.
+        if (this.options.max < this.logs.length)
+            this.logs.push(ordered);
         done(ordered);
     };
     /**

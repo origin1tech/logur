@@ -103,15 +103,20 @@ exports.system = system;
  * @param done the callback to call when done.
  */
 function stacktrace(err, offset) {
-    if (err === void 0) { err = undefined; }
     var mapped = [];
+    if (u.isNumber(err)) {
+        offset = err;
+        err = undefined;
+    }
     // Stack trace in NodeJS.
     if (u.isNode()) {
         var trace = err ? stackTrace.parse(err) : stackTrace.get();
         mapped = trace.map(function (site) {
+            var filename = site.getFileName();
             return {
                 type: site.getTypeName(),
-                path: site.getFileName(),
+                path: filename,
+                file: filename,
                 line: site.getLineNumber(),
                 column: site.getColumnNumber(),
                 function: site.getFunctionName(),
@@ -131,6 +136,7 @@ function stacktrace(err, offset) {
         mapped = error_stack_parser_1.parse(err).map(function (f) {
             return {
                 path: f.fileName,
+                url: f.fileName,
                 line: f.lineNumber,
                 column: f.columnNumber,
                 function: f.functionName,

@@ -1,11 +1,16 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-var fs_1 = require("fs");
-var interfaces_1 = require("./interfaces");
-var chalk, util;
+var _clone = require("lodash.clonedeep");
+var chalk, util, statSync, parse, EOL;
 if (!process.env.BROWSER) {
     chalk = require('chalk');
     util = require('util');
+    parse = require('path').parse;
+    statSync = require('fs').statSync;
+    EOL = require('os').EOL;
+}
+else {
+    EOL = '\n';
 }
 ///////////////////////////////
 // COMMON UTILS
@@ -116,13 +121,47 @@ exports.isObject = isObject;
 function isError(obj) {
     if (isUndefined(obj) || isNull(obj))
         return false;
-    var type = toString.call(obj);
+    var type = toString.call(obj).toLowerCase();
     // NOTE __exception__ is a custom property
     // used to denoted an object literall as
     // an error.
     return type === '[object error]' || type === '[object domexception]' || isBoolean(obj.__exception__);
 }
 exports.isError = isError;
+/**
+ * Is Reg Expression
+ * Tests if object is regular expression.
+ */
+function isRegExp(obj) {
+    return (obj instanceof RegExp);
+}
+exports.isRegExp = isRegExp;
+/**
+ * Is Date
+ * Parses value inspecting if is Date.
+ *
+ * @param obj the value to inspect/test if is Date.
+ * @param parse when True parsing is allowed to parse/check if string is Date.
+ */
+function isDate(obj, parse) {
+    if (!parse)
+        return obj instanceof Date;
+    // If is string try to parse date.
+    if (isString(obj) && parse) {
+        // Ignore if only numbers string.
+        if (/^[0-9]+$/.test(obj))
+            return false;
+        if (!/[0-9]/g)
+            return false;
+        // Ignore if no date or time delims.
+        if (!/(\.|\/|-|:)/g.test(obj))
+            return false;
+        // Parse and ensure is number/epoch.
+        return isNumber(tryParseDate(obj));
+    }
+    return false;
+}
+exports.isDate = isDate;
 /**
  * Is Undefined
  * Tests if value is undefined.
@@ -164,27 +203,6 @@ function isInstance(obj, Type) {
     return obj instanceof Type;
 }
 exports.isInstance = isInstance;
-/**
- * Duplicates
- * Counts the number of duplicates in an array.
- *
- * @param arr the array to check for duplicates.
- * @param value the value to match.
- * @param breakable when true allows breaking at first duplicate.
- */
-function duplicates(arr, value, breakable) {
-    var i = arr.length;
-    var dupes = 0;
-    while (i--) {
-        if (breakable && dupes > 1)
-            break;
-        if (isEqual(arr[i], value))
-            dupes += 1;
-    }
-    dupes -= 1;
-    return dupes < 0 ? 0 : dupes;
-}
-exports.duplicates = duplicates;
 /**
  * Is Unique
  * Tests if the value is unique in the collection.
@@ -251,6 +269,27 @@ function isEqual(value, compare, loose) {
     return value == compare;
 }
 exports.isEqual = isEqual;
+/**
+ * Duplicates
+ * Counts the number of duplicates in an array.
+ *
+ * @param arr the array to check for duplicates.
+ * @param value the value to match.
+ * @param breakable when true allows breaking at first duplicate.
+ */
+function duplicates(arr, value, breakable) {
+    var i = arr.length;
+    var dupes = 0;
+    while (i--) {
+        if (breakable && dupes > 1)
+            break;
+        if (isEqual(arr[i], value))
+            dupes += 1;
+    }
+    dupes -= 1;
+    return dupes < 0 ? 0 : dupes;
+}
+exports.duplicates = duplicates;
 /**
  * Contains
  * Tests if array contains value.
@@ -369,28 +408,15 @@ function flatten(args) {
 exports.flatten = flatten;
 /**
  * Clone
- * Please use caution this is meant to
- * clone simple objects. It fits the
- * need. Use _.clone from lodash for
- * complete solution.
+ * Performs deep cloning of objects, arrays
+ * numbers, strings, maps, promises etc..
  *
  * @param obj object to be cloned.
+ * @param circular whether or not to clone circular set false if certain no circular refs.
+ * @param depth the depth to clone defaults to infinity.
  */
-function clone(obj) {
-    // Return if not object.
-    if (!isObject(obj))
-        return obj;
-    if (Object.create && obj.prototype)
-        return Object.create(obj.prototype);
-    // Clone via constructor.
-    var _clone = new obj.constructor();
-    // Iterate and add properties.
-    for (var key in obj) {
-        if (obj.hasOwnProperty(key)) {
-            _clone[key] = clone(obj[key]);
-        }
-    }
-    return _clone;
+function clone(obj, circular, depth) {
+    return _clone(obj, circular, depth);
 }
 exports.clone = clone;
 /**
@@ -683,26 +709,23 @@ function getType(obj, stringToDate, unknown) {
         unknown = stringToDate;
         stringToDate = undefined;
     }
-    // USE CAUTION:
-    // This is a bit hacky just to
-    // check if a string can be parsed
-    // as a date for colorization
-    if (type === 'string' && stringToDate) {
-        var d = tryParseDate(obj);
-        if (isNumber(d))
+    if (type !== 'object' && type !== 'string')
+        return type;
+    else if (type === 'string' && stringToDate) {
+        if (isDate(obj, true))
             return 'date';
         return type;
     }
-    if (type !== 'object')
-        return type;
-    if (obj instanceof Date)
+    else if (isDate(obj))
         return 'date';
-    else if (obj instanceof RegExp)
+    else if (isRegExp(obj))
         return 'regexp';
     else if (isArray(obj))
         return 'array';
     else if (isPlainObject(obj))
         return 'object';
+    else if (isError(obj))
+        return 'error';
     else if (obj === null)
         return 'null';
     return unknown || 'unknown';
@@ -717,8 +740,7 @@ exports.getType = getType;
 function tryParseDate(str) {
     try {
         var d = Date.parse(str);
-        var dStr = d.toString();
-        if (dStr !== 'Invalid Date' && !isNaN(d))
+        if ((d + '') !== 'Invalid Date' && !isNaN(d))
             return d;
         return str;
     }
@@ -730,6 +752,34 @@ exports.tryParseDate = tryParseDate;
 ///////////////////////////////
 // LIBRARY UTILS
 ///////////////////////////////
+/**
+ * Parse Path
+ * Universal method to parse a file path or url.
+ *
+ * @param path the file path or url to parse.
+ */
+function parsePath(path) {
+    if (parse) {
+        return parse(path);
+    }
+    else {
+        var exp = /\.[0-9a-z]{2,5}$/i;
+        var ext = exp.exec(path);
+        // Can't parse not a file.
+        if (!ext)
+            return {};
+        var idx = path.lastIndexOf('/');
+        idx = idx >= 0 ? idx += 1 : 0;
+        var basename = path.slice(idx);
+        var split_1 = basename.split('.');
+        return {
+            base: basename,
+            ext: '.' + split_1[1],
+            name: split_1[0]
+        };
+    }
+}
+exports.parsePath = parsePath;
 /**
  * Timestamp
  * Generates multiple timestamp formats.
@@ -810,7 +860,7 @@ exports.bytesToSize = bytesToSize;
  * @param filename the file name to stat.
  */
 function checkStat(filename) {
-    var stats = fs_1.statSync(filename);
+    var stats = statSync(filename);
     var normalized = bytesToSize(stats.size, 0);
     if (normalized.index > 2)
         return false;
@@ -876,17 +926,17 @@ exports.activate = activate;
  *
  * @see https://github.com/chalk/chalk
  *
- * @param str the string or metadata to be colorized.
+ * @param obj the value to be colorized.
  * @param color the color to apply, modifiers, shorthand.
  * @param modifiers the optional modifier or modifiers.
  */
-function colorize(str, color, modifiers) {
+function colorize(obj, color, modifiers) {
     // If not chalk can't colorize
     // as we are in browser.
     if (!chalk)
-        return str;
+        return obj;
     if (!color && !modifiers)
-        return str;
+        return obj;
     if (isArray(color)) {
         modifiers = color;
         color = undefined;
@@ -909,166 +959,42 @@ function colorize(str, color, modifiers) {
     var i = styles.length;
     while (i--) {
         var style = styles[i];
-        str = chalk[style](str);
+        obj = chalk[style](obj);
     }
-    return str;
+    return obj;
 }
 exports.colorize = colorize;
 /**
- * Colorize Array
- * Iterates and array and colorizes each
- * element by its data type.
+ * Strip Colors
+ * Strips ansi colors from string, object, arrays etc.
  *
- * @param arr the array to interate and colorize.
- * @param map an optional map of type to colors such as util.inspect.styles.
+ * @param str the object to strip color from.
  */
-function colorizeArray(arr, map) {
-    // Default color map, mimics Node's
-    // util.inspect
-    var stylesMap = interfaces_1.COLOR_TYPE_MAP;
-    map = map || stylesMap;
-    // Iterate the array and colorize by type.
-    return arr.map(function (item) {
-        var type = getType(item, true);
-        // If is object colorize with metadata method.
-        if (isPlainObject(item)) {
-            return colorizeObject(item, map);
+function stripColors(obj) {
+    var exp = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
+    if (isString(obj))
+        return obj.replace(exp, '');
+    // Strip object.
+    if (isPlainObject(obj)) {
+        for (var prop in obj) {
+            var val = obj[prop];
+            if (isString(val))
+                obj[prop] = val.replace(exp, '');
+            else
+                obj[prop] = stripColors(val);
         }
-        else {
-            if (!map[type])
-                return item;
-            return colorize(item, map[type]);
-        }
-    });
-}
-exports.colorizeArray = colorizeArray;
-/**
- * Colorize Metadata
- * This will iterate an object converting to strings
- * colorizing values for displaying in console.
- *
- * @param obj the object to be colorized
- * @param map the color map that maps type to a color or boolean for pretty.
- * @param pretty when true outputs using returns and tabs.
- */
-function colorizeObject(obj, map, pretty) {
-    if (isBoolean(map)) {
-        pretty = map;
-        map = undefined;
-    }
-    // Default color map, mimics Node's
-    // util.inspect
-    var stylesMap = interfaces_1.COLOR_TYPE_MAP;
-    map = map || stylesMap;
-    var result = '';
-    // Adds color mapped from type.
-    function addColor(type, val) {
-        if (isString(val))
-            val = "'" + val + "'";
-        if (!map[type])
-            return val;
-        return colorize(val, map[type]);
-    }
-    // Iterate the metadata.
-    function colorizer(o, depth) {
-        var len = keys(o).length;
-        var ctr = 0;
-        depth = depth || 1;
-        var base = 2;
-        var pad = depth * base;
-        var _loop_1 = function (prop) {
-            ctr += 1;
-            var sep = ctr < len ? ', ' : '';
-            if (o.hasOwnProperty(prop)) {
-                var val = o[prop];
-                if (isPlainObject(val)) {
-                    // result += '\n    { ';
-                    result += ('\n' + padLeft('', pad * 2) + '{ ');
-                    colorizer(val, depth + 1);
-                    result += ' }';
-                }
-                else {
-                    if (pretty) {
-                        var offset = ctr > 1 && depth > 1 ? 2 : 0;
-                        if (ctr > 1) {
-                            result += ('\n' + padLeft('', pad, offset));
-                        }
-                    }
-                    // Iterate array and colorize
-                    // by type.
-                    if (isArray(val)) {
-                        var arrLen_1 = val.length;
-                        result += prop + ": [ ";
-                        val.forEach(function (v, i) {
-                            var arrSep = i + 1 < arrLen_1 ? ', ' : '';
-                            // Get the type to match in color map.
-                            var type = getType(v, 'special');
-                            result += ("" + addColor(type, v) + arrSep);
-                            // Add color.
-                            // o[prop][i] = addColor(type, v);
-                        });
-                        result += ' ]';
-                    }
-                    else {
-                        // Get the type to match in color map.
-                        var type = getType(val, true, 'special');
-                        result += (prop + ": " + addColor(type, val) + sep);
-                        // o[prop] = addColor(type, val);
-                    }
-                }
-            }
-        };
-        for (var prop in o) {
-            _loop_1(prop);
-        }
-        return o;
-    }
-    colorizer(obj);
-    return "{ " + result + " }";
-}
-exports.colorizeObject = colorizeObject;
-/**
- * Colorize By Type
- * Inspects the type then colorizes.
- *
- * @param obj the object to inspect for colorization.
- * @param map an optional map to map types to colors.
- */
-function colorizeByType(obj, map) {
-    // Default color map, mimics Node's
-    // util.inspect
-    var stylesMap = interfaces_1.COLOR_TYPE_MAP;
-    map = map || stylesMap;
-    var type = getType(obj);
-    if (type === 'array') {
-        return colorizeArray(obj, map);
-    }
-    else if (type === 'object') {
-        return colorizeObject(obj, map);
     }
     else {
-        if (!map[type])
-            return obj;
-        return colorize(obj, map[type]);
+        var arr = obj;
+        var i = arr.length;
+        while (i--)
+            // If string replace
+            if (isString(arr[i]))
+                arr[i] = arr[i].replace(exp, '');
+            else
+                arr[i] = stripColors(arr[i]);
+        return arr;
     }
-}
-exports.colorizeByType = colorizeByType;
-/**
- * Strip Color
- * Strips ansi colors from strings.
- *
- * @param str a string or array of strings to strip color from.
- */
-function stripColors(str) {
-    var exp = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
-    if (!isArray(str) && isString(str))
-        return str.replace(exp, '');
-    var arr = str;
-    var i = arr.length;
-    while (i--)
-        if (isString(arr[i]))
-            arr[i] = arr[i].replace(exp, '');
-    return arr;
 }
 exports.stripColors = stripColors;
 ///////////////////////////////

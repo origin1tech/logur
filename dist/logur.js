@@ -7,6 +7,10 @@ var defaults = {
     transports: []
 };
 var Logur = (function () {
+    /**
+     * Constructs Logur
+     * @param options the Logur options.
+     */
     function Logur(options) {
         this.instances = {};
         this.transports = {};
@@ -14,21 +18,18 @@ var Logur = (function () {
             return Logur.instance;
         // Init options with defaults.
         this.options = u.extend({}, defaults, options);
-        var instance;
-        // Create the default Logur Instance.
-        if (!this.instances['default'])
-            instance = this.create('default', instance_1.LogurInstance);
-        // Create the default Console Transport.
-        instance.transports.create('console', transports_1.ConsoleTransport);
-        // Iterate Transports and add
-        // to default instance.
-        this.options.transports.forEach(function (conf) {
-            instance.transports.create(conf.name, conf.options, conf.transport);
-        });
-        // Save the default Logur Instance
-        // for internal logging.
-        this.log = instance;
-        // Store instance for singleton.
+        // Options for default Console transport.
+        var consoleOpts = {};
+        var hasConsole = this.options.transports.filter(function (t) {
+            return t.name === 'console' || u.isInstance(t.transport, transports_1.ConsoleTransport);
+        })[0];
+        // Add console transport if doesn't exist.
+        if (!hasConsole)
+            this.options.transports.push({
+                name: 'console',
+                options: consoleOpts,
+                transport: transports_1.ConsoleTransport
+            });
         Logur.instance = this;
     }
     /**
@@ -43,7 +44,7 @@ var Logur = (function () {
         if (!u.isPlainObject(key)) {
             // If not value log error.
             if (!value)
-                console.log('error', "cannot set option for key " + key + " using value of undefined.");
+                throw new Error("Cannot set option for key " + key + " using value of undefined.");
             else
                 this.options[key] = value;
         }
@@ -71,7 +72,8 @@ var Logur = (function () {
     Logur.prototype.create = function (name, options) {
         if (!name)
             throw new Error('Failed to create Logur Instance using name of undefined.');
-        return this.instances[name] = new instance_1.LogurInstance(name, options || {}, this);
+        this.instances[name] = new instance_1.LogurInstance(name, options, this);
+        return this.instances[name];
     };
     /**
      * Remove
@@ -81,12 +83,31 @@ var Logur = (function () {
      */
     Logur.prototype.remove = function (name) {
         if (name === 'default')
-            this.log.error('cannot remove default Logur Instance.').exit();
+            throw Error('cannot remove default Logur Instance.');
         delete this.instances[name];
     };
     return Logur;
 }());
 exports.Logur = Logur;
+/**
+ * Init
+ * Initializes Logur.
+ *
+ * @param options Logur options to initialize with.
+ */
+function init(options) {
+    var logur = Logur.instance;
+    // If not Logur initialize and create
+    // default instance.
+    if (!logur) {
+        logur = new Logur(options);
+        var instance = logur.create('default', { transports: logur.options.transports });
+        // store the default logger.
+        logur.log = instance;
+    }
+    return logur;
+}
+exports.init = init;
 /**
  * Get Instance
  * Gets an existing Logur Instance by name.
@@ -94,14 +115,13 @@ exports.Logur = Logur;
  * @param name the name of the Logur Instance to get.
  */
 function get(name) {
-    var logur = new Logur();
+    var logur = init();
     return logur.get(name);
 }
 exports.get = get;
 /**
  * Get
  * Gets the default Logur Instance.
- *
  */
 function getDefault() {
     return get('default');

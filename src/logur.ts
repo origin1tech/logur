@@ -1,5 +1,5 @@
 import * as u from './utils';
-import { ILogur, ILogurInstanceOptions, ILogurTransport, ILogurInstance, ILogurTransportOptions, ILogurOptions, ITransportMethods, ILogurInstances, ILogurTransports, ILevelMethodsBase, ILevelMethods, ILogurOptionsTransport } from './interfaces';
+import { ILogur, ILogurInstanceOptions, ILogurTransport, ILogurInstance, ILogurTransportOptions, ILogurOptions, ITransportMethods, ILogurInstances, ILogurTransports, ILevelMethodsBase, ILevelMethods, ILogurOptionsTransport, IConsoleTransportOptions } from './interfaces';
 
 import { LogurInstance } from './instance';
 import { ConsoleTransport } from './transports';
@@ -8,15 +8,19 @@ const defaults = {
   transports: []
 };
 
-class Logur implements ILogur {
+export class Logur implements ILogur {
 
-  static instance: ILogur;
+  static instance: Logur;
 
   instances: ILogurInstances = {};
   transports: ILogurTransports = {};
-  log: ILogurInstance & ILevelMethods;  // the default logger instance used internally.
+  log: ILogurInstance & ILevelMethods;
   options: ILogurOptions;
 
+  /**
+   * Constructs Logur
+   * @param options the Logur options.
+   */
   constructor(options?: ILogurOptions) {
 
     if (Logur.instance)
@@ -25,26 +29,23 @@ class Logur implements ILogur {
     // Init options with defaults.
     this.options = u.extend({}, defaults, options);
 
-    let instance: ILogurInstance & ILevelMethods;
+    // Options for default Console transport.
+    const consoleOpts: IConsoleTransportOptions = {
+      // placeholder
+    };
 
-    // Create the default Logur Instance.
-    if (!this.instances['default'])
-      instance = this.create<ILevelMethods>('default', LogurInstance);
+    const hasConsole = this.options.transports.filter((t) => {
+      return t.name === 'console' || u.isInstance(t.transport, ConsoleTransport);
+    })[0];
 
-    // Create the default Console Transport.
-    instance.transports.create<ConsoleTransport>('console', ConsoleTransport);
+    // Add console transport if doesn't exist.
+    if (!hasConsole)
+      this.options.transports.push({
+        name: 'console',
+        options: consoleOpts,
+        transport: ConsoleTransport
+      });
 
-    // Iterate Transports and add
-    // to default instance.
-    this.options.transports.forEach((conf: ILogurOptionsTransport) => {
-      instance.transports.create(conf.name, conf.options, conf.transport);
-    });
-
-    // Save the default Logur Instance
-    // for internal logging.
-    this.log = instance;
-
-    // Store instance for singleton.
     Logur.instance = this;
 
   }
@@ -63,7 +64,7 @@ class Logur implements ILogur {
 
       // If not value log error.
       if (!value)
-        console.log('error', `cannot set option for key ${key} using value of undefined.`);
+        throw new Error(`Cannot set option for key ${key} using value of undefined.`);
 
       else
         this.options[key as string] = value;
@@ -101,7 +102,9 @@ class Logur implements ILogur {
     if (!name)
       throw new Error('Failed to create Logur Instance using name of undefined.');
 
-    return this.instances[name] = <LogurInstance & T>new LogurInstance(name, options || {}, this);
+    this.instances[name] = <LogurInstance & T>new LogurInstance(name, options, this);
+
+    return this.instances[name];
 
   }
 
@@ -113,9 +116,32 @@ class Logur implements ILogur {
    */
   remove(name: string): void {
     if (name === 'default')
-      this.log.error('cannot remove default Logur Instance.').exit();
+      throw Error('cannot remove default Logur Instance.');
     delete this.instances[name];
   }
+
+}
+
+/**
+ * Init
+ * Initializes Logur.
+ *
+ * @param options Logur options to initialize with.
+ */
+function init(options?: ILogurOptions): ILogur {
+
+  let logur = Logur.instance;
+
+  // If not Logur initialize and create
+  // default instance.
+  if (!logur) {
+    logur = new Logur(options);
+    const instance = logur.create<ILevelMethods>('default', { transports: logur.options.transports });
+    // store the default logger.
+    logur.log = instance;
+  }
+
+  return logur;
 
 }
 
@@ -126,21 +152,20 @@ class Logur implements ILogur {
  * @param name the name of the Logur Instance to get.
  */
 function get<T extends ILevelMethodsBase>(name: string): ILogurInstance & T {
-  let logur = new Logur();
+  const logur = init();
   return <ILogurInstance & T>logur.get<T>(name);
 }
 
 /**
  * Get
  * Gets the default Logur Instance.
- *
  */
 function getDefault(): ILogurInstance & ILevelMethods {
   return get<ILevelMethods>('default');
 }
 
 export {
-  Logur,
+  init,
   get,
   getDefault
 }
