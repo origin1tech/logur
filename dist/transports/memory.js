@@ -26,7 +26,7 @@ var MemoryTransport = (function (_super) {
      * @param options the Transport options.
      * @param logur the common Logur instance.
      */
-    function MemoryTransport(base, ILogurInstanceOptions, options, logur) {
+    function MemoryTransport(base, options, logur) {
         var _this = _super.call(this, base, u.extend({}, defaults, options), logur) || this;
         _this.logs = [];
         return _this;
@@ -40,11 +40,11 @@ var MemoryTransport = (function (_super) {
      */
     MemoryTransport.prototype.action = function (output, done) {
         // Get colorized ordered array.
-        var ordered = this.toOutput(this.options, output);
-        // Add ordered to the collection.
+        var mapped = this.toMapped(this.options, output);
+        // Add mapped to collection.
         if (this.options.max < this.logs.length)
-            this.logs.push(ordered);
-        done(ordered);
+            this.logs.push(mapped);
+        done(mapped);
     };
     /**
      * Query

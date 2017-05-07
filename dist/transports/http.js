@@ -33,7 +33,9 @@ var HttpTransport = (function (_super) {
      * @param done an callback on Transport done.
      */
     HttpTransport.prototype.action = function (output, done) {
-        done(this.toArray(output));
+        // Get colorized mapped array.
+        var mapped = this.toMapped(this.options, output);
+        done(mapped);
     };
     /**
      * Query

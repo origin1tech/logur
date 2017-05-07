@@ -6,12 +6,6 @@ const should = chai.should;
 const assert = chai.assert;
 
 import { getDefault, Logur, ILogur, LogurInstance, ILevelMethods, ConsoleTransport } from '../src';
-import * as u from '../src/utils';
-import * as vfmt from 'sprintf-js';
-
-interface ExtendedMethods extends ILevelMethods {
-
-}
 
 // Instantiate Logur manually.
 let logur = new Logur();
@@ -22,7 +16,7 @@ let log = getDefault();
 // Create a custom transport.
 log.transports.create('console2', ConsoleTransport);
 
-describe('Logur', () => {
+describe('Logur:Main', () => {
 
   before((done) => {
 
@@ -41,11 +35,6 @@ describe('Logur', () => {
   it('should be an instance of ConsoleTransport', () => {
     assert.instanceOf(log.transports.get('console2'), ConsoleTransport);
   });
-
-  it('should be an instance of ConsoleTransport', (done) => {
-
-  });
-
 
 
 });

@@ -20,7 +20,6 @@ var defaults = {
     level: 5,
     active: true,
     cascade: true,
-    strategy: 'array',
     levels: {
         error: { level: 0, color: 'red' },
         warn: { level: 1, color: 'yellow' },
@@ -31,7 +30,8 @@ var defaults = {
     timestamp: 'utc',
     uuid: undefined,
     transports: [],
-    colorTypeMap: interfaces_1.COLOR_TYPE_MAP
+    exceptions: 'log',
+    colormap: interfaces_1.COLOR_TYPE_MAP
 };
 var profileDefaults = {
     transports: [],
@@ -50,6 +50,7 @@ var LogurInstance = (function (_super) {
      */
     function LogurInstance(name, options, logur) {
         var _this = _super.call(this) || this;
+        _this._exceptionsCounter = 0;
         _this._transports = [];
         _this._exceptions = [];
         _this._active = true;
@@ -84,11 +85,11 @@ var LogurInstance = (function (_super) {
             _this._nodeEnv = env.node();
         else
             _this._browserEnv = env.browser(_this.ua);
-        return _this;
         // init exception handling
-        // this.handleExceptions();
+        _this.handleExceptions();
+        return _this;
     }
-    // PROTECTED & INSTANCE METHODS
+    // PRIVATE METHODS
     /**
      * Log
      * Iterates transports then calls base Logur.log method.
@@ -107,6 +108,7 @@ var LogurInstance = (function (_super) {
             return;
         // Get and flatten params.
         var params = u.flatten([].slice.call(arguments, 1));
+        var isException;
         // If transports is string
         if (u.isString(transports)) {
             type = transports;
@@ -115,6 +117,12 @@ var LogurInstance = (function (_super) {
         else if (u.isArray(transports)) {
             params.shift();
         }
+        // If we have transports this is an unhandled
+        // exception. If not clear exception loop.
+        if (transports && transports.length)
+            isException = true;
+        else
+            this._exceptionsCounter = 0;
         // Clone the args.
         var untyped = params.slice(0);
         // Get level info.
@@ -126,35 +134,30 @@ var LogurInstance = (function (_super) {
         var level = levelObj.level;
         // If is NodeJS debug mode set an override flag to always log.
         var debugOverride = u.isNode() && u.isDebug() && type === 'debug' ? true : false;
-        // Get all Transports for the Instance.
-        transports = this._transports;
+        // Transports either passed from unhandled
+        // exceptions or get the Instance's Transports.
+        transports = transports || this._transports;
         var msg = untyped[0];
-        var fn, meta, stack, err;
-        /* Check if msg is error
-        ****************************************/
-        if (u.isError(msg)) {
-            untyped.shift();
-            err = msg;
-        }
-        // Check if we should offset stacktrace frames.
-        // const shouldOffset = u.isNode() && !err ? true : false;
-        // Offsets the returned frames to trim out
-        // some bloat from stack when generating frames.
-        // const offset = shouldOffset ? 3 : 0;
-        // Get the stacktrace for calling log method.
-        stack = env.stacktrace(3);
+        var meta;
+        var fn, stack, err;
         /* Check Last is Callback
         ****************************************/
         if (u.isFunction(u.last(untyped)))
             fn = untyped.pop();
-        /* Check Last is Metadata
-        ****************************************/
-        if (u.isObject(u.last(untyped)) && !u.isError(u.last(untyped)))
-            meta = untyped.pop();
         /* Normalize Message Arguments
         **************************************/
-        // If string inspect/format.
-        if (u.isString(msg)) {
+        // If error remove from untyped.
+        if (u.isError(msg)) {
+            untyped.shift();
+            err = { name: msg.name || 'Error', message: msg.message || 'Unknown error.', stack: env.stacktrace(msg) };
+            err.__exit__ = msg.__exit__;
+        }
+        else if (u.isPlainObject(msg)) {
+            meta = msg;
+            untyped.shift();
+            msg = undefined;
+        }
+        else if (u.isString(msg)) {
             // If is a string shift the first arg.
             untyped.shift();
             // Get the number of sprintf tokens in message.
@@ -170,13 +173,27 @@ var LogurInstance = (function (_super) {
                 // Format the message.
                 msg = sprintf.vsprintf(msg, untyped.slice(0, tokens.length));
                 // Get resulting array.
-                untyped = params.slice(tokens.length);
+                untyped = params.slice(tokens.length + 1);
+            }
+        }
+        /* Build Metadata
+        *****************************************/
+        // Merge any metadata that was passed.
+        // remove from untyped array.
+        var i = untyped.length;
+        while (i--) {
+            if (u.isPlainObject(untyped[i]) && !u.isError(untyped[i])) {
+                meta = meta || {};
+                u.extend(meta, untyped[i]);
+                untyped.splice(i, 1);
             }
         }
         /* Get Environment
         *****************************************/
         // For node we get env again because
         // we need accurate load and memory usage.
+        // Get the stacktrace for calling log method.
+        stack = env.stacktrace(3);
         var sysinfo;
         if (u.isNode())
             sysinfo = env.node();
@@ -187,9 +204,10 @@ var LogurInstance = (function (_super) {
         var run = function (t) {
             // Get the transport object.
             var transport = _this.transports.get(t);
-            // Ignore if the Transport isn't active.
-            if (!transport.active())
-                return;
+            if (isException)
+                // Ignore if the Transport isn't active.
+                if (!transport.active())
+                    return;
             // Return if the level is greater
             // that the transport's level.
             if (!debugOverride && level > _this.options.level)
@@ -233,7 +251,8 @@ var LogurInstance = (function (_super) {
                 // Error & Stack
                 stacktrace: stack,
                 // Environment Info
-                env: sysinfo
+                env: sysinfo,
+                pkg: _this._logur.pkg
             };
             // Set meta if exists.
             if (meta)
@@ -241,9 +260,12 @@ var LogurInstance = (function (_super) {
             // Set callback if exists.
             if (fn)
                 output.callback = fn;
+            if (err)
+                output.error = err;
             // Call the Transort's action passing
             // the ordered args and the original args.
             var clone = u.clone(output);
+            // Call the transports action.
             transport.action(clone, function (ordered, modified) {
                 // User may have mutated the output
                 // object check if user passed modified.
@@ -275,12 +297,60 @@ var LogurInstance = (function (_super) {
      */
     LogurInstance.prototype.handleExceptions = function () {
         var _this = this;
-        // Handle uncaught exceptions in NodeJS.
-        if (u.isNode()) {
-            process.on('uncaughtException', function (err) {
-                // If not exceptions just exit.
-                if (!_this._exceptions.length)
+        var EOL = this.env.node && this.env.node.os ? this.env.node.os.EOL : '\n';
+        var isNode = u.isNode();
+        var exceptionLoop = function (e) {
+            // manually log error.
+            // wrap in try just in case.
+            var _log = console.error ? console.error : console.log;
+            try {
+                var msg = (e.name || 'Error') + ': ' + (e.message || 'Uknown error.');
+                if (isNode) {
+                    msg = u.colorize(msg, interfaces_1.COLOR_TYPE_MAP.error);
+                    msg = u.colorize('error: ', 'red') + msg;
+                }
+                else {
+                    msg = 'error: ' + msg;
+                }
+                var stack = e.stack ? e.stack.split(EOL).slice(1).join(EOL) : '';
+                if (stack.length)
+                    msg += (EOL + stack);
+                _log(msg);
+                if (isNode) {
+                    _log(EOL + EOL, u.colorize('  Detected exception loop exiting...  ', 'bold.bgRed.white'), EOL + EOL);
                     process.exit();
+                }
+                else {
+                    var err = new Error('Detected exception loop exiting...');
+                    throw err;
+                }
+            }
+            catch (ex) {
+                if (isNode) {
+                    _log(ex);
+                    process.exit();
+                }
+                else {
+                    throw ex;
+                }
+            }
+        };
+        // Handle uncaught exceptions in NodeJS.
+        if (isNode) {
+            process.on('uncaughtException', function (err) {
+                // If no exception transports check if should exit.
+                if (!_this._exceptions.length || _this.options.exceptions === 'none') {
+                    if (_this.options.exceptions === 'exit')
+                        process.exit();
+                    return;
+                }
+                // track multiple consecutive exceptions
+                // just in case we need to exit preventing loop.
+                _this._exceptionsCounter += 1;
+                if (_this._exceptionsCounter > 1)
+                    return exceptionLoop(err);
+                if (_this.options.exceptions === 'exit')
+                    err.__exit__ = true;
                 _this.logger(_this._exceptions, 'error', err);
             });
         }
@@ -288,18 +358,22 @@ var LogurInstance = (function (_super) {
             var browser_1 = this.ua.getBrowser().name.toLowerCase();
             window.onerror = function (message, url, line, column, err) {
                 // If not exceptions just return.
-                if (!this._exceptions.length)
+                if (!this._exceptions.length || this.options.exceptions === 'none' || err.__handled__)
                     return;
+                this._exceptionsCounter += 1;
+                if (this._exceptionsCounter > 1)
+                    return exceptionLoop(err);
                 // Ahh the good browsers
                 if (err) {
-                    this.log(this._exceptions, 'error', err);
+                    this.loggger(this._exceptions, 'error', err);
                 }
                 else {
                     var stack = "Error: " + message + "\ngetStack@" + url + ":" + line + ":" + column;
                     if (browser_1 === 'chrome' || browser_1 === 'opera')
                         stack = "Error: " + message + "\nat getStack (" + url + ":" + line + ":" + column + ")";
                     // We'll parse this in log method.
-                    this.log(this._exceptions, 'error', {
+                    this.logger(this._exceptions, 'error', {
+                        name: 'unhandledException',
                         message: message,
                         stack: stack,
                         frames: [{
@@ -325,6 +399,7 @@ var LogurInstance = (function (_super) {
         configurable: true
     });
     Object.defineProperty(LogurInstance.prototype, "transports", {
+        // PROTECTED & INSTANCE METHODS
         /**
          * Transport
          * Exposes methods for adding, removing and getting transports.
@@ -490,10 +565,7 @@ var LogurInstance = (function (_super) {
              * @param name the name of the Profile to get.
              */
             var get = function (name) {
-                var profile = _this._profiles[name];
-                if (!profile)
-                    _this.log.warn("cannot get Profile " + name + " of undefined.").exit();
-                return profile;
+                return _this._profiles[name];
             };
             /**
              * Active
@@ -547,23 +619,17 @@ var LogurInstance = (function (_super) {
                 options = u.extend({}, profileDefaults, options);
                 // Ensure transports.
                 transports = transports || options.transports;
-                if (!transports || !transports.length) {
-                    _this.log.error("cannot start profile " + name + " using transports of none.");
-                    return;
-                }
+                if (!transports || !transports.length)
+                    throw new Error("Cannot start profile " + name + " using transports of none.");
                 var valid = [];
                 // Ensure transports can be used for profiling.
                 transports.forEach(function (t) {
                     // Get the transport.
                     var transport = _this.transports.get(t);
-                    if (!transport) {
-                        _this.log.warn("the Transport " + t + " was NOT found, ensure the Transport is loaded.");
-                        return;
-                    }
-                    if (!transport.options.profiler) {
-                        _this.log.warn("attempted to load Transport " + t + " but profiling is NOT enabled..");
-                        return;
-                    }
+                    if (!transport)
+                        throw new Error("The Transport " + t + " was NOT found, ensure the Transport is loaded.");
+                    if (!transport.options.profiler)
+                        throw new Error("Attempted to load Transport " + t + " but profiling is NOT enabled..");
                     valid.push(t);
                 });
                 // Add the profile.
@@ -593,10 +659,8 @@ var LogurInstance = (function (_super) {
                 var profile = _this.profiles.get(name);
                 if (!profile)
                     return;
-                if (profile.active) {
-                    _this.log.warn("cannot start already active Profile " + name + ".");
-                    return;
-                }
+                if (profile.active)
+                    throw new Error("Cannot start already active Profile " + name + ".");
                 profile.started = Date.now();
                 profile.active = true;
             };
@@ -631,10 +695,8 @@ var LogurInstance = (function (_super) {
                 var profile = _this.profiles.get(name);
                 if (!profile)
                     return;
-                if (profile.active && !force) {
-                    _this.log.warn("cannot remove active Profile " + name + ", stop or set force to true to remove.");
-                    return;
-                }
+                if (profile.active && !force)
+                    throw new Error("Cannot remove active Profile " + name + ", stop or set force to true to remove.");
                 delete _this._profiles[name];
             };
             methods = {
@@ -644,6 +706,39 @@ var LogurInstance = (function (_super) {
                 create: create,
                 start: start,
                 stop: stop,
+                remove: remove
+            };
+            return methods;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(LogurInstance.prototype, "serializers", {
+        /**
+         * Serializers
+         * Gets, creates and removes serializers.
+         */
+        get: function () {
+            var _this = this;
+            var methods;
+            var get = function (name) {
+                return _this._logur.serializers[name];
+            };
+            var getAll = function () {
+                return _this._logur.serializers;
+            };
+            var create = function (name, serializer) {
+                _this._logur.serializers[name] = serializer;
+                return methods;
+            };
+            var remove = function (name) {
+                delete _this._logur.serializers[name];
+                return methods;
+            };
+            methods = {
+                get: get,
+                getAll: getAll,
+                create: create,
                 remove: remove
             };
             return methods;

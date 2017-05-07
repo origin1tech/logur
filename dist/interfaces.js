@@ -3,6 +3,7 @@
 ////////////////////////
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+// export type CacheMap = Map<string, any>;
 ////////////////////////
 // CONSTANTS
 ////////////////////////
@@ -25,6 +26,7 @@ exports.COLOR_TYPE_MAP = {
     date: 'magenta',
     regexp: 'red',
     error: 'bold.underline.red',
-    ministack: 'gray'
+    ministack: 'gray',
+    function: 'cyan'
 };
 //# sourceMappingURL=interfaces.js.map

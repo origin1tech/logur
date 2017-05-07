@@ -1,8 +1,10 @@
-import { ILogur, ILogurInstanceOptions, ILogurInstance, ILogurOptions, ILogurInstances, ILogurTransports, ILevelMethodsBase, ILevelMethods } from './interfaces';
+import { ILogur, ILogurInstanceOptions, ILogurInstance, ILogurOptions, ILogurInstances, ILogurTransports, ILevelMethodsBase, ILevelMethods, ISerializers, IMetadata } from './interfaces';
 export declare class Logur implements ILogur {
     static instance: Logur;
+    pkg: IMetadata;
     instances: ILogurInstances;
     transports: ILogurTransports;
+    serializers: ISerializers;
     log: ILogurInstance & ILevelMethods;
     options: ILogurOptions;
     /**

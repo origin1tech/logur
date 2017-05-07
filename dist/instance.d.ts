@@ -1,4 +1,4 @@
-import { ILogurInstance, ILogur, ILogurInstanceOptions, ITransportMethods, IEnv, IProfiles, IProfileMethods } from './interfaces';
+import { ILogurInstance, ILogur, ILogurInstanceOptions, ITransportMethods, IEnv, IProfiles, IProfileMethods, ISerializerMethods } from './interfaces';
 import { Notify } from './notify';
 import { UAParser } from 'ua-parser-js';
 /**
@@ -7,6 +7,7 @@ import { UAParser } from 'ua-parser-js';
 export declare class LogurInstance extends Notify implements ILogurInstance {
     private _browserEnv;
     private _nodeEnv;
+    private _exceptionsCounter;
     protected _name: string;
     protected _logur: ILogur;
     protected _transports: string[];
@@ -29,12 +30,12 @@ export declare class LogurInstance extends Notify implements ILogurInstance {
      * @param type the type of log message.
      * @param args array of arguments.
      */
-    protected logger(transports: string | string[], type: any, ...args: any[]): void;
+    private logger(transports, type, ...args);
     /**
      * Handle Exceptions
      * Enables handling uncaught NodeJS exceptions.
      */
-    protected handleExceptions(): void;
+    private handleExceptions();
     /**
      * Log
      * Gets the internal logger.
@@ -51,6 +52,11 @@ export declare class LogurInstance extends Notify implements ILogurInstance {
      * TODO: Really needs its on class!
      */
     readonly profiles: IProfileMethods;
+    /**
+     * Serializers
+     * Gets, creates and removes serializers.
+     */
+    readonly serializers: ISerializerMethods;
     /**
      * Env
      * Returns the current environment information.

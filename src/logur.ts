@@ -1,10 +1,19 @@
 import * as u from './utils';
-import { ILogur, ILogurInstanceOptions, ILogurTransport, ILogurInstance, ILogurTransportOptions, ILogurOptions, ITransportMethods, ILogurInstances, ILogurTransports, ILevelMethodsBase, ILevelMethods, ILogurOptionsTransport, IConsoleTransportOptions } from './interfaces';
+import { ILogur, ILogurInstanceOptions, ILogurTransport, ILogurInstance, ILogurTransportOptions, ILogurOptions, ITransportMethods, ILogurInstances, ILogurTransports, ILevelMethodsBase, ILevelMethods, ILogurOptionsTransport, IConsoleTransportOptions, ISerializers, IMetadata } from './interfaces';
 
 import { LogurInstance } from './instance';
 import { ConsoleTransport } from './transports';
 
+let pkg;
+
+// If NodeJS get package info.
+if (u.isNode()) {
+  const resolve = require('path').resolve;
+  pkg = require(resolve(process.cwd(), 'package.json'));
+}
+
 const defaults = {
+  package: ['name', 'description', 'version', 'main', 'repository', 'author', 'license'],
   transports: []
 };
 
@@ -12,8 +21,10 @@ export class Logur implements ILogur {
 
   static instance: Logur;
 
+  pkg: IMetadata = {};
   instances: ILogurInstances = {};
   transports: ILogurTransports = {};
+  serializers: ISerializers = {};
   log: ILogurInstance & ILevelMethods;
   options: ILogurOptions;
 
@@ -45,6 +56,14 @@ export class Logur implements ILogur {
         options: consoleOpts,
         transport: ConsoleTransport
       });
+
+    if (pkg && this.options.package && this.options.package.length) {
+      this.options.package.forEach((k) => {
+        const found = u.get(pkg, k);
+        if (found)
+          this.pkg[k] = found;
+      });
+    }
 
     Logur.instance = this;
 

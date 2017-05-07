@@ -46,6 +46,13 @@ export type LevelMethod = { (...args: any[]) };
 export type UUIDCallback = { (): string };
 
 /**
+ * Serializer
+ * Callback method called when mapped to
+ * object name in LogurOutput.
+ */
+export type Serializer = { <T>(value: T, output?: ILogurOutput, options?: any): T };
+
+/**
  * Timestamp Strategy
  * Type constraint for the timestamp strategy to be used.
  */
@@ -64,7 +71,7 @@ export type FileFormatStrategy = 'tab' | 'csv' | 'json';
  * exit: logs the error then exits.
  * none: ignores errors does not log or exit.
  */
-export type ErrorStrategy = 'log' | 'exit' | 'none';
+export type ExceptionStrategy = 'log' | 'exit' | 'none';
 
 /**
  * Pad Strategy
@@ -92,7 +99,7 @@ export type ColorizationStrategy = 'yes' | 'no' | 'strip';
  */
 export type OutputStrategy = 'array' | 'object' | 'json';
 
-export type CacheMap = Map<string, any>;
+// export type CacheMap = Map<string, any>;
 
 ////////////////////////
 // CONSTANTS
@@ -118,7 +125,8 @@ export const COLOR_TYPE_MAP: IColorTypeMap = {
   date: 'magenta',
   regexp: 'red',
   error: 'bold.underline.red',
-  ministack: 'gray'
+  ministack: 'gray',
+  function: 'cyan'
 };
 
 ////////////////////////
@@ -137,11 +145,14 @@ export interface IColorTypeMap {
   regexp: string;
   error: string;
   ministack: string;
+  function: string;
 }
 
-export interface IError extends ErrorConstructor {
+export interface IError extends Error {
   prepareStackTrace?(_: any, stack: any);
-  __handle__: boolean;
+  __handled__: boolean;   // indicates the error has already been handled.
+  __exception__: boolean; // used for browser generated error objects.
+  __exit__: boolean;      // used to indicate should exit after logging error.
 }
 
 export interface ITimestamps {
@@ -460,10 +471,10 @@ export interface ILogurOutput {
 
   map: string[];                                // array of ordered props for output.
   levels: ILevels;                              // the levels configuration.
-
   stacktrace?: IStacktrace[];                   // parsed stacktrace frame.
-
   env?: IEnvNode | IEnvBrowser;                 // browser, os, process environment info.
+  error?: Error;                                // populated with parsed error if exists.
+  pkg?: IMetadata;                              // defined package.json fields.
 
 }
 
@@ -478,8 +489,8 @@ export interface ILogurBaseOptions {
   levels?: ILevels;             // Log levels configuration.
   uuid?: UUIDCallback;          // when has value callsback to get generated uuid.
   timestamp?: TimestampCallback | TimestampStrategy; // timestamp strategy.
-  colorTypeMap?: IMetadata;     // mimics util.inspect.styles for mapping type to color.
-  strategy?: OutputStrategy;    // the strategy for normalized output.
+  colormap?: IMetadata;         // mimics util.inspect.styles for mapping type to color.
+  exceptions?: ExceptionStrategy; // how to handle unhandled exceptions.
 
 }
 
@@ -499,9 +510,9 @@ export interface ILogurTransportOptions extends ILogurBaseOptions {
   map?: string[];               // array containing properties in order of output.
   pretty?: boolean;             // when true objects are pretty printed.
   ministack?: boolean;          // When NOT false log append msgs w/ (file:line:col)
-  exceptions?: ErrorStrategy;   // strategy for how errors should be handled.
-  fullstack?: boolean;          // when true full stack shown on errors.
+  prettystack?: boolean;        // when true error stact trace is pretty printed.
   profiler?: boolean;           // when true transport can be used for profiling.
+  strategy?: OutputStrategy;    // the strategy for normalized output.
 
 }
 
@@ -594,13 +605,11 @@ export interface ILogurTransport {
   active(state?: boolean): boolean;
 
   colorize(obj: any, color?: string | string[], modifiers?: string | string[]): any;
-  toArray(output: ILogurOutput, pretty?: boolean, colors?: boolean, map?: IMetadata): any[];
-  toObject<T>(output: ILogurOutput, pretty?: boolean, colors?: boolean, map?: IMetadata): T;
-
   stripColors(str: any): any;
-
   padLevel(level: string, levels: string[], strategy?: PadStrategy): string;
-  toOutput(options: any, output: ILogurOutput): any[];
+  ministack(options: any, output: ILogurOutput): string;
+  format(obj: any, options: any, output: ILogurOutput): any;
+  toMapped(options: any, output: ILogurOutput): any[];
 
   // Must Override Methods
 
@@ -612,6 +621,17 @@ export interface ILogurTransport {
 ////////////////////////
 // INSTANCE
 ////////////////////////
+
+export interface ISerializers {
+  [key: string]: Serializer;
+}
+
+export interface ISerializerMethods {
+  get(name: string): Serializer;
+  getAll(): ISerializers;
+  create(name: string, serializer: Serializer): ISerializerMethods;
+  remove(name: string): ISerializerMethods;
+}
 
 export interface ITransportMethods {
   has(name: string): boolean;
@@ -669,11 +689,17 @@ export interface IProfileMethods {
   remove(name: string, force?: boolean): void;
 }
 
+export interface ILogurInstances {
+  [key: string]: any;
+}
+
 export interface ILogurInstance extends INotify {
 
   env: IEnv;
   options: ILogurInstanceOptions;
   transports: ITransportMethods;
+  profiles: IProfileMethods;
+  serializers: ISerializerMethods;
   setOption<T extends ILogurInstanceOptions>(options: T): void;
   setOption<T extends ILogurInstanceOptions>(key: string | T, value?: any): void;
   active(state?: boolean): boolean;
@@ -681,10 +707,6 @@ export interface ILogurInstance extends INotify {
   write(...args: any[]): ILogurInstance;
   exit(code?: number): void;
 
-}
-
-export interface ILogurInstances {
-  [key: string]: any;
 }
 
 ////////////////////////
@@ -699,6 +721,10 @@ export interface ILogurOptionsTransport {
 
 export interface ILogurOptions {
 
+  // Array of properties to grab from package.json
+  // when in NodeJS mode. Dot notation is supported.
+  package?: string[];
+
   // Will new up default Logur Instance with
   // the following transports when provided.
   transports?: ILogurOptionsTransport[];
@@ -706,8 +732,10 @@ export interface ILogurOptions {
 }
 
 export interface ILogur {
+  pkg: IMetadata;
   instances: ILogurInstances;
   transports: ILogurTransports;
+  serializers: ISerializers;
   log: ILogurInstance & ILevelMethods;
   options: ILogurOptions;
   setOption(options: ILogurOptions): void;

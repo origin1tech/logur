@@ -8,8 +8,7 @@ const defaults: IConsoleTransportOptions = {
   padding: 'right',
   pretty: false,
   colorize: true,
-  ministack: false,
-  fullstack: false
+  ministack: false
 
 };
 
@@ -26,6 +25,13 @@ export class ConsoleTransport extends LogurTransport implements IConsoleTranspor
     */
   constructor(base: ILogurInstanceOptions, options: IConsoleTransportOptions, logur: ILogur) {
     super(base, u.extend({}, defaults, options), logur);
+
+    // If not NodeJS can't prettystack or colorize.
+    if (!u.isNode()) {
+      this.options.colorize = false;
+      this.options.prettystack = false;
+    }
+
   }
 
   /**
@@ -40,15 +46,15 @@ export class ConsoleTransport extends LogurTransport implements IConsoleTranspor
     // If the log level matches a console type use it.
     const _console = console[output.level] ? console[output.level] : console.log;
 
-    // Get colorized ordered array.
-    let ordered = this.toOutput(this.options, output);
+    // Get mapped array.
+    let mapped = this.toMapped(this.options, output);
 
     // If console method matches level
     // name use it for good measure.
     // Really only makes difference in Browser.
-    _console.apply(console, ordered);
+    _console.apply(console, mapped);
 
-    done(ordered);
+    done(mapped);
 
   }
 

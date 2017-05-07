@@ -17,8 +17,7 @@ var defaults = {
     padding: 'right',
     pretty: false,
     colorize: true,
-    ministack: false,
-    fullstack: false
+    ministack: false
 };
 var ConsoleTransport = (function (_super) {
     __extends(ConsoleTransport, _super);
@@ -30,7 +29,13 @@ var ConsoleTransport = (function (_super) {
       * @param logur the common Logur instance.
       */
     function ConsoleTransport(base, options, logur) {
-        return _super.call(this, base, u.extend({}, defaults, options), logur) || this;
+        var _this = _super.call(this, base, u.extend({}, defaults, options), logur) || this;
+        // If not NodeJS can't prettystack or colorize.
+        if (!u.isNode()) {
+            _this.options.colorize = false;
+            _this.options.prettystack = false;
+        }
+        return _this;
     }
     /**
      * Action
@@ -42,13 +47,13 @@ var ConsoleTransport = (function (_super) {
     ConsoleTransport.prototype.action = function (output, done) {
         // If the log level matches a console type use it.
         var _console = console[output.level] ? console[output.level] : console.log;
-        // Get colorized ordered array.
-        var ordered = this.toOutput(this.options, output);
+        // Get mapped array.
+        var mapped = this.toMapped(this.options, output);
         // If console method matches level
         // name use it for good measure.
         // Really only makes difference in Browser.
-        _console.apply(console, ordered);
-        done(ordered);
+        _console.apply(console, mapped);
+        done(mapped);
     };
     /**
      * Query

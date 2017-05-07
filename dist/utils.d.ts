@@ -196,10 +196,8 @@ export declare function flatten(args: any[]): any[];
  * numbers, strings, maps, promises etc..
  *
  * @param obj object to be cloned.
- * @param circular whether or not to clone circular set false if certain no circular refs.
- * @param depth the depth to clone defaults to infinity.
  */
-export declare function clone<T>(obj: any, circular?: boolean, depth?: number): T;
+export declare function clone<T>(obj: any): T;
 /**
  * First
  * Simple method to get first element just

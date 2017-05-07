@@ -1,4 +1,4 @@
-import { ILogurTransport, ILogur, ILogurTransportOptions, ILogurOutput, IMetadata, TransportActionCallback, PadStrategy, ILogurInstance, ILevelMethods } from '../interfaces';
+import { ILogurTransport, ILogur, ILogurTransportOptions, ILogurOutput, TransportActionCallback, PadStrategy, ILogurInstance, ILevelMethods } from '../interfaces';
 /**
  * Logur Base Transport
  */
@@ -61,29 +61,15 @@ export declare class LogurTransport implements ILogurTransport {
      * @param strategy the strategy to pad with left, right or none.
      */
     padLevel(level: string, levels?: string[] | PadStrategy, strategy?: PadStrategy): string;
-    ministack(options: any, output: ILogurOutput): void;
     /**
-     * Normalize Array
-     * Iterates and array and colorizes each
-     * element by its data type.
+     * Ministack
+     * Generates a mini stacktrace of the calling
+     * line, col etc.
      *
-     * @param arr the array to interate and colorize.
-     * @param pretty when true outputs using returns and tabs.
-     * @param colors when true values are colorized.
-     * @param map the color map that maps type to a color or boolean for pretty.
+     * @param options the Logur Transport options.
+     * @param output the generated Logur Output object.
      */
-    normalizeOutputArray(arr: any[], pretty?: boolean, colors?: boolean, map?: IMetadata): any[];
-    /**
-     * Normalize Output Metadata
-     * This will iterate an object colorizing values,
-     * pretty printing for output when defined.
-     *
-     * @param obj the object to be processed.
-     * @param pretty when true outputs using returns and tabs.
-     * @param colors when true values are colorized.
-     * @param map the color map that maps type to a color or boolean for pretty.
-     */
-    normalizeOutputObject(obj: IMetadata, pretty?: boolean, colors?: boolean, map?: IMetadata): any;
+    ministack(options: any, output: ILogurOutput): string;
     /**
      * Normalize By Type
      * Inspects the type then colorizes.
@@ -93,27 +79,7 @@ export declare class LogurTransport implements ILogurTransport {
      * @param colors whether to colorize the value.
      * @param map an optional map to apply colors by type.
      */
-    normalizeOutput(obj: any, options: any): any;
-    /**
-     * To Array
-     * Takes a Logour Output object using map
-     * orders in array.
-     *
-     * @param output the compiled Logour Output object.
-     * @param pretty whether objects should be pretty printed.
-     * @param colors whether to colorize the value.
-     * @param map a type to value map for applying colors.
-     */
-    toArray(output: ILogurOutput, options: any): any[];
-    /**
-     * To Object
-     *
-     * @param output the Logur Output generated object.
-     * @param pretty whether objects should be pretty printed.
-     * @param colors whether to colorize the value.
-     * @param map a type to value map for applying colors.
-     */
-    toObject(output: ILogurOutput, options: any): any;
+    format(obj: any, options: any, output: ILogurOutput): any;
     /**
      * To Output
      * Normalizes data for output to array or object.
@@ -121,7 +87,7 @@ export declare class LogurTransport implements ILogurTransport {
      * @param options the calling Transport's options.
      * @param output the generated Logur output.
      */
-    toOutput(options: any, output: ILogurOutput): any[];
+    toMapped(options: any, output: ILogurOutput): any[];
     /**
      * Action
      * The transport action to be called when messages are logged.

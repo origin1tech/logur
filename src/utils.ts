@@ -135,9 +135,9 @@ export function isError(obj: any): boolean {
     return false;
   const type = toString.call(obj).toLowerCase();
   // NOTE __exception__ is a custom property
-  // used to denoted an object literall as
+  // used to denoted an object literal as
   // an error.
-  return type === '[object error]' || type === '[object domexception]' || isBoolean(obj.__exception__);
+  return type === '[object error]' || type === '[object domexception]' || obj.__exception__;
 }
 
 /**
@@ -419,12 +419,12 @@ export function extend<T>(obj: any, ...args: any[]): T {
         let _isArray = isArray(from);
 
         if (deep && (_isPlainObject || _isArray)) {
-          let clone: any;
+          let _clone: any;
           if (_isArray)
-            clone = to && isArray(to) ? to : [];
+            _clone = to && isArray(to) ? to : [];
           else
-            clone = to && isPlainObject(to) ? to : {};
-          target[name] = extend(deep, clone, from);
+            _clone = to && isPlainObject(to) ? to : {};
+          target[name] = extend(deep, _clone, from);
         }
         else if (!isUndefined(from)) {
           target[name] = from;
@@ -456,11 +456,9 @@ export function flatten(args: any[]): any[] {
  * numbers, strings, maps, promises etc..
  *
  * @param obj object to be cloned.
- * @param circular whether or not to clone circular set false if certain no circular refs.
- * @param depth the depth to clone defaults to infinity.
  */
-export function clone<T>(obj: any, circular?: boolean, depth?: number): T {
-  return _clone(obj, circular, depth);
+export function clone<T>(obj: any): T {
+  return _clone(obj);
 }
 
 /**
@@ -908,19 +906,64 @@ export function timestamp(date?: string | number): ITimestamps {
       epoch = <number>date;
   }
 
-  const dt = new Date(epoch);
-  let localDate = dt.toLocaleDateString();
-  const localTime = dt.toTimeString().split(' ')[0];
-  const iso = dt.toISOString();
-  const splitUtc: any = iso.split('T');
-  const utcDate = splitUtc[0];
-  const utcTime = splitUtc[1].split('.')[0];
+  function pad(val) {
+    val += '';
+    if (val.length < 2)
+      val = 0 + val;
+    return val;
+  }
 
-  // split local date and format in reverse.
-  const splitLocal = localDate.split('/');
-  if (splitLocal[0].length < 2) splitLocal[0] = '0' + splitLocal[0];
-  if (splitLocal[1].length < 2) splitLocal[1] = '0' + splitLocal[1];
-  localDate = `${splitLocal[2]}-${splitLocal[1]}-${splitLocal[0]}`;
+  function genDate(yr?, mo?, dt?, delim?) {
+    delim = delim || '-';
+    const arr = [];
+    if (yr) arr.push(yr);
+    if (mo) arr.push(pad(mo));
+    if (dt) arr.push(pad(dt));
+    return arr.join(delim);
+  }
+
+  function genTime(hr?, min?, sec?, ms?, delim?) {
+    delim = delim || ':';
+    const arr = [];
+    if (hr) arr.push(pad(hr));
+    if (min) arr.push(pad(min));
+    if (sec) arr.push(pad(sec));
+    if (ms) arr.push(pad(ms));
+    return arr.join(delim);
+  }
+
+  const dt = new Date(epoch);
+  const iso = dt.toISOString();
+
+  // local date.
+  const lyr = dt.getFullYear();
+  const lmo = dt.getMonth() + 1;
+  const ldt = dt.getDate();
+
+  // utc date
+  const uyr = dt.getUTCFullYear();
+  const umo = dt.getUTCMonth(); + 1;
+  const udt = dt.getUTCDate();
+
+  // local time
+  const lhr = dt.getHours();
+  const lmin = dt.getMinutes();
+  const lsec = dt.getSeconds();
+  const lms = dt.getMilliseconds();
+
+  // utc time
+  const uhr = dt.getUTCHours();
+  const umin = dt.getUTCMinutes();
+  const usec = dt.getUTCSeconds();
+  const ums = dt.getUTCMilliseconds();
+
+  const localDate = genDate(lyr, lmo, ldt, '-');
+  const localTime = genTime(lhr, lmin, lsec, lms, ':');
+
+  const utcDate = genDate(uyr, umo, udt, '-');
+  const utcTime = genTime(uhr, umin, usec, ums, ':');
+  const local = localDate + ' ' + localTime;
+  const utc = utcDate + ' ' + utcTime;
 
   const obj: ITimestamps = {
     epoch: epoch,
@@ -928,10 +971,10 @@ export function timestamp(date?: string | number): ITimestamps {
     iso: iso,
     localDate: localDate,
     localTime: localTime,
-    local: localDate + ' ' + localTime,
+    local: local,
     utcDate: utcDate,
     utcTime: utcTime,
-    utc: utcDate + ' ' + utcTime
+    utc: utc
   };
 
   return obj;

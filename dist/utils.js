@@ -123,9 +123,9 @@ function isError(obj) {
         return false;
     var type = toString.call(obj).toLowerCase();
     // NOTE __exception__ is a custom property
-    // used to denoted an object literall as
+    // used to denoted an object literal as
     // an error.
-    return type === '[object error]' || type === '[object domexception]' || isBoolean(obj.__exception__);
+    return type === '[object error]' || type === '[object domexception]' || obj.__exception__;
 }
 exports.isError = isError;
 /**
@@ -378,12 +378,12 @@ function extend(obj) {
                 var _isPlainObject = isPlainObject(from);
                 var _isArray = isArray(from);
                 if (deep && (_isPlainObject || _isArray)) {
-                    var clone_1 = void 0;
+                    var _clone_1 = void 0;
                     if (_isArray)
-                        clone_1 = to && isArray(to) ? to : [];
+                        _clone_1 = to && isArray(to) ? to : [];
                     else
-                        clone_1 = to && isPlainObject(to) ? to : {};
-                    target[name_1] = extend(deep, clone_1, from);
+                        _clone_1 = to && isPlainObject(to) ? to : {};
+                    target[name_1] = extend(deep, _clone_1, from);
                 }
                 else if (!isUndefined(from)) {
                     target[name_1] = from;
@@ -412,11 +412,9 @@ exports.flatten = flatten;
  * numbers, strings, maps, promises etc..
  *
  * @param obj object to be cloned.
- * @param circular whether or not to clone circular set false if certain no circular refs.
- * @param depth the depth to clone defaults to infinity.
  */
-function clone(obj, circular, depth) {
-    return _clone(obj, circular, depth);
+function clone(obj) {
+    return _clone(obj);
 }
 exports.clone = clone;
 /**
@@ -791,30 +789,73 @@ function timestamp(date) {
         if (isNumber(date))
             epoch = date;
     }
+    function pad(val) {
+        val += '';
+        if (val.length < 2)
+            val = 0 + val;
+        return val;
+    }
+    function genDate(yr, mo, dt, delim) {
+        delim = delim || '-';
+        var arr = [];
+        if (yr)
+            arr.push(yr);
+        if (mo)
+            arr.push(pad(mo));
+        if (dt)
+            arr.push(pad(dt));
+        return arr.join(delim);
+    }
+    function genTime(hr, min, sec, ms, delim) {
+        delim = delim || ':';
+        var arr = [];
+        if (hr)
+            arr.push(pad(hr));
+        if (min)
+            arr.push(pad(min));
+        if (sec)
+            arr.push(pad(sec));
+        if (ms)
+            arr.push(pad(ms));
+        return arr.join(delim);
+    }
     var dt = new Date(epoch);
-    var localDate = dt.toLocaleDateString();
-    var localTime = dt.toTimeString().split(' ')[0];
     var iso = dt.toISOString();
-    var splitUtc = iso.split('T');
-    var utcDate = splitUtc[0];
-    var utcTime = splitUtc[1].split('.')[0];
-    // split local date and format in reverse.
-    var splitLocal = localDate.split('/');
-    if (splitLocal[0].length < 2)
-        splitLocal[0] = '0' + splitLocal[0];
-    if (splitLocal[1].length < 2)
-        splitLocal[1] = '0' + splitLocal[1];
-    localDate = splitLocal[2] + "-" + splitLocal[1] + "-" + splitLocal[0];
+    // local date.
+    var lyr = dt.getFullYear();
+    var lmo = dt.getMonth() + 1;
+    var ldt = dt.getDate();
+    // utc date
+    var uyr = dt.getUTCFullYear();
+    var umo = dt.getUTCMonth();
+    +1;
+    var udt = dt.getUTCDate();
+    // local time
+    var lhr = dt.getHours();
+    var lmin = dt.getMinutes();
+    var lsec = dt.getSeconds();
+    var lms = dt.getMilliseconds();
+    // utc time
+    var uhr = dt.getUTCHours();
+    var umin = dt.getUTCMinutes();
+    var usec = dt.getUTCSeconds();
+    var ums = dt.getUTCMilliseconds();
+    var localDate = genDate(lyr, lmo, ldt, '-');
+    var localTime = genTime(lhr, lmin, lsec, lms, ':');
+    var utcDate = genDate(uyr, umo, udt, '-');
+    var utcTime = genTime(uhr, umin, usec, ums, ':');
+    var local = localDate + ' ' + localTime;
+    var utc = utcDate + ' ' + utcTime;
     var obj = {
         epoch: epoch,
         date: dt,
         iso: iso,
         localDate: localDate,
         localTime: localTime,
-        local: localDate + ' ' + localTime,
+        local: local,
         utcDate: utcDate,
         utcTime: utcTime,
-        utc: utcDate + ' ' + utcTime
+        utc: utc
     };
     return obj;
 }

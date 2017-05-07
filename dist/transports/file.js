@@ -40,9 +40,9 @@ var FileTransport = (function (_super) {
      * @param done an callback on Transport done.
      */
     FileTransport.prototype.action = function (output, done) {
-        // Get colorized ordered array.
-        var ordered = this.toOutput(this.options, output);
-        done(ordered);
+        // Get colorized mapped array.
+        var mapped = this.toMapped(this.options, output);
+        done(mapped);
     };
     /**
      * Query

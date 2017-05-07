@@ -27,7 +27,12 @@ export class HttpTransport extends LogurTransport implements IHttpTransport {
    * @param done an callback on Transport done.
    */
   action(output: ILogurOutput, done: TransportActionCallback) {
-    done(this.toArray(output));
+
+    // Get colorized mapped array.
+    let mapped = this.toMapped(this.options, output);
+
+    done(mapped);
+
   }
 
   /**

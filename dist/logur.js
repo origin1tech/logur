@@ -3,7 +3,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var u = require("./utils");
 var instance_1 = require("./instance");
 var transports_1 = require("./transports");
+var pkg;
+// If NodeJS get package info.
+if (u.isNode()) {
+    var resolve = require('path').resolve;
+    pkg = require(resolve(process.cwd(), 'package.json'));
+}
 var defaults = {
+    package: ['name', 'description', 'version', 'main', 'repository', 'author', 'license'],
     transports: []
 };
 var Logur = (function () {
@@ -12,8 +19,11 @@ var Logur = (function () {
      * @param options the Logur options.
      */
     function Logur(options) {
+        var _this = this;
+        this.pkg = {};
         this.instances = {};
         this.transports = {};
+        this.serializers = {};
         if (Logur.instance)
             return Logur.instance;
         // Init options with defaults.
@@ -30,6 +40,13 @@ var Logur = (function () {
                 options: consoleOpts,
                 transport: transports_1.ConsoleTransport
             });
+        if (pkg && this.options.package && this.options.package.length) {
+            this.options.package.forEach(function (k) {
+                var found = u.get(pkg, k);
+                if (found)
+                    _this.pkg[k] = found;
+            });
+        }
         Logur.instance = this;
     }
     /**

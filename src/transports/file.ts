@@ -35,10 +35,10 @@ export class FileTransport extends LogurTransport implements IFileTransport {
    */
   action(output: ILogurOutput, done: TransportActionCallback) {
 
-    // Get colorized ordered array.
-    let ordered = this.toOutput(this.options, output);
+    // Get colorized mapped array.
+    let mapped = this.toMapped(this.options, output);
 
-    done(ordered);
+    done(mapped);
 
   }
 

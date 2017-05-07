@@ -22,7 +22,7 @@ export class MemoryTransport extends LogurTransport implements IMemoryTransport 
    * @param options the Transport options.
    * @param logur the common Logur instance.
    */
-  constructor(base, ILogurInstanceOptions, options: IMemoryTransportOptions, logur: ILogur) {
+  constructor(base: ILogurInstanceOptions, options: IMemoryTransportOptions, logur: ILogur) {
     super(base, u.extend({}, defaults, options), logur);
   }
 
@@ -36,13 +36,13 @@ export class MemoryTransport extends LogurTransport implements IMemoryTransport 
   action(output: ILogurOutput, done: TransportActionCallback) {
 
     // Get colorized ordered array.
-    let ordered = this.toOutput(this.options, output);
+    let mapped = this.toMapped(this.options, output);
 
-    // Add ordered to the collection.
+    // Add mapped to collection.
     if (this.options.max < this.logs.length)
-      this.logs.push(ordered);
+      this.logs.push(mapped);
 
-    done(ordered);
+    done(mapped);
 
   }
 

@@ -1,13 +1,20 @@
-import { ILogurTransport, ILogur, ILogurTransportOptions, ILogurOutput, IMetadata, TransportActionCallback, COLOR_TYPE_MAP, ColorizationStrategy, PadStrategy, CacheMap, ILevel, ILogurInstance, ILevelMethods } from '../interfaces';
+import { ILogurTransport, ILogur, ILogurTransportOptions, ILogurOutput, IMetadata, TransportActionCallback, COLOR_TYPE_MAP, ColorizationStrategy, PadStrategy, ILevel, ILogurInstance, ILevelMethods, Serializer } from '../interfaces';
 import * as u from '../utils';
+
+let util;
+
+if (!process.env.BROWSER) {
+  util = require('util');
+}
 
 const defaults: ILogurTransportOptions = {
   active: true,
+  strategy: 'array',
   map: ['level', 'timestamp', 'message', 'untyped', 'metadata'],
   pretty: false,
   ministack: false,
-  exceptions: 'exit',
-  profiler: true
+  prettystack: false,
+  profiler: true,
 };
 
 /**
@@ -129,7 +136,15 @@ export class LogurTransport implements ILogurTransport {
     return padded[idx];
   }
 
-  ministack(options: any, output: ILogurOutput) {
+  /**
+   * Ministack
+   * Generates a mini stacktrace of the calling
+   * line, col etc.
+   *
+   * @param options the Logur Transport options.
+   * @param output the generated Logur Output object.
+   */
+  ministack(options: any, output: ILogurOutput): string {
 
     const colorize = options.colorize && u.isNode() ? true : false;
 
@@ -149,211 +164,44 @@ export class LogurTransport implements ILogurTransport {
         if (colorize)
           mini = this.colorize(mini, (options.colorTypeMap && options.colorTypeMap.ministack) || 'gray');
 
+        return mini;
+
         // Just add to object when JSON is required.
-        if (options.json) {
-          ordered.ministack = mini;
-        }
+        // if (options.json) {
+        //   return mini;
+        // }
 
-        else {
+        // else {
 
-          // If metadata and metadata is set to display pretty
-          // then we have to inject the ministack before it
-          // or it will look funny.
-          if (output.metadata && u.contains(options.map, 'metadata') && options.pretty) {
+        //   // If metadata and metadata is set to display pretty
+        //   // then we have to inject the ministack before it
+        //   // or it will look funny.
+        //   if (output.metadata && u.contains(options.map, 'metadata') && options.pretty) {
 
-            // Get the metadata index.
-            const metaIndex = options.map.indexOf('metadata') - 1;
+        //     // Get the metadata index.
+        //     const metaIndex = options.map.indexOf('metadata') - 1;
 
-            if (metaIndex >= 0) {
-              const suffixMeta = ordered.slice(metaIndex);
-              ordered = [...ordered.splice(0, metaIndex), mini, ...suffixMeta];
-            }
+        //     if (metaIndex >= 0) {
+        //       const suffixMeta = ordered.slice(metaIndex);
+        //       ordered = [...ordered.splice(0, metaIndex), mini, ...suffixMeta];
+        //     }
 
-          }
+        //   }
 
-          else {
+        //   else {
 
-            ordered.push(mini);
+        //     ordered.push(mini);
 
-          }
+        //   }
 
-        }
+        // }
 
       }
 
     }
 
+    return '';
 
-  }
-
-  /**
-   * Normalize Array
-   * Iterates and array and colorizes each
-   * element by its data type.
-   *
-   * @param arr the array to interate and colorize.
-   * @param pretty when true outputs using returns and tabs.
-   * @param colors when true values are colorized.
-   * @param map the color map that maps type to a color or boolean for pretty.
-   */
-  normalizeOutputArray(arr: any[], pretty?: boolean, colors?: boolean, map?: IMetadata): any[] {
-
-    // Default color map, mimics Node's
-    // util.inspect
-    let stylesMap = COLOR_TYPE_MAP;
-
-    map = map || stylesMap;
-
-    // Iterate the array and colorize by type.
-    return arr.map((item) => {
-
-      let type = u.getType(item, true, 'special');
-
-      // If is object colorize with metadata method.
-      if (u.isPlainObject(item)) {
-        return this.normalizeOutputObject(item, pretty, colors, map);
-      }
-      else {
-
-        if (!map[type] || !colors)
-          return item;
-
-        return u.colorize(item, map[type]);
-
-      }
-
-    });
-
-  }
-
-  /**
-   * Normalize Output Metadata
-   * This will iterate an object colorizing values,
-   * pretty printing for output when defined.
-   *
-   * @param obj the object to be processed.
-   * @param pretty when true outputs using returns and tabs.
-   * @param colors when true values are colorized.
-   * @param map the color map that maps type to a color or boolean for pretty.
-   */
-  normalizeOutputObject(obj: IMetadata, pretty?: boolean, colors?: boolean, map?: IMetadata): any {
-
-    // Default color map, mimics Node's
-    // util.inspect
-    let stylesMap = COLOR_TYPE_MAP;
-
-    map = map || stylesMap;
-
-    let result = '';
-
-    // Adds color mapped from type.
-    function addColor(type, val) {
-      if (!colors)
-        return val;
-      if (!map[type])
-        return val;
-      return u.colorize(val, map[type]);
-    }
-
-    // Iterate the metadata.
-    function colorizer(o, depth?) {
-
-      const len = u.keys(o).length;
-      let ctr = 0;
-      depth = depth || 1;
-
-      let base = 2;
-      let pad = depth * base;
-
-      for (let prop in o) {
-
-        ctr += 1;
-        const sep = ctr < len ? ', ' : '';
-
-        if (o.hasOwnProperty(prop)) {
-
-          const val = o[prop];
-
-          // Handle value is an object.
-          if (u.isPlainObject(val)) {
-            const keyPad = depth > 1 ? u.padLeft('', (pad * 2) - 2) : u.padLeft('', pad);
-
-            if (pretty) {
-              result += '\n' + keyPad + prop + ': ';
-              result += ('\n' + u.padLeft('', pad * 2) + `{ `);
-            }
-
-            colorizer(val, depth + 1);
-
-            if (pretty)
-              result += ' }';
-
-          }
-
-          // Handle non object literal.
-          else {
-
-            if (pretty) {
-
-              const offset = ctr > 1 && depth > 1 ? 2 : 0;
-
-              if (ctr > 1) {
-                result += ('\n' + u.padLeft('', pad, offset));
-              }
-
-            }
-
-            // Iterate array and colorize
-            // by type.
-            if (u.isArray(val)) {
-
-              const arrLen = val.length;
-
-              result += `${prop}: [ `;
-
-              val.forEach((v, i) => {
-
-                const arrSep = i + 1 < arrLen ? ', ' : '';
-
-                // Get the type to match in color map.
-                const type = u.getType(v, 'special');
-
-                result += (`${addColor(type, v)}${arrSep}`);
-
-              });
-
-              result += ' ]';
-
-            }
-
-            // Colorize value.
-            else {
-
-              // Get the type to match in color map.
-              const type = u.getType(val, true, 'special');
-
-              if (pretty)
-                result += (`${prop}: ${addColor(type, val)}${sep}`);
-              else
-                result += (`${prop}=${addColor(type, val)}${sep}`);
-
-            }
-
-          }
-
-        }
-
-      }
-
-      return o;
-
-    }
-
-    colorizer(obj);
-
-    if (pretty)
-      return `{ ${result} }`;
-    return result;
 
   }
 
@@ -366,119 +214,131 @@ export class LogurTransport implements ILogurTransport {
    * @param colors whether to colorize the value.
    * @param map an optional map to apply colors by type.
    */
-  normalizeOutput(obj: any, options: any): any {
+  format(obj: any, options: any, output: ILogurOutput): any {
 
     let pretty = options.pretty;
     let colors = options.colorize;
     let colorMap = options.colorTypeMap || COLOR_TYPE_MAP;
+    const EOL = output.env && output.env.os ? output.env.os['EOL'] : '\n';
+
+    function plainPrint(o) {
+
+      let result = '';
+
+      if (u.isArray(o)) {
+
+        o.forEach((item, i) => {
+
+          const t = u.getType(item, true, 'special');
+
+          if (t === 'object' || t === 'array') {
+
+            result += plainPrint(item);
+
+          }
+
+          else {
+
+            if (t === 'function') {
+              const name = item.name || 'fn';
+              item = `[Function: ${name}]`;
+            }
+
+            else {
+              if (!colors)
+                result += (`${i}=${item}, `);
+              else
+                result += (`${i}=${u.colorize(item, colorMap[t])}, `);
+            }
+
+          }
+
+        });
+
+      }
+
+      else {
+
+        for (let prop in o) {
+
+          let item = o[prop];
+
+          const t = u.getType(item, true, 'special');
+
+          if (t === 'array' || t === 'object') {
+
+            result += plainPrint(item);
+
+          }
+          else {
+
+            if (t === 'function') {
+              const name = item.name || 'fn';
+              item = `[Function: ${name}]`;
+            }
+
+            else {
+              if (!colors)
+                result += (`${prop}=${item}, `);
+              else
+                result += (`${prop}=${u.colorize(item, colorMap[t])}, `);
+            }
+
+          }
+
+        }
+
+      }
+
+      if (result.length)
+        return result.replace(/, $/, '');
+      return result;
+
+    }
 
     // Get the value's type.
     const type = u.getType(obj, true, 'special');
 
     // Handle error normalization.
     if (type === 'error') {
-      let tmp = obj.message;
+
+      // Otherwise normalize the error for output.
+      // Create the error message.
+      let tmp = (obj.name || 'Error') + ': ' + (obj.message || 'unknown error.');
+
+      // colorize if enabled.
       if (colorMap[type] && colors)
         tmp = u.colorize(tmp, colorMap[type]);
+
+      // If pretty stacktrace use util.inspect.
+      if (options.prettyStack && output.error) {
+        return { normalized: tmp, append: util.inspect(output.error, true, null, colors) };
+      }
+
       // Check if fullstack should be shown.
+      if (obj.stack) {
+        const stack = obj.stack.split(EOL).slice(1);
+        return { normalized: tmp, append: stack.join(EOL) };
+      }
 
     }
 
-    // Handle an array of values to be normalized.
-    else if (type === 'array') {
-      return this.normalizeOutputArray(obj, pretty, colors, colorMap);
-    }
-
-    // Handle and object to be normalized.
-    else if (type === 'object') {
-      return this.normalizeOutputObject(obj, pretty, colors, colorMap);
+    // Handle and objects/array.
+    else if (type === 'object' || type === 'array') {
+      if (options.pretty) {
+        return {
+          append: util.inspect(obj, true, null, colors)
+        };
+      }
+      return { normalized: plainPrint(obj) };
     }
 
     // Handle simple value.
     else {
       if (!colorMap[type] || !colors)
-        return obj;
-      return u.colorize(obj, colorMap[type]);
+        return { normalized: obj };
+      return { normalized: u.colorize(obj, colorMap[type]) };
     }
-
-  }
-
-  /**
-   * To Array
-   * Takes a Logour Output object using map
-   * orders in array.
-   *
-   * @param output the compiled Logour Output object.
-   * @param pretty whether objects should be pretty printed.
-   * @param colors whether to colorize the value.
-   * @param map a type to value map for applying colors.
-   */
-  toArray(output: ILogurOutput, options: any): any[] {
-
-    let ordered = [];
-    let suffix = [];
-    const ignored = ['callback'];
-    const metaIndex = output.map.indexOf('metadata');
-    const metaLast = output.map.length - 1 === metaIndex;
-
-    // Iterate the output format array
-    // adding each element to our ordered
-    // result array.
-    output.map.forEach((k, i) => {
-
-      const value = u.get(output, k);
-
-      if (k === 'untyped' && output.untyped) {
-        output.untyped.forEach((u) => {
-          // No pretty print for inner objects.
-          ordered.push(this.normalizeOutput(u, options));
-        });
-      }
-
-      else if (value) {
-        // Don't pretty print metadata when NOT
-        // the last argument.
-        let isPretty = metaIndex === i && !metaLast ? false : options.pretty;
-        let processed = this.normalizeOutput(value, options);
-        if (isPretty && i === metaIndex && metaLast)
-          processed = '\n' + processed;
-        ordered.push(processed);
-      }
-
-    });
-
-    return ordered;
-
-  }
-
-  /**
-   * To Object
-   *
-   * @param output the Logur Output generated object.
-   * @param pretty whether objects should be pretty printed.
-   * @param colors whether to colorize the value.
-   * @param map a type to value map for applying colors.
-   */
-  toObject(output: ILogurOutput, options: any): any {
-
-    let obj = {};
-    const ignored = ['callback'];
-
-    // Iterate the output and build object.
-    output.map.forEach((k) => {
-
-      // ignored prop.
-      if (ignored.indexOf(k) !== -1)
-        return;
-
-      let value = u.get(output, k);
-
-      if (value)
-        obj[k] = this.normalizeOutput(value, options);
-
-    });
-
-    return obj;
 
   }
 
@@ -489,7 +349,7 @@ export class LogurTransport implements ILogurTransport {
    * @param options the calling Transport's options.
    * @param output the generated Logur output.
    */
-  toOutput(options: any, output: ILogurOutput): any[] {
+  toMapped(options: any, output: ILogurOutput): any[] {
 
     if (!options || !output)
       throw new Error('Cannot format "toOdered" using options or output of undefined.');
@@ -497,14 +357,24 @@ export class LogurTransport implements ILogurTransport {
     // Get list of levels we'll use this for padding.
     const levels = u.keys(options.levels);
     const EOL = output.env && output.env.os ? output.env.os['EOL'] : '\n';
+    const ignored = ['callback'];
+    const metaIndex = options.map.indexOf('metadata');
+    const metaLast = options.map.length - 1 === metaIndex;
 
+    // Metadata must be last index in map.
+    if (metaIndex !== -1 && !metaLast) {
+      options.map.splice(metaIndex, 1);
+      options.map.push('metadta');
+    }
+
+    // Var for resulting output array, object or json.
     let ordered;
+
+    // An array of values to append to output.
+    let appended = [];
 
     // Reference the logged level.
     let level = output.level;
-
-    // Check if message is error.
-    const isMsgError = u.isError(output.message);
 
     // Get the level's config object.
     const levelObj: ILevel = options.levels[level];
@@ -514,7 +384,34 @@ export class LogurTransport implements ILogurTransport {
 
     if (options.strategy !== 'array') {
 
-      ordered = this.toObject(output, options);
+      // ordered = this.toObject(output, options);
+      ordered = {};
+
+      // Iterate the map and build the object.
+      output.map.forEach((k) => {
+
+        // ignored prop.
+        if (ignored.indexOf(k) !== -1)
+          return;
+
+        let value = u.get(output, k);
+
+        // When outputting to object/json
+        // when don't normalize with pretty
+        // printing or colors as they would not
+        // be relevant in that context.
+        if (!u.isUndefined(value)) {
+          const serializer: Serializer = this._logur.serializers[k];
+          // If a serializer exists call it.
+          if (serializer)
+            value = serializer(value, output, options);
+          ordered[k] = value;
+        }
+
+      });
+
+      if (options.ministack)
+        ordered['ministack'] = this.ministack(options, output);
 
       if (options.strategy === 'json')
         ordered = JSON.stringify(ordered);
@@ -524,7 +421,58 @@ export class LogurTransport implements ILogurTransport {
     else {
 
       // Get output as array.
-      ordered = this.toArray(output, options);
+      // ordered = this.toArray(output, options);
+
+      ordered = [];
+
+      // Iterate layout map and build output.
+      output.map.forEach((k, i) => {
+
+        let value = u.get(output, k);
+
+        const serializer: Serializer = this._logur.serializers[k];
+
+        if (serializer && !u.isUndefined(value))
+          value = serializer(value, output, options);
+
+        if (k === 'untyped' && output.untyped) {
+
+          value.forEach((u) => {
+            const result = this.format(u, options, output);
+            if (result) {
+              if (!u.isUndefined(result.normalized))
+                ordered.push(result.normalized);
+              if (!u.isUndefined(result.append))
+                appended.push(result.append);
+            }
+          });
+
+        }
+
+        else if (value) {
+          const result = this.format(value, options, output);
+          if (result) {
+            if (!u.isUndefined(result.normalized))
+              ordered.push(result.normalized);
+            if (!u.isUndefined(result.append))
+              appended.push(result.append);
+          }
+        }
+
+      });
+
+      // Check if should add ministack.
+      if (options.ministack)
+        ordered.push(this.ministack(options, output));
+
+      // Check appended values that should be appended
+      // after primary elements.
+      if (appended.length) {
+        if (!ordered.length)
+          ordered = appended;
+        else
+          ordered = ordered.concat(appended.map(a => { return '\n' + a; }));
+      }
 
       // Get the index of the level in map, we do
       // this
@@ -548,56 +496,6 @@ export class LogurTransport implements ILogurTransport {
       }
 
     }
-
-    // Check if ministack should be applied.
-    // if (output.stacktrace && output.stacktrace.length) {
-
-    //   const stack = output.stacktrace[0];
-    //   const parsed = u.parsePath(stack.path);
-
-    //   // Handle ministack but don't display if
-    //   // msg is an error as it would be redundant.
-    //   if (options.ministack && stack && parsed && parsed.base) {
-
-    //     // Compile the mini stacktrace string.
-    //     let mini = `(${parsed.base}:${stack.line}:${stack.column})`;
-
-    //     if (colorize)
-    //       mini = this.colorize(mini, (options.colorTypeMap && options.colorTypeMap.ministack) || 'gray');
-
-    //     // Just add to object when JSON is required.
-    //     if (options.json) {
-    //       ordered.ministack = mini;
-    //     }
-
-    //     else {
-
-    //       // If metadata and metadata is set to display pretty
-    //       // then we have to inject the ministack before it
-    //       // or it will look funny.
-    //       if (output.metadata && u.contains(options.map, 'metadata') && options.pretty) {
-
-    //         // Get the metadata index.
-    //         const metaIndex = options.map.indexOf('metadata') - 1;
-
-    //         if (metaIndex >= 0) {
-    //           const suffixMeta = ordered.slice(metaIndex);
-    //           ordered = [...ordered.splice(0, metaIndex), mini, ...suffixMeta];
-    //         }
-
-    //       }
-
-    //       else {
-
-    //         ordered.push(mini);
-
-    //       }
-
-    //     }
-
-    //   }
-
-    // }
 
     return ordered;
 
@@ -624,5 +522,5 @@ export class LogurTransport implements ILogurTransport {
     throw new Error('Logur Transport query method must be overriden.');
   }
 
-
 }
+

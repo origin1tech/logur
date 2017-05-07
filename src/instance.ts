@@ -1,5 +1,5 @@
 
-import { ILogurInstance, ILogur, ILogurInstanceOptions, ILogurTransportOptions, ILogurTransport, ITransportMethods, ILogurTransports, ILogurInstances, IMetadata, ILevel, TimestampCallback, ILogurOutput, ILoad, MemoryUsage, IProcess, IOS, IEnvBrowser, IEnvNode, IEnv, IProfiles, IProfileMethods, IProfileResult, IProfileOptions, IProfile, IStacktrace, TransportConstructor, ILogurOptionsTransport, ILevels, CacheMap, ILevelMethods, COLOR_TYPE_MAP } from './interfaces';
+import { ILogurInstance, ILogur, ILogurInstanceOptions, ILogurTransportOptions, ILogurTransport, ITransportMethods, ILogurTransports, ILogurInstances, IMetadata, ILevel, TimestampCallback, ILogurOutput, ILoad, MemoryUsage, IProcess, IOS, IEnvBrowser, IEnvNode, IEnv, IProfiles, IProfileMethods, IProfileResult, IProfileOptions, IProfile, IStacktrace, TransportConstructor, ILogurOptionsTransport, ILevels, ILevelMethods, COLOR_TYPE_MAP, ISerializers, ISerializerMethods, Serializer, IError } from './interfaces';
 import { LogurTransport, ConsoleTransport, FileTransport, HttpTransport } from './transports';
 import { Notify } from './notify';
 
@@ -13,7 +13,6 @@ const defaults: ILogurInstanceOptions = {
   level: 5,
   active: true,
   cascade: true,
-  strategy: 'array',
 
   levels: {
     error: { level: 0, color: 'red' },
@@ -26,7 +25,8 @@ const defaults: ILogurInstanceOptions = {
   timestamp: 'utc',
   uuid: undefined,
   transports: [],
-  colorTypeMap: COLOR_TYPE_MAP
+  exceptions: 'log',
+  colormap: COLOR_TYPE_MAP
 
 };
 
@@ -42,6 +42,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
 
   private _browserEnv: IEnvBrowser;
   private _nodeEnv: IEnvNode;
+  private _exceptionsCounter: number = 0;
 
   protected _name: string;
   protected _logur: ILogur;
@@ -100,11 +101,11 @@ export class LogurInstance extends Notify implements ILogurInstance {
       this._browserEnv = env.browser(this.ua);
 
     // init exception handling
-    // this.handleExceptions();
+    this.handleExceptions();
 
   }
 
-  // PROTECTED & INSTANCE METHODS
+  // PRIVATE METHODS
 
   /**
    * Log
@@ -113,7 +114,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
    * @param type the type of log message.
    * @param args array of arguments.
    */
-  protected logger(transports: string | string[], type: any, ...args: any[]): void {
+  private logger(transports: string | string[], type: any, ...args: any[]): void {
 
     // If Logur Instance isn't active return.
     if (!this._active)
@@ -121,6 +122,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
 
     // Get and flatten params.
     let params = u.flatten([].slice.call(arguments, 1));
+    let isException;
 
     // If transports is string
     if (u.isString(transports)) {
@@ -133,6 +135,13 @@ export class LogurInstance extends Notify implements ILogurInstance {
     else if (u.isArray(transports)) {
       params.shift();
     }
+
+    // If we have transports this is an unhandled
+    // exception. If not clear exception loop.
+    if (transports && transports.length)
+      isException = true;
+    else
+      this._exceptionsCounter = 0;
 
     // Clone the args.
     let untyped = params.slice(0);
@@ -150,29 +159,13 @@ export class LogurInstance extends Notify implements ILogurInstance {
     // If is NodeJS debug mode set an override flag to always log.
     let debugOverride = u.isNode() && u.isDebug() && type === 'debug' ? true : false;
 
-    // Get all Transports for the Instance.
-    transports = this._transports;
+    // Transports either passed from unhandled
+    // exceptions or get the Instance's Transports.
+    transports = transports || this._transports;
 
     let msg = untyped[0];
-    let fn, meta, stack, err;
-
-    /* Check if msg is error
-    ****************************************/
-
-    if (u.isError(msg)) {
-      untyped.shift();
-      err = msg;
-    }
-
-    // Check if we should offset stacktrace frames.
-    // const shouldOffset = u.isNode() && !err ? true : false;
-
-    // Offsets the returned frames to trim out
-    // some bloat from stack when generating frames.
-    // const offset = shouldOffset ? 3 : 0;
-
-    // Get the stacktrace for calling log method.
-    stack = env.stacktrace(3);
+    let meta: any;
+    let fn, stack, err;
 
     /* Check Last is Callback
     ****************************************/
@@ -180,18 +173,24 @@ export class LogurInstance extends Notify implements ILogurInstance {
     if (u.isFunction(u.last(untyped)))
       fn = untyped.pop();
 
-    /* Check Last is Metadata
-    ****************************************/
-
-    if (u.isObject(u.last(untyped)) && !u.isError(u.last(untyped)))
-      meta = untyped.pop();
-
-
     /* Normalize Message Arguments
     **************************************/
 
+    // If error remove from untyped.
+    if (u.isError(msg)) {
+      untyped.shift();
+      err = { name: msg.name || 'Error', message: msg.message || 'Unknown error.', stack: env.stacktrace(msg) };
+      err.__exit__ = msg.__exit__;
+    }
+
+    else if (u.isPlainObject(msg)) {
+      meta = msg;
+      untyped.shift();
+      msg = undefined;
+    }
+
     // If string inspect/format.
-    if (u.isString(msg)) {
+    else if (u.isString(msg)) {
 
       // If is a string shift the first arg.
       untyped.shift();
@@ -212,10 +211,24 @@ export class LogurInstance extends Notify implements ILogurInstance {
         msg = sprintf.vsprintf(msg, untyped.slice(0, tokens.length));
 
         // Get resulting array.
-        untyped = params.slice(tokens.length);
+        untyped = params.slice(tokens.length + 1);
 
       }
 
+    }
+
+    /* Build Metadata
+    *****************************************/
+
+    // Merge any metadata that was passed.
+    // remove from untyped array.
+    let i = untyped.length;
+    while (i--) {
+      if (u.isPlainObject(untyped[i]) && !u.isError(untyped[i])) {
+        meta = meta || {};
+        u.extend(meta, untyped[i]);
+        untyped.splice(i, 1);
+      }
     }
 
     /* Get Environment
@@ -223,6 +236,9 @@ export class LogurInstance extends Notify implements ILogurInstance {
 
     // For node we get env again because
     // we need accurate load and memory usage.
+
+    // Get the stacktrace for calling log method.
+    stack = env.stacktrace(3);
 
     let sysinfo;
 
@@ -239,9 +255,11 @@ export class LogurInstance extends Notify implements ILogurInstance {
       // Get the transport object.
       const transport = this.transports.get<ILogurTransport>(t);
 
-      // Ignore if the Transport isn't active.
-      if (!transport.active())
-        return;
+      if (isException)
+
+        // Ignore if the Transport isn't active.
+        if (!transport.active())
+          return;
 
       // Return if the level is greater
       // that the transport's level.
@@ -298,7 +316,8 @@ export class LogurInstance extends Notify implements ILogurInstance {
         stacktrace: stack,
 
         // Environment Info
-        env: sysinfo
+        env: sysinfo,
+        pkg: this._logur.pkg
 
       };
 
@@ -310,10 +329,14 @@ export class LogurInstance extends Notify implements ILogurInstance {
       if (fn)
         output.callback = fn;
 
+      if (err)
+        output.error = err;
+
       // Call the Transort's action passing
       // the ordered args and the original args.
       const clone = u.clone<ILogurOutput>(output);
 
+      // Call the transports action.
       transport.action(clone, (ordered, modified) => {
 
         // User may have mutated the output
@@ -339,13 +362,11 @@ export class LogurInstance extends Notify implements ILogurInstance {
 
     // We don't really care about order of transports
     // just run them in parallel if possible.
-    transports.forEach((t) => {
-
+    (transports as string[]).forEach((t) => {
       if (this.options.sync)
         run(t);
       else
         u.tick(this, run, t);
-
     });
 
   }
@@ -354,16 +375,72 @@ export class LogurInstance extends Notify implements ILogurInstance {
    * Handle Exceptions
    * Enables handling uncaught NodeJS exceptions.
    */
-  protected handleExceptions(): void {
+  private handleExceptions(): void {
+
+    const EOL = this.env.node && this.env.node.os ? this.env.node.os.EOL : '\n';
+    const isNode = u.isNode();
+
+    const exceptionLoop = (e) => {
+      // manually log error.
+      // wrap in try just in case.
+      const _log = console.error ? console.error : console.log;
+      try {
+        let msg = (e.name || 'Error') + ': ' + (e.message || 'Uknown error.');
+        if (isNode) {
+          msg = u.colorize(msg, COLOR_TYPE_MAP.error);
+          msg = u.colorize('error: ', 'red') + msg;
+        }
+        else {
+          msg = 'error: ' + msg;
+        }
+        const stack = e.stack ? e.stack.split(EOL).slice(1).join(EOL) : '';
+        if (stack.length)
+          msg += (EOL + stack);
+        _log(msg);
+        if (isNode) {
+          _log(EOL + EOL, u.colorize('  Detected exception loop exiting...  ', 'bold.bgRed.white'), EOL + EOL);
+          process.exit();
+        }
+        else {
+          const err = new Error('Detected exception loop exiting...');
+
+          throw err;
+        }
+
+      }
+      catch (ex) {
+        if (isNode) {
+          _log(ex);
+          process.exit();
+        }
+        else {
+          throw ex;
+        }
+      }
+
+    };
 
     // Handle uncaught exceptions in NodeJS.
-    if (u.isNode()) {
+    if (isNode) {
 
-      process.on('uncaughtException', (err: Error) => {
+      process.on('uncaughtException', (err: IError) => {
 
-        // If not exceptions just exit.
-        if (!this._exceptions.length)
-          process.exit();
+        // If no exception transports check if should exit.
+        if (!this._exceptions.length || this.options.exceptions === 'none') {
+          if (this.options.exceptions === 'exit')
+            process.exit();
+          return;
+        }
+
+        // track multiple consecutive exceptions
+        // just in case we need to exit preventing loop.
+        this._exceptionsCounter += 1;
+
+        if (this._exceptionsCounter > 1)
+          return exceptionLoop(err);
+
+        if (this.options.exceptions === 'exit')
+          err.__exit__ = true;
 
         this.logger(this._exceptions, 'error', err);
 
@@ -376,16 +453,21 @@ export class LogurInstance extends Notify implements ILogurInstance {
 
       const browser = this.ua.getBrowser().name.toLowerCase();
 
-      window.onerror = function (message: string, url: string, line: number, column: number, err: Error) {
+      window.onerror = function (message: string, url: string, line: number, column: number, err: IError) {
 
         // If not exceptions just return.
-        if (!this._exceptions.length)
+        if (!this._exceptions.length || this.options.exceptions === 'none' || err.__handled__)
           return;
+
+        this._exceptionsCounter += 1;
+
+        if (this._exceptionsCounter > 1)
+          return exceptionLoop(err);
 
         // Ahh the good browsers
         if (err) {
 
-          this.log(this._exceptions, 'error', err);
+          this.loggger(this._exceptions, 'error', err);
 
         }
 
@@ -398,8 +480,9 @@ export class LogurInstance extends Notify implements ILogurInstance {
             stack = `Error: ${message}\nat getStack (${url}:${line}:${column})`;
 
           // We'll parse this in log method.
-          this.log(this._exceptions, 'error', {
+          this.logger(this._exceptions, 'error', {
 
+            name: 'unhandledException',
             message: message,
             stack: stack,
             frames: [{
@@ -426,6 +509,8 @@ export class LogurInstance extends Notify implements ILogurInstance {
   private get log(): ILogurInstance & ILevelMethods {
     return this._logur.log;
   }
+
+  // PROTECTED & INSTANCE METHODS
 
   /**
    * Transport
@@ -631,10 +716,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
      * @param name the name of the Profile to get.
      */
     const get = (name: string): IProfile => {
-      const profile = this._profiles[name];
-      if (!profile)
-        this.log.warn(`cannot get Profile ${name} of undefined.`).exit();
-      return profile;
+      return this._profiles[name];
     };
 
     /**
@@ -701,10 +783,8 @@ export class LogurInstance extends Notify implements ILogurInstance {
       // Ensure transports.
       transports = transports || options.transports;
 
-      if (!transports || !(transports as string[]).length) {
-        this.log.error(`cannot start profile ${name} using transports of none.`);
-        return;
-      }
+      if (!transports || !(transports as string[]).length)
+        throw new Error(`Cannot start profile ${name} using transports of none.`);
 
       const valid = [];
 
@@ -714,15 +794,11 @@ export class LogurInstance extends Notify implements ILogurInstance {
         // Get the transport.
         const transport = this.transports.get<ILogurTransport>(t);
 
-        if (!transport) {
-          this.log.warn(`the Transport ${t} was NOT found, ensure the Transport is loaded.`);
-          return;
-        }
+        if (!transport)
+          throw new Error(`The Transport ${t} was NOT found, ensure the Transport is loaded.`);
 
-        if (!transport.options.profiler) {
-          this.log.warn(`attempted to load Transport ${t} but profiling is NOT enabled..`);
-          return;
-        }
+        if (!transport.options.profiler)
+          throw new Error(`Attempted to load Transport ${t} but profiling is NOT enabled..`);
 
         valid.push(t);
 
@@ -763,10 +839,8 @@ export class LogurInstance extends Notify implements ILogurInstance {
       if (!profile)
         return;
 
-      if (profile.active) {
-        this.log.warn(`cannot start already active Profile ${name}.`);
-        return;
-      }
+      if (profile.active)
+        throw new Error(`Cannot start already active Profile ${name}.`);
 
       profile.started = Date.now();
       profile.active = true;
@@ -812,10 +886,9 @@ export class LogurInstance extends Notify implements ILogurInstance {
       const profile = this.profiles.get(name);
       if (!profile)
         return;
-      if (profile.active && !force) {
-        this.log.warn(`cannot remove active Profile ${name}, stop or set force to true to remove.`);
-        return;
-      }
+      if (profile.active && !force)
+        throw new Error(`Cannot remove active Profile ${name}, stop or set force to true to remove.`);
+
       delete this._profiles[name];
     };
 
@@ -826,6 +899,43 @@ export class LogurInstance extends Notify implements ILogurInstance {
       create,
       start,
       stop,
+      remove
+    };
+
+    return methods;
+
+  }
+
+  /**
+   * Serializers
+   * Gets, creates and removes serializers.
+   */
+  get serializers(): ISerializerMethods {
+
+    let methods;
+
+    const get = (name: string): Serializer => {
+      return this._logur.serializers[name];
+    };
+
+    const getAll = (): ISerializers => {
+      return this._logur.serializers;
+    };
+
+    const create = (name: string, serializer: Serializer): ISerializerMethods => {
+      this._logur.serializers[name] = serializer;
+      return methods;
+    };
+
+    const remove = (name: string): ISerializerMethods => {
+      delete this._logur.serializers[name];
+      return methods;
+    };
+
+    methods = {
+      get,
+      getAll,
+      create,
       remove
     };
 
