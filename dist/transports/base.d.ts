@@ -87,7 +87,9 @@ export declare class LogurTransport implements ILogurTransport {
      * @param options the calling Transport's options.
      * @param output the generated Logur output.
      */
-    toMapped(options: any, output: ILogurOutput): any[];
+    toMapped(as: 'array' | 'object', options: any, output: ILogurOutput): any;
+    toMappedArray(options: any, output: ILogurOutput): any[];
+    toMappedObject<T>(options: any, output: ILogurOutput): T;
     /**
      * Action
      * The transport action to be called when messages are logged.
@@ -101,4 +103,10 @@ export declare class LogurTransport implements ILogurTransport {
      * The transport query method for finding/searching previous logs.
      */
     query(): void;
+    /**
+     * Close
+     * When Transport is of type stream this method is called
+     * on close of Logur to flush streams.
+     */
+    close(): void;
 }

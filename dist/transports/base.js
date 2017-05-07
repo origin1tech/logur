@@ -8,7 +8,6 @@ if (!process.env.BROWSER) {
 }
 var defaults = {
     active: true,
-    strategy: 'array',
     map: ['level', 'timestamp', 'message', 'untyped', 'metadata'],
     pretty: false,
     ministack: false,
@@ -264,7 +263,7 @@ var LogurTransport = (function () {
      * @param options the calling Transport's options.
      * @param output the generated Logur output.
      */
-    LogurTransport.prototype.toMapped = function (options, output) {
+    LogurTransport.prototype.toMapped = function (as, options, output) {
         var _this = this;
         if (!options || !output)
             throw new Error('Cannot format "toOdered" using options or output of undefined.');
@@ -373,7 +372,13 @@ var LogurTransport = (function () {
         }
         return ordered;
     };
-    // MUST OVERRIDE METHODS
+    LogurTransport.prototype.toMappedArray = function (options, output) {
+        return this.toMapped('array', options, output);
+    };
+    LogurTransport.prototype.toMappedObject = function (options, output) {
+        return this.toMapped('object', options, output);
+    };
+    // MUST & OPTIONAL OVERRIDE METHODS
     /**
      * Action
      * The transport action to be called when messages are logged.
@@ -390,6 +395,14 @@ var LogurTransport = (function () {
      */
     LogurTransport.prototype.query = function () {
         throw new Error('Logur Transport query method must be overriden.');
+    };
+    /**
+     * Close
+     * When Transport is of type stream this method is called
+     * on close of Logur to flush streams.
+     */
+    LogurTransport.prototype.close = function () {
+        return;
     };
     return LogurTransport;
 }());

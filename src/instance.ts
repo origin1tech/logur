@@ -42,7 +42,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
 
   private _browserEnv: IEnvBrowser;
   private _nodeEnv: IEnvNode;
-  private _exceptionsCounter: number = 0;
+  private _boundExceptions: boolean = false;
 
   protected _name: string;
   protected _logur: ILogur;
@@ -432,16 +432,6 @@ export class LogurInstance extends Notify implements ILogurInstance {
           return;
         }
 
-        // track multiple consecutive exceptions
-        // just in case we need to exit preventing loop.
-        this._exceptionsCounter += 1;
-
-        if (this._exceptionsCounter > 1)
-          return exceptionLoop(err);
-
-        if (this.options.exceptions === 'exit')
-          err.__exit__ = true;
-
         this.logger(this._exceptions, 'error', err);
 
       });
@@ -456,13 +446,8 @@ export class LogurInstance extends Notify implements ILogurInstance {
       window.onerror = function (message: string, url: string, line: number, column: number, err: IError) {
 
         // If not exceptions just return.
-        if (!this._exceptions.length || this.options.exceptions === 'none' || err.__handled__)
+        if (!this._exceptions.length)
           return;
-
-        this._exceptionsCounter += 1;
-
-        if (this._exceptionsCounter > 1)
-          return exceptionLoop(err);
 
         // Ahh the good browsers
         if (err) {
@@ -490,7 +475,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
               line: line,
               column: column
             }],
-            __exception__: true
+            __generated__: true
 
           });
 
@@ -588,8 +573,11 @@ export class LogurInstance extends Notify implements ILogurInstance {
 
       // If transport handles exception add
       // to list of transport exceptions.
-      if (transport.options.exceptions)
+      if (transport.options.exceptions) {
         this._exceptions.push(name);
+        if (!this._boundExceptions)
+          this.handleExceptions();
+      }
 
       // Add the transport to local collection.
       this._transports.push(name);
@@ -720,6 +708,14 @@ export class LogurInstance extends Notify implements ILogurInstance {
     };
 
     /**
+     * Get All
+     * Gets all profiles stored in instance.
+     */
+    const getAll = (): IProfiles => {
+      return this._profiles;
+    };
+
+    /**
      * Active
      * Sets or gets the active state of a Profile.
      *
@@ -807,17 +803,16 @@ export class LogurInstance extends Notify implements ILogurInstance {
       // Add the profile.
       profile = {
         name: name,
-        running: true,
+        running: false,
         instance: this._name,
         transports: valid,
-        started: Date.now(),
+        started: 0,
         elapsed: 0,
         count: 0,
         options: options,
         start: methods.start.bind(this, name),
         stop: methods.stop.bind(this, name),
         remove: methods.remove.bind(this, name)
-
       };
 
       this._profiles[name] = profile;
@@ -894,6 +889,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
 
     methods = {
       get,
+      getAll,
       active,
       until,
       create,

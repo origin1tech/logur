@@ -6,7 +6,7 @@ const should = chai.should;
 const assert = chai.assert;
 
 import * as supertest from 'supertest';
-import * as server from './server';
+import '../src/server';
 
 describe('Logur:Express', () => {
 

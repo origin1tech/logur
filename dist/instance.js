@@ -50,7 +50,7 @@ var LogurInstance = (function (_super) {
      */
     function LogurInstance(name, options, logur) {
         var _this = _super.call(this) || this;
-        _this._exceptionsCounter = 0;
+        _this._boundExceptions = false;
         _this._transports = [];
         _this._exceptions = [];
         _this._active = true;
@@ -344,13 +344,6 @@ var LogurInstance = (function (_super) {
                         process.exit();
                     return;
                 }
-                // track multiple consecutive exceptions
-                // just in case we need to exit preventing loop.
-                _this._exceptionsCounter += 1;
-                if (_this._exceptionsCounter > 1)
-                    return exceptionLoop(err);
-                if (_this.options.exceptions === 'exit')
-                    err.__exit__ = true;
                 _this.logger(_this._exceptions, 'error', err);
             });
         }
@@ -358,11 +351,8 @@ var LogurInstance = (function (_super) {
             var browser_1 = this.ua.getBrowser().name.toLowerCase();
             window.onerror = function (message, url, line, column, err) {
                 // If not exceptions just return.
-                if (!this._exceptions.length || this.options.exceptions === 'none' || err.__handled__)
+                if (!this._exceptions.length)
                     return;
-                this._exceptionsCounter += 1;
-                if (this._exceptionsCounter > 1)
-                    return exceptionLoop(err);
                 // Ahh the good browsers
                 if (err) {
                     this.loggger(this._exceptions, 'error', err);
@@ -381,7 +371,7 @@ var LogurInstance = (function (_super) {
                                 line: line,
                                 column: column
                             }],
-                        __exception__: true
+                        __generated__: true
                     });
                 }
             };
@@ -464,8 +454,11 @@ var LogurInstance = (function (_super) {
                 var transport = new Transport(_this.options, options, _this._logur);
                 // If transport handles exception add
                 // to list of transport exceptions.
-                if (transport.options.exceptions)
+                if (transport.options.exceptions) {
                     _this._exceptions.push(name);
+                    if (!_this._boundExceptions)
+                        _this.handleExceptions();
+                }
                 // Add the transport to local collection.
                 _this._transports.push(name);
                 // If Transport create and save instance.
@@ -568,6 +561,13 @@ var LogurInstance = (function (_super) {
                 return _this._profiles[name];
             };
             /**
+             * Get All
+             * Gets all profiles stored in instance.
+             */
+            var getAll = function () {
+                return _this._profiles;
+            };
+            /**
              * Active
              * Sets or gets the active state of a Profile.
              *
@@ -635,10 +635,10 @@ var LogurInstance = (function (_super) {
                 // Add the profile.
                 profile = {
                     name: name,
-                    running: true,
+                    running: false,
                     instance: _this._name,
                     transports: valid,
-                    started: Date.now(),
+                    started: 0,
                     elapsed: 0,
                     count: 0,
                     options: options,
@@ -701,6 +701,7 @@ var LogurInstance = (function (_super) {
             };
             methods = {
                 get: get,
+                getAll: getAll,
                 active: active,
                 until: until,
                 create: create,

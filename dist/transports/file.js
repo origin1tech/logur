@@ -41,7 +41,7 @@ var FileTransport = (function (_super) {
      */
     FileTransport.prototype.action = function (output, done) {
         // Get colorized mapped array.
-        var mapped = this.toMapped(this.options, output);
+        var mapped = this.toMappedObject(this.options, output);
         done(mapped);
     };
     /**

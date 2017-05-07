@@ -7,7 +7,7 @@ import { UAParser } from 'ua-parser-js';
 export declare class LogurInstance extends Notify implements ILogurInstance {
     private _browserEnv;
     private _nodeEnv;
-    private _exceptionsCounter;
+    private _boundExceptions;
     protected _name: string;
     protected _logur: ILogur;
     protected _transports: string[];

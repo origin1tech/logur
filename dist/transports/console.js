@@ -48,7 +48,7 @@ var ConsoleTransport = (function (_super) {
         // If the log level matches a console type use it.
         var _console = console[output.level] ? console[output.level] : console.log;
         // Get mapped array.
-        var mapped = this.toMapped(this.options, output);
+        var mapped = this.toMappedArray(this.options, output);
         // If console method matches level
         // name use it for good measure.
         // Really only makes difference in Browser.

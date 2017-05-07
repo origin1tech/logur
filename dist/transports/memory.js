@@ -40,7 +40,7 @@ var MemoryTransport = (function (_super) {
      */
     MemoryTransport.prototype.action = function (output, done) {
         // Get colorized ordered array.
-        var mapped = this.toMapped(this.options, output);
+        var mapped = this.toMappedArray(this.options, output);
         // Add mapped to collection.
         if (this.options.max < this.logs.length)
             this.logs.push(mapped);

@@ -47,7 +47,7 @@ export class ConsoleTransport extends LogurTransport implements IConsoleTranspor
     const _console = console[output.level] ? console[output.level] : console.log;
 
     // Get mapped array.
-    let mapped = this.toMapped(this.options, output);
+    let mapped = this.toMappedArray(this.options, output);
 
     // If console method matches level
     // name use it for good measure.

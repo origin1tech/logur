@@ -29,7 +29,7 @@ export declare type StackTraceCallback = {
  * Callback for Transport actions.
  */
 export declare type TransportActionCallback = {
-    (ordered: any[], output?: ILogurOutput): void;
+    (ordered: any, output?: ILogurOutput): void;
 };
 /**
  * Level Method
@@ -118,9 +118,7 @@ export interface IColorTypeMap {
 }
 export interface IError extends Error {
     prepareStackTrace?(_: any, stack: any): any;
-    __handled__: boolean;
-    __exception__: boolean;
-    __exit__: boolean;
+    __generated__: boolean;
 }
 export interface ITimestamps {
     epoch: number;
@@ -402,7 +400,6 @@ export interface ILogurTransportOptions extends ILogurBaseOptions {
     ministack?: boolean;
     prettystack?: boolean;
     profiler?: boolean;
-    strategy?: OutputStrategy;
 }
 export interface IConsoleTransportOptions extends ILogurTransportOptions {
     padding?: PadStrategy;
@@ -460,9 +457,12 @@ export interface ILogurTransport {
     padLevel(level: string, levels: string[], strategy?: PadStrategy): string;
     ministack(options: any, output: ILogurOutput): string;
     format(obj: any, options: any, output: ILogurOutput): any;
-    toMapped(options: any, output: ILogurOutput): any[];
+    toMapped(as: 'array' | 'object', options: any, output: ILogurOutput): any;
+    toMappedArray(options: any, output: ILogurOutput): any[];
+    toMappedObject<T>(options: any, output: ILogurOutput): T;
     action(output: ILogurOutput, done: TransportActionCallback): void;
     query(): void;
+    close?(): void;
 }
 export interface ISerializers {
     [key: string]: Serializer;
@@ -514,6 +514,7 @@ export interface IProfiles {
 }
 export interface IProfileMethods {
     get(name: string): IProfile;
+    getAll(): IProfiles;
     active(name: string, state?: boolean): boolean;
     status(name: string): boolean;
     until(name: string): boolean;

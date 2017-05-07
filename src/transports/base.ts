@@ -9,7 +9,6 @@ if (!process.env.BROWSER) {
 
 const defaults: ILogurTransportOptions = {
   active: true,
-  strategy: 'array',
   map: ['level', 'timestamp', 'message', 'untyped', 'metadata'],
   pretty: false,
   ministack: false,
@@ -349,7 +348,7 @@ export class LogurTransport implements ILogurTransport {
    * @param options the calling Transport's options.
    * @param output the generated Logur output.
    */
-  toMapped(options: any, output: ILogurOutput): any[] {
+  toMapped(as: 'array' | 'object', options: any, output: ILogurOutput): any {
 
     if (!options || !output)
       throw new Error('Cannot format "toOdered" using options or output of undefined.');
@@ -501,7 +500,15 @@ export class LogurTransport implements ILogurTransport {
 
   }
 
-  // MUST OVERRIDE METHODS
+  toMappedArray(options: any, output: ILogurOutput): any[] {
+    return this.toMapped('array', options, output);
+  }
+
+  toMappedObject<T>(options: any, output: ILogurOutput): T {
+    return this.toMapped('object', options, output);
+  }
+
+  // MUST & OPTIONAL OVERRIDE METHODS
 
   /**
    * Action
@@ -520,6 +527,15 @@ export class LogurTransport implements ILogurTransport {
    */
   query() {
     throw new Error('Logur Transport query method must be overriden.');
+  }
+
+  /**
+   * Close
+   * When Transport is of type stream this method is called
+   * on close of Logur to flush streams.
+   */
+  close(): void {
+    return;
   }
 
 }

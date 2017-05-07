@@ -4,6 +4,15 @@
   "description": "Extensible logging utility for Node and Browser written in TypeScript.",
   "main": "dist/index.js",
   "scripts": {
+    "clean": "node ./build/clean",
+    "copy": "node ./build/copy",
+    "compile": "node ./node_modules/typescript/bin/tsc -p ./src/tsconfig.json",
+    "bump": "node ./build/bump",
+    "build": "npm run clean && npm run copy && npm run compile",
+    "commit": "git commit -am 'auto commit'",
+    "push": "git push",
+    "docs": "node ./node_modules/typedoc/bin/typedoc --out ./docs ./src --options ./typedoc.json",
+    "release": "npm run build && npm run docs && npm run bump && npm run commit && npm run push && npm publish",
     "test": "mocha"
   },
   "repository": {

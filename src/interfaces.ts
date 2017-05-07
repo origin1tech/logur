@@ -31,7 +31,7 @@ export type StackTraceCallback = { (stacktrace: IStacktrace[]) };
  * Transport Action Callback
  * Callback for Transport actions.
  */
-export type TransportActionCallback = { (ordered: any[], output?: ILogurOutput): void };
+export type TransportActionCallback = { (ordered: any, output?: ILogurOutput): void };
 
 /**
  * Level Method
@@ -150,9 +150,7 @@ export interface IColorTypeMap {
 
 export interface IError extends Error {
   prepareStackTrace?(_: any, stack: any);
-  __handled__: boolean;   // indicates the error has already been handled.
-  __exception__: boolean; // used for browser generated error objects.
-  __exit__: boolean;      // used to indicate should exit after logging error.
+  __generated__: boolean; // used for browser generated error objects.
 }
 
 export interface ITimestamps {
@@ -492,6 +490,7 @@ export interface ILogurBaseOptions {
   colormap?: IMetadata;         // mimics util.inspect.styles for mapping type to color.
   exceptions?: ExceptionStrategy; // how to handle unhandled exceptions.
 
+
 }
 
 export interface ILogurInstanceOptions extends ILogurBaseOptions {
@@ -512,7 +511,6 @@ export interface ILogurTransportOptions extends ILogurBaseOptions {
   ministack?: boolean;          // When NOT false log append msgs w/ (file:line:col)
   prettystack?: boolean;        // when true error stact trace is pretty printed.
   profiler?: boolean;           // when true transport can be used for profiling.
-  strategy?: OutputStrategy;    // the strategy for normalized output.
 
 }
 
@@ -609,12 +607,15 @@ export interface ILogurTransport {
   padLevel(level: string, levels: string[], strategy?: PadStrategy): string;
   ministack(options: any, output: ILogurOutput): string;
   format(obj: any, options: any, output: ILogurOutput): any;
-  toMapped(options: any, output: ILogurOutput): any[];
+  toMapped(as: 'array' | 'object', options: any, output: ILogurOutput): any;
+  toMappedArray(options: any, output: ILogurOutput): any[];
+  toMappedObject<T>(options: any, output: ILogurOutput): T;
 
   // Must Override Methods
 
   action(output: ILogurOutput, done: TransportActionCallback): void;
   query(): void;
+  close?(): void;
 
 }
 
@@ -679,6 +680,7 @@ export interface IProfiles {
 
 export interface IProfileMethods {
   get(name: string): IProfile;
+  getAll(): IProfiles;
   active(name: string, state?: boolean): boolean;
   status(name: string): boolean;
   until(name: string): boolean;
