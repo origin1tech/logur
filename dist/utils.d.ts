@@ -214,10 +214,12 @@ export declare function first(arr: any[]): any;
  */
 export declare function last(arr: any[]): any;
 /**
- * Tick
- * Wraps function with process.nextTick or setTimeout.
+ * Tick Then
+ * Wraps function with process.nextTick or setTimeout
+ * then immediately calls function after tick.
  */
-export declare function tick(ctx: any, fn: Function, ...args: any[]): (callback: Function, ...args: any[]) => void;
+export declare function tickThen(ctx: Object | Function, fn: Function, ...args: any[]): void;
+export declare function tickUntil(ctx: Object | Function, until: Function, done: Function, progress: Function): void;
 /**
  * Match Index
  *

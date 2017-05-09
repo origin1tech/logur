@@ -11,7 +11,6 @@ import { UAParser } from 'ua-parser-js';
 const defaults: ILogurInstanceOptions = {
 
   level: 5,
-  active: true,
   cascade: true,
 
   levels: {
@@ -25,7 +24,7 @@ const defaults: ILogurInstanceOptions = {
   timestamp: 'utc',
   uuid: undefined,
   transports: [],
-  exceptions: 'log',
+  catcherr: false,
   colormap: COLOR_TYPE_MAP
 
 };
@@ -40,9 +39,14 @@ const profileDefaults: IProfileOptions = {
  */
 export class LogurInstance extends Notify implements ILogurInstance {
 
+  // Env
   private _browserEnv: IEnvBrowser;
   private _nodeEnv: IEnvNode;
-  private _boundExceptions: boolean = false;
+
+  // Exceptions
+  private _exceptionsInit: boolean = false;
+  private _exceptionHandler;
+
 
   protected _name: string;
   protected _logur: ILogur;
@@ -100,9 +104,6 @@ export class LogurInstance extends Notify implements ILogurInstance {
     else
       this._browserEnv = env.browser(this.ua);
 
-    // init exception handling
-    this.handleExceptions();
-
   }
 
   // PRIVATE METHODS
@@ -140,8 +141,6 @@ export class LogurInstance extends Notify implements ILogurInstance {
     // exception. If not clear exception loop.
     if (transports && transports.length)
       isException = true;
-    else
-      this._exceptionsCounter = 0;
 
     // Clone the args.
     let untyped = params.slice(0);
@@ -247,7 +246,86 @@ export class LogurInstance extends Notify implements ILogurInstance {
     else
       sysinfo = this.env.browser;
 
-    /* Iterate Transports
+    /* BUILD OUTPUT OBJECT
+    *****************************************/
+
+    // Return if the level is greater
+    // that the transport's level.
+    if (!debugOverride && level > this.options.level)
+      return;
+
+    /* Timestamp or User Defined Timestamp
+    *****************************************/
+
+    // Get all timestamp formats.
+    const timestamps = u.timestamp();
+    let ts;
+
+    // If is function call to get timestamp
+    // and format from user.
+    if (u.isFunction(this.options.timestamp)) {
+      const func: TimestampCallback = <TimestampCallback>this.options.timestamp;
+      ts = func(timestamps);
+    }
+
+    // Otherwise get timestamp from Logur
+    // defined timestamp.
+    else {
+      ts = timestamps[this.options.timestamp as string];
+    }
+
+    // Construct object with all possible
+    // properties, we'll use this in our
+    // Tranport's action for final output
+    // to it's defined target.
+    const output: ILogurOutput = {
+
+      // Level Info
+      activeid: this.options.level,
+      levelid: level,
+      levels: this.options.levels,
+
+      // Primary Fields
+      timestamp: ts,
+      uuid: u.uuid(),
+      level: type,
+      instance: this._name,
+      message: msg,
+      untyped: untyped,
+      args: params,
+
+      // Error & Stack
+      stacktrace: stack,
+
+      // Environment Info
+      env: sysinfo,
+      pkg: this._logur.pkg
+
+    };
+
+    // Set meta if exists.
+    if (meta)
+      output.metadata = meta;
+
+    // Set callback if exists.
+    if (fn)
+      output.callback = fn;
+
+    if (err)
+      output.error = err;
+
+    /* EMIT EVENTS & CALLBACK
+    *****************************************/
+
+    // Emit typed log message.
+    this.emit.call(this, type, output);
+
+    // Emit global logged message.
+    this.emit.call(this, 'logged', output);
+
+    if (fn) fn(output);
+
+    /* ITERATE ALL TRANSPORTS
     *****************************************/
 
     const run = (t: string) => {
@@ -255,118 +333,26 @@ export class LogurInstance extends Notify implements ILogurInstance {
       // Get the transport object.
       const transport = this.transports.get<ILogurTransport>(t);
 
-      if (isException)
-
-        // Ignore if the Transport isn't active.
-        if (!transport.active())
-          return;
-
-      // Return if the level is greater
-      // that the transport's level.
-      if (!debugOverride && level > this.options.level)
+      // Ensure the transport is active.
+      if (!transport.active())
         return;
 
-      /* Timestamp or User Defined Timestamp
-      *****************************************/
-
-      // Get all timestamp formats.
-      const timestamps = u.timestamp();
-      let ts;
-
-      // If is function call to get timestamp
-      // and format from user.
-      if (u.isFunction(this.options.timestamp)) {
-        const func: TimestampCallback = <TimestampCallback>this.options.timestamp;
-        ts = func(timestamps);
-      }
-
-      // Otherwise get timestamp from Logur
-      // defined timestamp.
-      else {
-        ts = timestamps[this.options.timestamp as string];
-      }
-
-      // Construct object with all possible
-      // properties, we'll use this in our
-      // Tranport's action for final output
-      // to it's defined target.
-      const output: ILogurOutput = {
-
-        // Level Info
-        activeid: this.options.level,
-        levelid: level,
-        levels: this.options.levels,
-
-        // Property Map
-        // Used to generate array
-        // of ordered properties.
-        map: transport.options.map,
-
-        // Primary Fields
-        timestamp: ts,
-        uuid: u.uuid(),
-        level: type,
-        instance: this._name,
-        transport: t,
-        message: msg,
-        untyped: untyped,
-        args: params,
-
-        // Error & Stack
-        stacktrace: stack,
-
-        // Environment Info
-        env: sysinfo,
-        pkg: this._logur.pkg
-
-      };
-
-      // Set meta if exists.
-      if (meta)
-        output.metadata = meta;
-
-      // Set callback if exists.
-      if (fn)
-        output.callback = fn;
-
-      if (err)
-        output.error = err;
-
-      // Call the Transort's action passing
-      // the ordered args and the original args.
       const clone = u.clone<ILogurOutput>(output);
+      clone.map = transport.options.map;
+      clone.transports = <string[]>transports;
 
       // Call the transports action.
-      transport.action(clone, (ordered, modified) => {
-
-        // User may have mutated the output
-        // object check if user passed modified.
-        modified = modified || clone;
-
-        // Emit typed log message.
-        // const levelClone = ordered.slice(0);
-        // levelClone.unshift(type);
-        this.emit.call(this, type, ordered, modified);
-
-        // Emit global logged message.
-        // const loggedClone = ordered.slice(0);
-        // loggedClone.unshift('logged');
-        this.emit.call(this, 'logged', ordered, modified);
-
-        if (fn)
-          fn(ordered, modified);
-
-      });
+      transport.action(output);
 
     };
 
     // We don't really care about order of transports
-    // just run them in parallel if possible.
+    // just run them in parallel unless user specifies otherwise..
     (transports as string[]).forEach((t) => {
       if (this.options.sync)
         run(t);
       else
-        u.tick(this, run, t);
+        u.tickThen(this, run, t);
     });
 
   }
@@ -380,61 +366,23 @@ export class LogurInstance extends Notify implements ILogurInstance {
     const EOL = this.env.node && this.env.node.os ? this.env.node.os.EOL : '\n';
     const isNode = u.isNode();
 
-    const exceptionLoop = (e) => {
-      // manually log error.
-      // wrap in try just in case.
-      const _log = console.error ? console.error : console.log;
-      try {
-        let msg = (e.name || 'Error') + ': ' + (e.message || 'Uknown error.');
-        if (isNode) {
-          msg = u.colorize(msg, COLOR_TYPE_MAP.error);
-          msg = u.colorize('error: ', 'red') + msg;
-        }
-        else {
-          msg = 'error: ' + msg;
-        }
-        const stack = e.stack ? e.stack.split(EOL).slice(1).join(EOL) : '';
-        if (stack.length)
-          msg += (EOL + stack);
-        _log(msg);
-        if (isNode) {
-          _log(EOL + EOL, u.colorize('  Detected exception loop exiting...  ', 'bold.bgRed.white'), EOL + EOL);
-          process.exit();
-        }
-        else {
-          const err = new Error('Detected exception loop exiting...');
-
-          throw err;
-        }
-
-      }
-      catch (ex) {
-        if (isNode) {
-          _log(ex);
-          process.exit();
-        }
-        else {
-          throw ex;
-        }
-      }
-
-    };
-
     // Handle uncaught exceptions in NodeJS.
     if (isNode) {
 
-      process.on('uncaughtException', (err: IError) => {
+      this._exceptionHandler = (err: IError) => {
 
-        // If no exception transports check if should exit.
-        if (!this._exceptions.length || this.options.exceptions === 'none') {
-          if (this.options.exceptions === 'exit')
-            process.exit();
-          return;
-        }
+        // Remove the listener to prevent loops.
+        process.removeListener('uncaughtException', this._exceptionHandler);
 
-        this.logger(this._exceptions, 'error', err);
+        this.logger(this._exceptions, 'error', err, () => {
 
-      });
+          // Call dispose method on transports.
+
+        });
+
+      };
+
+      process.on('uncaughtException', this._exceptionHandler);
 
     }
 
@@ -443,7 +391,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
 
       const browser = this.ua.getBrowser().name.toLowerCase();
 
-      window.onerror = function (message: string, url: string, line: number, column: number, err: IError) {
+      this._exceptionHandler = (message: string, url: string, line: number, column: number, err: IError) => {
 
         // If not exceptions just return.
         if (!this._exceptions.length)
@@ -452,7 +400,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
         // Ahh the good browsers
         if (err) {
 
-          this.loggger(this._exceptions, 'error', err);
+          this.logger(this._exceptions, 'error', err);
 
         }
 
@@ -482,6 +430,8 @@ export class LogurInstance extends Notify implements ILogurInstance {
         }
 
       };
+
+      window.onerror = this._exceptionHandler;
 
     }
 
@@ -573,10 +523,16 @@ export class LogurInstance extends Notify implements ILogurInstance {
 
       // If transport handles exception add
       // to list of transport exceptions.
-      if (transport.options.exceptions) {
+      if (transport.options.catcherr) {
+
         this._exceptions.push(name);
-        if (!this._boundExceptions)
+
+        // Add uncaught/window exception handler listeners.
+        if (!this._exceptionsInit) {
           this.handleExceptions();
+          this._exceptionsInit = true;
+        }
+
       }
 
       // Add the transport to local collection.
@@ -803,13 +759,13 @@ export class LogurInstance extends Notify implements ILogurInstance {
       // Add the profile.
       profile = {
         name: name,
+        options: options,
         running: false,
         instance: this._name,
         transports: valid,
         started: 0,
         elapsed: 0,
         count: 0,
-        options: options,
         start: methods.start.bind(this, name),
         stop: methods.stop.bind(this, name),
         remove: methods.remove.bind(this, name)

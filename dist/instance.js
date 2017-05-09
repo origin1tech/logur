@@ -30,7 +30,7 @@ var defaults = {
     timestamp: 'utc',
     uuid: undefined,
     transports: [],
-    exceptions: 'log',
+    uncaught: false,
     colormap: interfaces_1.COLOR_TYPE_MAP
 };
 var profileDefaults = {
@@ -50,7 +50,8 @@ var LogurInstance = (function (_super) {
      */
     function LogurInstance(name, options, logur) {
         var _this = _super.call(this) || this;
-        _this._boundExceptions = false;
+        // Exceptions
+        _this._exceptionsInit = false;
         _this._transports = [];
         _this._exceptions = [];
         _this._active = true;
@@ -85,8 +86,6 @@ var LogurInstance = (function (_super) {
             _this._nodeEnv = env.node();
         else
             _this._browserEnv = env.browser(_this.ua);
-        // init exception handling
-        _this.handleExceptions();
         return _this;
     }
     // PRIVATE METHODS
@@ -121,8 +120,6 @@ var LogurInstance = (function (_super) {
         // exception. If not clear exception loop.
         if (transports && transports.length)
             isException = true;
-        else
-            this._exceptionsCounter = 0;
         // Clone the args.
         var untyped = params.slice(0);
         // Get level info.
@@ -270,6 +267,7 @@ var LogurInstance = (function (_super) {
                 // User may have mutated the output
                 // object check if user passed modified.
                 modified = modified || clone;
+                // EVENT LISTENERS
                 // Emit typed log message.
                 // const levelClone = ordered.slice(0);
                 // levelClone.unshift(type);
@@ -278,6 +276,7 @@ var LogurInstance = (function (_super) {
                 // const loggedClone = ordered.slice(0);
                 // loggedClone.unshift('logged');
                 _this.emit.call(_this, 'logged', ordered, modified);
+                // CALLBACK
                 if (fn)
                     fn(ordered, modified);
             });
@@ -288,7 +287,7 @@ var LogurInstance = (function (_super) {
             if (_this.options.sync)
                 run(t);
             else
-                u.tick(_this, run, t);
+                u.tickThen(_this, run, t);
         });
     };
     /**
@@ -299,70 +298,33 @@ var LogurInstance = (function (_super) {
         var _this = this;
         var EOL = this.env.node && this.env.node.os ? this.env.node.os.EOL : '\n';
         var isNode = u.isNode();
-        var exceptionLoop = function (e) {
-            // manually log error.
-            // wrap in try just in case.
-            var _log = console.error ? console.error : console.log;
-            try {
-                var msg = (e.name || 'Error') + ': ' + (e.message || 'Uknown error.');
-                if (isNode) {
-                    msg = u.colorize(msg, interfaces_1.COLOR_TYPE_MAP.error);
-                    msg = u.colorize('error: ', 'red') + msg;
-                }
-                else {
-                    msg = 'error: ' + msg;
-                }
-                var stack = e.stack ? e.stack.split(EOL).slice(1).join(EOL) : '';
-                if (stack.length)
-                    msg += (EOL + stack);
-                _log(msg);
-                if (isNode) {
-                    _log(EOL + EOL, u.colorize('  Detected exception loop exiting...  ', 'bold.bgRed.white'), EOL + EOL);
-                    process.exit();
-                }
-                else {
-                    var err = new Error('Detected exception loop exiting...');
-                    throw err;
-                }
-            }
-            catch (ex) {
-                if (isNode) {
-                    _log(ex);
-                    process.exit();
-                }
-                else {
-                    throw ex;
-                }
-            }
-        };
         // Handle uncaught exceptions in NodeJS.
         if (isNode) {
-            process.on('uncaughtException', function (err) {
-                // If no exception transports check if should exit.
-                if (!_this._exceptions.length || _this.options.exceptions === 'none') {
-                    if (_this.options.exceptions === 'exit')
-                        process.exit();
-                    return;
-                }
-                _this.logger(_this._exceptions, 'error', err);
-            });
+            this._exceptionHandler = function (err) {
+                // Remove the listener to prevent loops.
+                process.removeListener('uncaughtException', _this._exceptionHandler);
+                _this.logger(_this._exceptions, 'error', err, function () {
+                    // Call dispose method on transports.
+                });
+            };
+            process.on('uncaughtException', this._exceptionHandler);
         }
         else if (u.isBrowser()) {
             var browser_1 = this.ua.getBrowser().name.toLowerCase();
-            window.onerror = function (message, url, line, column, err) {
+            this._exceptionHandler = function (message, url, line, column, err) {
                 // If not exceptions just return.
-                if (!this._exceptions.length)
+                if (!_this._exceptions.length)
                     return;
                 // Ahh the good browsers
                 if (err) {
-                    this.loggger(this._exceptions, 'error', err);
+                    _this.logger(_this._exceptions, 'error', err);
                 }
                 else {
                     var stack = "Error: " + message + "\ngetStack@" + url + ":" + line + ":" + column;
                     if (browser_1 === 'chrome' || browser_1 === 'opera')
                         stack = "Error: " + message + "\nat getStack (" + url + ":" + line + ":" + column + ")";
                     // We'll parse this in log method.
-                    this.logger(this._exceptions, 'error', {
+                    _this.logger(_this._exceptions, 'error', {
                         name: 'unhandledException',
                         message: message,
                         stack: stack,
@@ -375,6 +337,7 @@ var LogurInstance = (function (_super) {
                     });
                 }
             };
+            window.onerror = this._exceptionHandler;
         }
     };
     Object.defineProperty(LogurInstance.prototype, "log", {
@@ -454,10 +417,13 @@ var LogurInstance = (function (_super) {
                 var transport = new Transport(_this.options, options, _this._logur);
                 // If transport handles exception add
                 // to list of transport exceptions.
-                if (transport.options.exceptions) {
+                if (transport.options.uncaught) {
                     _this._exceptions.push(name);
-                    if (!_this._boundExceptions)
+                    // Add uncaught/window exception handler listeners.
+                    if (!_this._exceptionsInit) {
                         _this.handleExceptions();
+                        _this._exceptionsInit = true;
+                    }
                 }
                 // Add the transport to local collection.
                 _this._transports.push(name);
@@ -635,13 +601,13 @@ var LogurInstance = (function (_super) {
                 // Add the profile.
                 profile = {
                     name: name,
+                    options: options,
                     running: false,
                     instance: _this._name,
                     transports: valid,
                     started: 0,
                     elapsed: 0,
                     count: 0,
-                    options: options,
                     start: methods.start.bind(_this, name),
                     stop: methods.stop.bind(_this, name),
                     remove: methods.remove.bind(_this, name)

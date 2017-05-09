@@ -375,6 +375,7 @@ export interface ILogurOutput {
     args: any[];
     map: string[];
     levels: ILevels;
+    profiles?: IProfiles;
     stacktrace?: IStacktrace[];
     env?: IEnvNode | IEnvBrowser;
     error?: Error;
@@ -387,7 +388,7 @@ export interface ILogurBaseOptions {
     uuid?: UUIDCallback;
     timestamp?: TimestampCallback | TimestampStrategy;
     colormap?: IMetadata;
-    exceptions?: ExceptionStrategy;
+    uncaught?: boolean;
 }
 export interface ILogurInstanceOptions extends ILogurBaseOptions {
     cascade?: boolean;
@@ -400,6 +401,7 @@ export interface ILogurTransportOptions extends ILogurBaseOptions {
     ministack?: boolean;
     prettystack?: boolean;
     profiler?: boolean;
+    exceptions?: boolean;
 }
 export interface IConsoleTransportOptions extends ILogurTransportOptions {
     padding?: PadStrategy;
@@ -431,6 +433,10 @@ export interface IHttpTransportOptions extends ILogurTransportOptions {
     ssl?: boolean;
     params?: IMetadata;
 }
+export interface IStreamTransportOptions extends ILogurTransportOptions {
+    padding?: PadStrategy;
+    colorize?: boolean;
+}
 export interface IConsoleTransport extends ILogurTransport {
 }
 export interface IFileTransport extends ILogurTransport {
@@ -441,6 +447,8 @@ export interface IHttpTransport extends ILogurTransport {
 }
 export interface IMemoryTransport extends ILogurTransport {
     logs: any[];
+}
+export interface IStreamTransport extends ILogurTransport {
 }
 export interface ILogurTransports {
     [key: string]: {
@@ -462,7 +470,7 @@ export interface ILogurTransport {
     toMappedObject<T>(options: any, output: ILogurOutput): T;
     action(output: ILogurOutput, done: TransportActionCallback): void;
     query(): void;
-    close?(): void;
+    dispose(): void;
 }
 export interface ISerializers {
     [key: string]: Serializer;
@@ -508,6 +516,7 @@ export interface IProfile extends IProfileResult {
     options: IProfileOptions;
     start(): void;
     stop(): IProfileResult;
+    remove(): void;
 }
 export interface IProfiles {
     [key: string]: IProfile;

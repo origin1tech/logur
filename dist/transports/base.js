@@ -13,6 +13,7 @@ var defaults = {
     ministack: false,
     prettystack: false,
     profiler: true,
+    exceptions: true
 };
 /**
  * Logur Base Transport
@@ -397,12 +398,12 @@ var LogurTransport = (function () {
         throw new Error('Logur Transport query method must be overriden.');
     };
     /**
-     * Close
-     * When Transport is of type stream this method is called
-     * on close of Logur to flush streams.
+     * Dispose
+     * Use the dispose method to close streams any any clean up.
+     * Dispose is called after uncaught exceptions and SIGINT.
      */
-    LogurTransport.prototype.close = function () {
-        return;
+    LogurTransport.prototype.dispose = function () {
+        throw new Error('Logur Transport dispose method must be overriden.');
     };
     return LogurTransport;
 }());

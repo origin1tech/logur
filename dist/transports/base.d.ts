@@ -104,9 +104,9 @@ export declare class LogurTransport implements ILogurTransport {
      */
     query(): void;
     /**
-     * Close
-     * When Transport is of type stream this method is called
-     * on close of Logur to flush streams.
+     * Dispose
+     * Use the dispose method to close streams any any clean up.
+     * Dispose is called after uncaught exceptions and SIGINT.
      */
-    close(): void;
+    dispose(): void;
 }

@@ -24,14 +24,11 @@ export class HttpTransport extends LogurTransport implements IHttpTransport {
    * The transport action to be called when messages are logged.
    *
    * @param output the Logur output object for the actively logged message.
-   * @param done an callback on Transport done.
    */
-  action(output: ILogurOutput, done: TransportActionCallback) {
+  action(output: ILogurOutput) {
 
     // Get colorized mapped array.
-    let mapped = this.toMappedObject(this.options, output);
-
-    done(mapped);
+    let mapped = this.toMappedObject(output);
 
   }
 
@@ -41,6 +38,15 @@ export class HttpTransport extends LogurTransport implements IHttpTransport {
    */
   query() {
     throw new Error('Logur Transport query method must be overriden.');
+  }
+
+  /**
+   * Dispose
+   * Use the dispose method to close streams any any clean up.
+   * Dispose is called after uncaught exceptions and SIGINT.
+   */
+  dispose() {
+    throw new Error('Logur Transport dispose method must be overriden.');
   }
 
 }

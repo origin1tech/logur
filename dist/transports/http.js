@@ -44,6 +44,14 @@ var HttpTransport = (function (_super) {
     HttpTransport.prototype.query = function () {
         throw new Error('Logur Transport query method must be overriden.');
     };
+    /**
+     * Dispose
+     * Use the dispose method to close streams any any clean up.
+     * Dispose is called after uncaught exceptions and SIGINT.
+     */
+    HttpTransport.prototype.dispose = function () {
+        throw new Error('Logur Transport dispose method must be overriden.');
+    };
     return HttpTransport;
 }(base_1.LogurTransport));
 exports.HttpTransport = HttpTransport;

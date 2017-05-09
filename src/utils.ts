@@ -1,5 +1,5 @@
 
-import { ITimestamps, IError, IMetadata, ILogur, Constructor, COLOR_TYPE_MAP, PadStrategy, IParsedPath } from './interfaces';
+import { ITimestamps, IError, IMetadata, ILogur, Constructor, COLOR_TYPE_MAP, PadStrategy, IParsedPath, ILogurOutput, ILevel, Serializer, ISerializers } from './interfaces';
 import * as _clone from 'lodash.clonedeep';
 
 let chalk, util, statSync, parse, EOL;
@@ -483,15 +483,16 @@ export function last(arr: any[]): any {
 }
 
 /**
- * Tick
- * Wraps function with process.nextTick or setTimeout.
+ * Tick Then
+ * Wraps function with process.nextTick or setTimeout
+ * then immediately calls function after tick.
  */
-export function tick(ctx: any, fn: Function, ...args: any[]) {
+export function tickThen(ctx: Object | Function, fn: Function, ...args: any[]): void {
 
   const ticker = isNode() ? process.nextTick : setTimeout;
 
   if (isFunction(ctx)) {
-    fn = ctx;
+    fn = <Function>ctx;
     ctx = null;
   }
 
@@ -499,7 +500,33 @@ export function tick(ctx: any, fn: Function, ...args: any[]) {
     fn.apply(ctx, args);
   });
 
-  return ticker;
+}
+
+export function tickUntil(ctx: Object | Function, until: Function, done: Function, progress: Function): void {
+
+  const ticker = isNode() ? process.nextTick : setTimeout;
+
+  if (isFunction(ctx)) {
+    progress = done;
+    done = until;
+    until = <Function>ctx;
+    ctx = null;
+  }
+
+  const tick = () => {
+    if (progress)
+      progress();
+    if (!until())
+      done();
+    else
+      ticker(tick);
+  };
+
+  // Bind the context.
+  tick.bind(ctx);
+
+  // Start the ticker.
+  tick();
 
 }
 
@@ -1084,6 +1111,343 @@ export function activate<T>(Type: Constructor<T>, ...args: any[]): T {
   return ctor;
 }
 
+///////////////////////////////
+// OUTPUT MAPPING
+///////////////////////////////
+
+/**
+ * Ministack
+ * Generates a mini stacktrace of the calling
+ * line, col etc.
+ *
+ * @param options the Logur Transport options.
+ * @param output the generated Logur Output object.
+ */
+export function ministack(options: any, output: ILogurOutput): string {
+
+  const _colorize = options.colorize && isNode() ? true : false;
+
+  // Check if ministack should be applied.
+  if (output.stacktrace && output.stacktrace.length) {
+
+    const stack = output.stacktrace[0];
+    const parsed = parsePath(stack.path);
+
+    // Handle ministack but don't display if
+    // msg is an error as it would be redundant.
+    if (options.ministack && stack && parsed && parsed.base) {
+
+      // Compile the mini stacktrace string.
+      let mini = `(${parsed.base}:${stack.line}:${stack.column})`;
+
+      if (_colorize) {
+        const clr: string = options.colorTypeMap && options.colorTypeMap.ministack ? options.colorTypeMap.ministack : 'gray';
+        mini = colorize(mini, clr);
+      }
+
+      return mini;
+
+    }
+
+  }
+
+  return '';
+
+}
+
+/**
+ * Format By Type
+ * Inspects the type then colorizes.
+ *
+ * @param obj the value to inspect for colorization.
+ * @param options the Transport options object.
+ * @param output the Logur Output object.
+ */
+export function format(obj: any, options: any, output: ILogurOutput): any {
+
+  let pretty = options.pretty;
+  let colors = options.colorize;
+  let colorMap = options.colorTypeMap || COLOR_TYPE_MAP;
+  const EOL = output.env && output.env.os ? output.env.os['EOL'] : '\n';
+
+  function plainPrint(o) {
+
+    let result = '';
+
+    if (isArray(o)) {
+
+      o.forEach((item, i) => {
+
+        const t = getType(item, true, 'special');
+
+        if (t === 'object' || t === 'array') {
+
+          result += plainPrint(item);
+
+        }
+
+        else {
+
+          if (t === 'function') {
+            const name = item.name || 'fn';
+            item = `[Function: ${name}]`;
+          }
+
+          else {
+            if (!colors)
+              result += (`${i}=${item}, `);
+            else
+              result += (`${i}=${colorize(item, colorMap[t])}, `);
+          }
+
+        }
+
+      });
+
+    }
+
+    else {
+
+      for (let prop in o) {
+
+        let item = o[prop];
+
+        const t = getType(item, true, 'special');
+
+        if (t === 'array' || t === 'object') {
+
+          result += plainPrint(item);
+
+        }
+        else {
+
+          if (t === 'function') {
+            const name = item.name || 'fn';
+            item = `[Function: ${name}]`;
+          }
+
+          else {
+            if (!colors)
+              result += (`${prop}=${item}, `);
+            else
+              result += (`${prop}=${colorize(item, colorMap[t])}, `);
+          }
+
+        }
+
+      }
+
+    }
+
+    if (result.length)
+      return result.replace(/, $/, '');
+    return result;
+
+  }
+
+  // Get the value's type.
+  const type = getType(obj, true, 'special');
+
+  // Handle error normalization.
+  if (type === 'error') {
+
+    // Otherwise normalize the error for output.
+    // Create the error message.
+    let tmp = (obj.name || 'Error') + ': ' + (obj.message || 'unknown error.');
+
+    // colorize if enabled.
+    if (colorMap[type] && colors)
+      tmp = colorize(tmp, colorMap[type]);
+
+    // If pretty stacktrace use util.inspect.
+    if (options.prettyStack && output.error) {
+      return { normalized: tmp, append: util.inspect(output.error, true, null, colors) };
+    }
+
+    // Check if fullstack should be shown.
+    if (obj.stack) {
+      const stack = obj.stack.split(EOL).slice(1);
+      return { normalized: tmp, append: stack.join(EOL) };
+    }
+
+  }
+
+  // Handle and objects/array.
+  else if (type === 'object' || type === 'array') {
+    if (options.pretty) {
+      return {
+        append: util.inspect(obj, true, null, colors)
+      };
+    }
+    return { normalized: plainPrint(obj) };
+  }
+
+  // Handle simple value.
+  else {
+    if (!colorMap[type] || !colors)
+      return { normalized: obj };
+    return { normalized: colorize(obj, colorMap[type]) };
+  }
+
+}
+
+/**
+ * To Mapped
+ * Normalizes data for output to array or object.
+ *
+ * @param options the calling Transport's options.
+ * @param serializers object containing type serializers to be called.
+ * @param output the generated Logur output.
+ */
+export function toMapped(as: 'array' | 'object', options: any, serializers: ISerializers, output: ILogurOutput): any {
+
+  // Get list of levels we'll use this for padding.
+  const levels = keys(options.levels);
+  const EOL = output.env && output.env.os ? output.env.os['EOL'] : '\n';
+  const ignored = ['callback'];
+  const metaIndex = options.map.indexOf('metadata');
+  const metaLast = options.map.length - 1 === metaIndex;
+
+  // Metadata must be last index in map.
+  if (metaIndex !== -1 && !metaLast) {
+    options.map.splice(metaIndex, 1);
+    options.map.push('metadta');
+  }
+
+  // Var for resulting output array, object or json.
+  let ordered;
+
+  // An array of values to append to output.
+  let appended = [];
+
+  // Reference the logged level.
+  let level = output.level;
+
+  // Get the level's config object.
+  const levelObj: ILevel = options.levels[level];
+
+  // Flag if we should colorize.
+  const _colorize = options.colorize && isNode() ? true : false;
+
+  if (options.strategy !== 'array') {
+
+    ordered = {};
+
+    // Iterate the map and build the object.
+    output.map.forEach((k) => {
+
+      // ignored prop.
+      if (ignored.indexOf(k) !== -1)
+        return;
+
+      let value = get(output, k);
+
+      // When outputting to object/json
+      // when don't normalize with pretty
+      // printing or colors as they would not
+      // be relevant in that context.
+      if (!isUndefined(value)) {
+        const serializer: Serializer = this._logur.serializers[k];
+        // If a serializer exists call it.
+        if (serializer)
+          value = serializer(value, output, options);
+        ordered[k] = value;
+      }
+
+    });
+
+    if (options.ministack)
+      ordered['ministack'] = ministack(options, output);
+
+    if (options.strategy === 'json')
+      ordered = JSON.stringify(ordered);
+
+  }
+
+  else {
+
+    ordered = [];
+
+    // Iterate layout map and build output.
+    output.map.forEach((k, i) => {
+
+      let value = get(output, k);
+
+      const serializer: Serializer = serializers[k];
+
+      if (serializer && !isUndefined(value))
+        value = serializer(value, output, options);
+
+      if (k === 'untyped' && output.untyped) {
+
+        value.forEach((u) => {
+          const result = format(u, options, output);
+          if (result) {
+            if (!isUndefined(result.normalized))
+              ordered.push(result.normalized);
+            if (!isUndefined(result.append))
+              appended.push(result.append);
+          }
+        });
+
+      }
+
+      else if (value) {
+        const result = format(value, options, output);
+        if (result) {
+          if (!isUndefined(result.normalized))
+            ordered.push(result.normalized);
+          if (!isUndefined(result.append))
+            appended.push(result.append);
+        }
+      }
+
+    });
+
+    // Check if should add ministack.
+    if (options.ministack)
+      ordered.push(ministack(options, output));
+
+    // Check appended values that should be appended
+    // after primary elements.
+    if (appended.length) {
+      if (!ordered.length)
+        ordered = appended;
+      else
+        ordered = ordered.concat(appended.map(a => { return '\n' + a; }));
+    }
+
+    // Get the index of the level in map, we do
+    // this
+    const idx = options.map.indexOf('level');
+
+    if (idx !== -1) {
+
+      let tmpLevel = level.trim();
+
+      // If padding pad the level.
+      if (options.padding) {
+        const idx = levels.indexOf(level);
+        if (idx === -1) {
+          const padded = padValues(<string[]>levels, options.padding);
+          tmpLevel = padded[idx];
+        }
+      }
+
+      if (_colorize)
+        tmpLevel = colorize(tmpLevel, levelObj.color);
+
+      tmpLevel += ':';
+
+      ordered[idx] = tmpLevel;
+
+    }
+
+  }
+
+  return ordered;
+
+}
 
 ///////////////////////////////
 // COLORIZATION

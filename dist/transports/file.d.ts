@@ -25,4 +25,10 @@ export declare class FileTransport extends LogurTransport implements IFileTransp
      * The transport query method for finding/searching previous logs.
      */
     query(): void;
+    /**
+     * Dispose
+     * Use the dispose method to close streams any any clean up.
+     * Dispose is called after uncaught exceptions and SIGINT.
+     */
+    dispose(): void;
 }

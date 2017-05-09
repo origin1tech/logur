@@ -439,10 +439,11 @@ function last(arr) {
 }
 exports.last = last;
 /**
- * Tick
- * Wraps function with process.nextTick or setTimeout.
+ * Tick Then
+ * Wraps function with process.nextTick or setTimeout
+ * then immediately calls function after tick.
  */
-function tick(ctx, fn) {
+function tickThen(ctx, fn) {
     var args = [];
     for (var _i = 2; _i < arguments.length; _i++) {
         args[_i - 2] = arguments[_i];
@@ -455,9 +456,30 @@ function tick(ctx, fn) {
     ticker(function () {
         fn.apply(ctx, args);
     });
-    return ticker;
 }
-exports.tick = tick;
+exports.tickThen = tickThen;
+function tickUntil(ctx, until, done, progress) {
+    var ticker = isNode() ? process.nextTick : setTimeout;
+    if (isFunction(ctx)) {
+        progress = done;
+        done = until;
+        until = ctx;
+        ctx = null;
+    }
+    var tick = function () {
+        if (progress)
+            progress();
+        if (!until())
+            done();
+        else
+            ticker(tick);
+    };
+    // Bind the context.
+    tick.bind(ctx);
+    // Start the ticker.
+    tick();
+}
+exports.tickUntil = tickUntil;
 /**
  * Match Index
  *

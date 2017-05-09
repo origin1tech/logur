@@ -31,18 +31,15 @@ export class MemoryTransport extends LogurTransport implements IMemoryTransport 
    * The transport action to be called when messages are logged.
    *
    * @param output the Logur output object for the actively logged message.
-   * @param done an callback on Transport done.
    */
-  action(output: ILogurOutput, done: TransportActionCallback) {
+  action(output: ILogurOutput) {
 
     // Get colorized ordered array.
-    let mapped = this.toMappedArray(this.options, output);
+    let mapped = this.toMappedArray(output);
 
     // Add mapped to collection.
     if (this.options.max < this.logs.length)
       this.logs.push(mapped);
-
-    done(mapped);
 
   }
 
@@ -52,6 +49,15 @@ export class MemoryTransport extends LogurTransport implements IMemoryTransport 
    */
   query() {
     throw new Error('Logur Transport query method must be overriden.');
+  }
+
+  /**
+   * Dispose
+   * Use the dispose method to close streams any any clean up.
+   * Dispose is called after uncaught exceptions and SIGINT.
+   */
+  dispose() {
+    throw new Error('Logur Transport dispose method must be overriden.');
   }
 
 }

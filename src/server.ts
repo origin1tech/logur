@@ -1,13 +1,12 @@
 import * as express from 'express';
 import * as logur from './';
-import { createServer, Server } from 'http';
-
+import { createServer, Server, IncomingMessage, ClientResponse } from 'http';
 const log = logur.getDefault();
 
 let app = express();
 
-app.get('/', (req, res) => {
-  res.send('home');
+app.get('/contact', (req: IncomingMessage, res: ClientResponse) => {
+
 });
 
 let server: Server = createServer(app);

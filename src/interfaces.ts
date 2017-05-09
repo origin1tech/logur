@@ -457,7 +457,7 @@ export interface ILogurOutput {
   uuid?: string;                                // a unique id for the logged message.
   level?: string;                               // the logged level.
   instance?: string;                            // the transport instance name.
-  transport?: string;                           // the logged transport name or label.
+  transports?: string[];                        // array of transports called.
   message?: string;                             // the logged message.
   metadata?: IMetadata;                         // passed metadata.
   callback?: { (output?: ILogurOutput) };       // passed callback function.
@@ -467,8 +467,9 @@ export interface ILogurOutput {
   untyped: any[];                               // args that are not known types.
   args: any[];                                  // the originally logged args.
 
-  map: string[];                                // array of ordered props for output.
+  map?: string[];                                // array of ordered props for output.
   levels: ILevels;                              // the levels configuration.
+  profiles?: IProfiles;
   stacktrace?: IStacktrace[];                   // parsed stacktrace frame.
   env?: IEnvNode | IEnvBrowser;                 // browser, os, process environment info.
   error?: Error;                                // populated with parsed error if exists.
@@ -482,14 +483,14 @@ export interface ILogurOutput {
 
 export interface ILogurBaseOptions {
 
-  active?: boolean;             // when NOT false is active.
+
   level?: number;               // the active log level.
   levels?: ILevels;             // Log levels configuration.
   uuid?: UUIDCallback;          // when has value callsback to get generated uuid.
   timestamp?: TimestampCallback | TimestampStrategy; // timestamp strategy.
   colormap?: IMetadata;         // mimics util.inspect.styles for mapping type to color.
-  exceptions?: ExceptionStrategy; // how to handle unhandled exceptions.
-
+  catcherr?: boolean;           // whether to handle uncaught exceptions/errors.
+  exiterr?: boolean;            // whether to exit on uncaught errors.
 
 }
 
@@ -506,11 +507,13 @@ export interface ILogurInstanceOptions extends ILogurBaseOptions {
 
 export interface ILogurTransportOptions extends ILogurBaseOptions {
 
-  map?: string[];               // array containing properties in order of output.
+  active?: boolean;             // when NOT false is active.
+  map?: string[];                // array of properties to map log output.
   pretty?: boolean;             // when true objects are pretty printed.
   ministack?: boolean;          // When NOT false log append msgs w/ (file:line:col)
-  prettystack?: boolean;        // when true error stact trace is pretty printed.
+  prettystack?: boolean;        // when true error stack trace is pretty printed.
   profiler?: boolean;           // when true transport can be used for profiling.
+  exceptions?: boolean;         // whether the transport is fired on exceptions.
 
 }
 
@@ -548,6 +551,11 @@ export interface IHttpTransportOptions extends ILogurTransportOptions {
   params?: IMetadata;
 }
 
+export interface IStreamTransportOptions extends ILogurTransportOptions {
+  padding?: PadStrategy;        // the strategy for pading levels.
+  colorize?: boolean;           // when NOT false colorization is applied.
+}
+
 ////////////////////////
 // BASE TRANSPORTS
 ////////////////////////
@@ -579,10 +587,15 @@ export interface IHttpTransport extends ILogurTransport {
 /* Memory
 *******************/
 
-
-
 export interface IMemoryTransport extends ILogurTransport {
   logs: any[];
+}
+
+/* Stream
+*******************/
+
+export interface IStreamTransport extends ILogurTransport {
+  //
 }
 
 ////////////////////////
@@ -613,9 +626,9 @@ export interface ILogurTransport {
 
   // Must Override Methods
 
-  action(output: ILogurOutput, done: TransportActionCallback): void;
+  action(output: ILogurOutput): void;
   query(): void;
-  close?(): void;
+  dispose(): void;
 
 }
 
@@ -657,7 +670,7 @@ export interface IProfileOptions {
 
 export interface IProfileResult {
 
-  name: string;
+  name: string;           // name of the profile.
   instance: string;       // name of instance that ran the profile.
   transports: string[];   // array of transport names used in profile.
   started: number;        // start timestamp.
@@ -668,10 +681,11 @@ export interface IProfileResult {
 }
 
 export interface IProfile extends IProfileResult {
-  active: boolean;
+  active: boolean;            // whether the profile is active.
   options: IProfileOptions;
   start(): void;
   stop(): IProfileResult;
+  remove(): void;
 }
 
 export interface IProfiles {

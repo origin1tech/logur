@@ -6,9 +6,7 @@ const defaults: IConsoleTransportOptions = {
 
   map: ['level', 'message', 'untyped', 'metadata'],
   padding: 'right',
-  pretty: false,
-  colorize: true,
-  ministack: false
+  colorize: true
 
 };
 
@@ -39,22 +37,19 @@ export class ConsoleTransport extends LogurTransport implements IConsoleTranspor
    * The transport action to be called when messages are logged.
    *
    * @param output the Logur output object for the actively logged message.
-   * @param done an optional callback on Transport done.
    */
-  action(output: ILogurOutput, done: TransportActionCallback): void {
+  action(output: ILogurOutput): void {
 
     // If the log level matches a console type use it.
     const _console = console[output.level] ? console[output.level] : console.log;
 
     // Get mapped array.
-    let mapped = this.toMappedArray(this.options, output);
+    let mapped = this.toMappedArray(output);
 
     // If console method matches level
     // name use it for good measure.
     // Really only makes difference in Browser.
     _console.apply(console, mapped);
-
-    done(mapped);
 
   }
 
@@ -64,6 +59,15 @@ export class ConsoleTransport extends LogurTransport implements IConsoleTranspor
    */
   query() {
     throw new Error('Logur Transport query method must be overriden.');
+  }
+
+  /**
+   * Dispose
+   * Use the dispose method to close streams any any clean up.
+   * Dispose is called after uncaught exceptions and SIGINT.
+   */
+  dispose() {
+    throw new Error('Logur Transport dispose method must be overriden.');
   }
 
 }

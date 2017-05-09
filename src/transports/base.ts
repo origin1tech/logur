@@ -9,11 +9,12 @@ if (!process.env.BROWSER) {
 
 const defaults: ILogurTransportOptions = {
   active: true,
-  map: ['level', 'timestamp', 'message', 'untyped', 'metadata'],
+  map: ['timestamp', 'level', 'message', 'untyped', 'metadata'],
   pretty: false,
-  ministack: false,
+  ministack: true,
   prettystack: false,
   profiler: true,
+  exceptions: true
 };
 
 /**
@@ -143,7 +144,9 @@ export class LogurTransport implements ILogurTransport {
    * @param options the Logur Transport options.
    * @param output the generated Logur Output object.
    */
-  ministack(options: any, output: ILogurOutput): string {
+  ministack(output: ILogurOutput): string {
+
+    const options = this.options;
 
     const colorize = options.colorize && u.isNode() ? true : false;
 
@@ -165,36 +168,6 @@ export class LogurTransport implements ILogurTransport {
 
         return mini;
 
-        // Just add to object when JSON is required.
-        // if (options.json) {
-        //   return mini;
-        // }
-
-        // else {
-
-        //   // If metadata and metadata is set to display pretty
-        //   // then we have to inject the ministack before it
-        //   // or it will look funny.
-        //   if (output.metadata && u.contains(options.map, 'metadata') && options.pretty) {
-
-        //     // Get the metadata index.
-        //     const metaIndex = options.map.indexOf('metadata') - 1;
-
-        //     if (metaIndex >= 0) {
-        //       const suffixMeta = ordered.slice(metaIndex);
-        //       ordered = [...ordered.splice(0, metaIndex), mini, ...suffixMeta];
-        //     }
-
-        //   }
-
-        //   else {
-
-        //     ordered.push(mini);
-
-        //   }
-
-        // }
-
       }
 
     }
@@ -213,7 +186,9 @@ export class LogurTransport implements ILogurTransport {
    * @param colors whether to colorize the value.
    * @param map an optional map to apply colors by type.
    */
-  format(obj: any, options: any, output: ILogurOutput): any {
+  format(obj: any, output: ILogurOutput): any {
+
+    const options = this.options;
 
     let pretty = options.pretty;
     let colors = options.colorize;
@@ -348,10 +323,9 @@ export class LogurTransport implements ILogurTransport {
    * @param options the calling Transport's options.
    * @param output the generated Logur output.
    */
-  toMapped(as: 'array' | 'object', options: any, output: ILogurOutput): any {
+  toMapped(as: 'array' | 'object', output: ILogurOutput): any {
 
-    if (!options || !output)
-      throw new Error('Cannot format "toOdered" using options or output of undefined.');
+    const options = this.options;
 
     // Get list of levels we'll use this for padding.
     const levels = u.keys(options.levels);
@@ -500,12 +474,12 @@ export class LogurTransport implements ILogurTransport {
 
   }
 
-  toMappedArray(options: any, output: ILogurOutput): any[] {
-    return this.toMapped('array', options, output);
+  toMappedArray(output: ILogurOutput): any[] {
+    return this.toMapped('array', output);
   }
 
-  toMappedObject<T>(options: any, output: ILogurOutput): T {
-    return this.toMapped('object', options, output);
+  toMappedObject<T>(output: ILogurOutput): T {
+    return this.toMapped('object', output);
   }
 
   // MUST & OPTIONAL OVERRIDE METHODS
@@ -517,7 +491,7 @@ export class LogurTransport implements ILogurTransport {
    * @param output the Logur output object for the actively logged message.
    * @param done an optional callback on Transport done.
    */
-  action(output: ILogurOutput, done: TransportActionCallback): void {
+  action(output: ILogurOutput): void {
     throw new Error('Logur Transport action method must be overriden.');
   }
 
@@ -530,12 +504,12 @@ export class LogurTransport implements ILogurTransport {
   }
 
   /**
-   * Close
-   * When Transport is of type stream this method is called
-   * on close of Logur to flush streams.
+   * Dispose
+   * Use the dispose method to close streams any any clean up.
+   * Dispose is called after uncaught exceptions and SIGINT.
    */
-  close(): void {
-    return;
+  dispose() {
+    throw new Error('Logur Transport dispose method must be overriden.');
   }
 
 }
