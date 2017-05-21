@@ -15,9 +15,10 @@ var u = require("../utils");
 var defaults = {
     map: ['level', 'message', 'untyped', 'metadata'],
     padding: 'right',
-    pretty: false,
     colorize: true,
-    ministack: false
+    ministack: true,
+    pretty: true,
+    prettystack: false
 };
 var ConsoleTransport = (function (_super) {
     __extends(ConsoleTransport, _super);
@@ -42,18 +43,16 @@ var ConsoleTransport = (function (_super) {
      * The transport action to be called when messages are logged.
      *
      * @param output the Logur output object for the actively logged message.
-     * @param done an optional callback on Transport done.
      */
-    ConsoleTransport.prototype.action = function (output, done) {
+    ConsoleTransport.prototype.action = function (output) {
         // If the log level matches a console type use it.
         var _console = console[output.level] ? console[output.level] : console.log;
         // Get mapped array.
-        var mapped = this.toMappedArray(this.options, output);
+        var mapped = this.toMapped(this.options, output);
         // If console method matches level
         // name use it for good measure.
         // Really only makes difference in Browser.
-        _console.apply(console, mapped);
-        done(mapped);
+        _console.apply(console, mapped.array);
     };
     /**
      * Query

@@ -1,11 +1,13 @@
 
-import { ITimestamps, IError, IMetadata, ILogur, Constructor, COLOR_TYPE_MAP, PadStrategy, IParsedPath, ILogurOutput, ILevel, Serializer, ISerializers } from './interfaces';
+import { ITimestamps, IError, IMetadata, ILogur, Constructor, PadStrategy, IParsedPath, ILogurOutput, ILevel, Serializer, ISerializers, ILogurOutputMapped } from './interfaces';
 import * as _clone from 'lodash.clonedeep';
+import * as env from './env';
+import * as colors from './colorize';
 
-let chalk, util, statSync, parse, EOL;
+let util, statSync, parse, EOL;
 
 if (!process.env.BROWSER) {
-  chalk = require('chalk');
+  // chalk = require('chalk');
   util = require('util');
   parse = require('path').parse;
   statSync = require('fs').statSync;
@@ -996,12 +998,12 @@ export function timestamp(date?: string | number): ITimestamps {
     epoch: epoch,
     date: dt,
     iso: iso,
-    localDate: localDate,
-    localTime: localTime,
     local: local,
-    utcDate: utcDate,
-    utcTime: utcTime,
-    utc: utc
+    utc: utc,
+    localdate: localDate,
+    localtime: localTime,
+    utcdate: utcDate,
+    utctime: utcTime
   };
 
   return obj;
@@ -1141,7 +1143,7 @@ export function ministack(options: any, output: ILogurOutput): string {
       let mini = `(${parsed.base}:${stack.line}:${stack.column})`;
 
       if (_colorize) {
-        const clr: string = options.colorTypeMap && options.colorTypeMap.ministack ? options.colorTypeMap.ministack : 'gray';
+        const clr: string = options.colormap && options.colormap.ministack ? options.colormap.ministack : 'gray';
         mini = colorize(mini, clr);
       }
 
@@ -1163,12 +1165,26 @@ export function ministack(options: any, output: ILogurOutput): string {
  * @param options the Transport options object.
  * @param output the Logur Output object.
  */
-export function format(obj: any, options: any, output: ILogurOutput): any {
+export function formatByType(key: string, obj: any, options: any, output: ILogurOutput): any {
 
-  let pretty = options.pretty;
-  let colors = options.colorize;
-  let colorMap = options.colorTypeMap || COLOR_TYPE_MAP;
+  let pretty = options.pretty && isNode();
+  let canColorize = options.colorize && isNode();
+  let colorMap = options.colormap;
   const EOL = output.env && output.env.os ? output.env.os['EOL'] : '\n';
+
+  // If util extend with styles
+  // from node util.inspect.styles.
+  if (util)
+    colorMap = extend({}, util.inspect.styles, colorMap);
+
+
+  // Get the value's type.
+  const type = getType(obj, true, 'special');
+
+  function getStyle(t) {
+    if (!canColorize) return false;
+    return colorMap[key] || colorMap[t];
+  }
 
   function plainPrint(o) {
 
@@ -1193,12 +1209,12 @@ export function format(obj: any, options: any, output: ILogurOutput): any {
             item = `[Function: ${name}]`;
           }
 
-          else {
-            if (!colors)
-              result += (`${i}=${item}, `);
-            else
-              result += (`${i}=${colorize(item, colorMap[t])}, `);
-          }
+          const style = getStyle(t);
+
+          if (style)
+            result += (`${i}=${colorize(item, style)}, `);
+          else
+            result += (`${i}=${item}, `);
 
         }
 
@@ -1226,12 +1242,12 @@ export function format(obj: any, options: any, output: ILogurOutput): any {
             item = `[Function: ${name}]`;
           }
 
-          else {
-            if (!colors)
-              result += (`${prop}=${item}, `);
-            else
-              result += (`${prop}=${colorize(item, colorMap[t])}, `);
-          }
+          const style = getStyle(t);
+
+          if (canColorize)
+            result += (`${prop}=${colorize(item, style)}, `);
+          else
+            result += (`${prop}=${item}, `);
 
         }
 
@@ -1239,35 +1255,39 @@ export function format(obj: any, options: any, output: ILogurOutput): any {
 
     }
 
-    if (result.length)
-      return result.replace(/, $/, '');
+
+    result = result.replace(/, $/, '');
+
     return result;
 
   }
-
-  // Get the value's type.
-  const type = getType(obj, true, 'special');
 
   // Handle error normalization.
   if (type === 'error') {
 
     // Otherwise normalize the error for output.
     // Create the error message.
-    let tmp = (obj.name || 'Error') + ': ' + (obj.message || 'unknown error.');
+    let tmp = obj.message || 'unknown error.';
+
+    const style = getStyle(type);
 
     // colorize if enabled.
-    if (colorMap[type] && colors)
-      tmp = colorize(tmp, colorMap[type]);
+    if (style)
+      tmp = colorize(tmp, style);
+
+    if (!obj.stack)
+      return { normalized: tmp };
+
+    const stack = obj.stack.split(EOL).slice(1);
 
     // If pretty stacktrace use util.inspect.
-    if (options.prettyStack && output.error) {
-      return { normalized: tmp, append: util.inspect(output.error, true, null, colors) };
+    if (options.prettystack) {
+      return { normalized: tmp, append: EOL + util.inspect({ name: obj.name || 'Error', message: obj.message || 'Unknown error', stack: env.stacktrace(obj, 1) }, true, null, canColorize) };
     }
 
     // Check if fullstack should be shown.
-    if (obj.stack) {
-      const stack = obj.stack.split(EOL).slice(1);
-      return { normalized: tmp, append: stack.join(EOL) };
+    else {
+      return { normalized: tmp, append: EOL + stack.join(EOL) };
     }
 
   }
@@ -1276,7 +1296,7 @@ export function format(obj: any, options: any, output: ILogurOutput): any {
   else if (type === 'object' || type === 'array') {
     if (options.pretty) {
       return {
-        append: util.inspect(obj, true, null, colors)
+        append: EOL + util.inspect(obj, true, null, canColorize)
       };
     }
     return { normalized: plainPrint(obj) };
@@ -1284,9 +1304,11 @@ export function format(obj: any, options: any, output: ILogurOutput): any {
 
   // Handle simple value.
   else {
-    if (!colorMap[type] || !colors)
+    const style = getStyle(type);
+
+    if (!style)
       return { normalized: obj };
-    return { normalized: colorize(obj, colorMap[type]) };
+    return { normalized: colorize(obj, style) };
   }
 
 }
@@ -1296,10 +1318,9 @@ export function format(obj: any, options: any, output: ILogurOutput): any {
  * Normalizes data for output to array or object.
  *
  * @param options the calling Transport's options.
- * @param serializers object containing type serializers to be called.
  * @param output the generated Logur output.
  */
-export function toMapped(as: 'array' | 'object', options: any, serializers: ISerializers, output: ILogurOutput): any {
+export function toMapped<T>(options: any, output: ILogurOutput): ILogurOutputMapped<T> {
 
   // Get list of levels we'll use this for padding.
   const levels = keys(options.levels);
@@ -1315,10 +1336,7 @@ export function toMapped(as: 'array' | 'object', options: any, serializers: ISer
   }
 
   // Var for resulting output array, object or json.
-  let ordered;
-
-  // An array of values to append to output.
-  let appended = [];
+  let arr = [], obj = {}, appended = [];
 
   // Reference the logged level.
   let level = output.level;
@@ -1327,125 +1345,97 @@ export function toMapped(as: 'array' | 'object', options: any, serializers: ISer
   const levelObj: ILevel = options.levels[level];
 
   // Flag if we should colorize.
-  const _colorize = options.colorize && isNode() ? true : false;
+  const colors = options.colorize && isNode() ? true : false;
 
-  if (options.strategy !== 'array') {
+  // Iterate the map and build the object.
+  output.map.forEach((k) => {
 
-    ordered = {};
+    // ignored prop.
+    if (ignored.indexOf(k) !== -1)
+      return;
 
-    // Iterate the map and build the object.
-    output.map.forEach((k) => {
+    let value = get(output, k);
 
-      // ignored prop.
-      if (ignored.indexOf(k) !== -1)
-        return;
+    if (isUndefined(value))
+      return;
 
-      let value = get(output, k);
+    const serializer: Serializer = output.serializers[k];
 
-      // When outputting to object/json
-      // when don't normalize with pretty
-      // printing or colors as they would not
-      // be relevant in that context.
-      if (!isUndefined(value)) {
-        const serializer: Serializer = this._logur.serializers[k];
-        // If a serializer exists call it.
-        if (serializer)
-          value = serializer(value, output, options);
-        ordered[k] = value;
-      }
+    // If a serializer exists call and get value.
+    if (serializer)
+      value = serializer(value, output, options);
 
-    });
+    // Add value to object.
+    obj[k] = value;
 
-    if (options.ministack)
-      ordered['ministack'] = ministack(options, output);
+    // Handled untyped array.
+    if (k === 'untyped' && output.untyped) {
 
-    if (options.strategy === 'json')
-      ordered = JSON.stringify(ordered);
-
-  }
-
-  else {
-
-    ordered = [];
-
-    // Iterate layout map and build output.
-    output.map.forEach((k, i) => {
-
-      let value = get(output, k);
-
-      const serializer: Serializer = serializers[k];
-
-      if (serializer && !isUndefined(value))
-        value = serializer(value, output, options);
-
-      if (k === 'untyped' && output.untyped) {
-
-        value.forEach((u) => {
-          const result = format(u, options, output);
-          if (result) {
-            if (!isUndefined(result.normalized))
-              ordered.push(result.normalized);
-            if (!isUndefined(result.append))
-              appended.push(result.append);
-          }
-        });
-
-      }
-
-      else if (value) {
-        const result = format(value, options, output);
+      value.forEach((u) => {
+        const result = formatByType(k, u, options, output);
         if (result) {
           if (!isUndefined(result.normalized))
-            ordered.push(result.normalized);
+            arr.push(result.normalized);
           if (!isUndefined(result.append))
             appended.push(result.append);
         }
-      }
+      });
 
-    });
-
-    // Check if should add ministack.
-    if (options.ministack)
-      ordered.push(ministack(options, output));
-
-    // Check appended values that should be appended
-    // after primary elements.
-    if (appended.length) {
-      if (!ordered.length)
-        ordered = appended;
-      else
-        ordered = ordered.concat(appended.map(a => { return '\n' + a; }));
     }
 
-    // Get the index of the level in map, we do
-    // this
-    const idx = options.map.indexOf('level');
-
-    if (idx !== -1) {
-
-      let tmpLevel = level.trim();
-
-      // If padding pad the level.
-      if (options.padding) {
-        const idx = levels.indexOf(level);
-        if (idx === -1) {
-          const padded = padValues(<string[]>levels, options.padding);
-          tmpLevel = padded[idx];
-        }
+    // Handle named properties.
+    else {
+      const result = formatByType(k, value, options, output);
+      if (result) {
+        arr.push(result.normalized);
+        if (!isUndefined(result.append))
+          appended.push(result.append);
       }
+    }
 
-      if (_colorize)
-        tmpLevel = colorize(tmpLevel, levelObj.color);
 
+  });
+
+  // Get level index in map.
+  const lvlIdx = options.map.indexOf('level');
+
+  // If index is valid check if should pad and colorize.
+  if (lvlIdx !== -1) {
+
+    let tmpLevel = level.trim();
+
+    // If padding pad the level.
+    if (options.padding) {
+      const idx = levels.indexOf(level);
+      if (idx !== -1) {
+        const padded = padValues(<string[]>levels, options.padding);
+        tmpLevel = padded[idx];
+      }
+    }
+
+    if (colors)
+      tmpLevel = colorize(tmpLevel, levelObj.color);
+
+    if (options.padding)
       tmpLevel += ':';
-
-      ordered[idx] = tmpLevel;
-
-    }
+    arr[lvlIdx] = tmpLevel;
 
   }
 
-  return ordered;
+  // Check if should append with ministack.
+  if (options.ministack) {
+    const mini = ministack(options, output);
+    obj['ministack'] = mini;
+    arr.push(mini);
+  }
+
+  arr = arr.concat(appended);
+
+  return {
+    array: arr,
+    object: obj as T,
+    json: JSON.stringify(obj)
+  };
 
 }
 
@@ -1455,372 +1445,21 @@ export function toMapped(as: 'array' | 'object', options: any, serializers: ISer
 
 /**
  * Colorize
- * Convenience wrapper for chalk. Color can be
- * shorthand string ex: 'underline.bold.red'.
+ * Applies color styles to value.
  *
- * @see https://github.com/chalk/chalk
- *
- * @param obj the value to be colorized.
- * @param color the color to apply, modifiers, shorthand.
- * @param modifiers the optional modifier or modifiers.
+ * @param str the value to be colorized.
+ * @param style the ansi style or styles to be applied.
  */
-export function colorize(obj: any, color?: string | string[], modifiers?: string | string[]): any {
-
-  // If not chalk can't colorize
-  // as we are in browser.
-  if (!chalk)
-    return obj;
-
-  if (!color && !modifiers)
-    return obj;
-
-  if (isArray(color)) {
-    modifiers = <string[]>color;
-    color = undefined;
-  }
-
-  if (isString(modifiers))
-    modifiers = <string[]>[modifiers];
-
-  // Just a loose exp we don't
-  // need much more for this.
-  const exp = /\./g;
-
-  // Array containing all styles.
-  let styles = [];
-
-  // Decorate from shorthand color
-  // when color is shorting format:
-  // bold.underline.red
-  if (exp.test(<string>color))
-    styles = (color as string).split('.');
-
-  // Decorate using args.
-  else
-    styles = styles.concat([color]).concat(modifiers || []);
-
-  // Iterate defined styles and apply.
-  let i = styles.length;
-
-  while (i--) {
-    const style = styles[i];
-    obj = chalk[style](obj);
-  }
-
-  return obj;
-
+export function colorize(str: any, style: string | string[]) {
+  return colors.style(str, style);
 }
 
 /**
  * Strip Colors
- * Strips ansi colors from string, object, arrays etc.
+ * Strips ansi colors from value.
  *
- * @param str the object to strip color from.
+ * @param str the value to be stripped of color.
  */
-export function stripColors(obj: any): any {
-
-  const exp = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
-
-  if (isString(obj))
-    return obj.replace(exp, '');
-
-  // Strip object.
-  if (isPlainObject(obj)) {
-
-    for (let prop in obj) {
-      const val = obj[prop];
-      if (isString(val))
-        obj[prop] = val.replace(exp, '');
-      else
-        obj[prop] = stripColors(val);
-    }
-
-  }
-  else {
-
-    let arr = obj;
-    let i = arr.length;
-
-    while (i--)
-
-      // If string replace
-      if (isString(arr[i]))
-        arr[i] = arr[i].replace(exp, '');
-
-      // Otherwise call stripColors again.
-      else
-        arr[i] = stripColors(arr[i]);
-
-    return arr;
-
-  }
-
+export function stripColors(str: any) {
+  return colors.strip(str);
 }
-
-///////////////////////////////
-// PLACEHOLDER
-///////////////////////////////
-
-/**
- * Fetch
- * Trivial method to fetch url using xmlhttp.
- *
- * @param url the url to be fetched.
- */
-// export function fetch(url: string) {
-
-//   try {
-
-//     const xmlHttp = function () {
-
-//       try {
-//         return new (<any>window).XMLHttpRequest();
-//       }
-
-//       catch (e) {
-//         return new (<any>window).ActiveXObject('Microsoft.XMLHTTP');
-//       }
-
-//     };
-
-//     const req = xmlHttp();
-//     req.open('GET', url, false);
-//     req.send('');
-//     return req.responseText;
-
-//   }
-
-//   catch (e) {
-
-//     return '';
-
-//   }
-
-// }
-
-/**
- * Lookup Function
- * Attempts to lookup function for error handling via
- * xmlhttp request. Not perfect.
- *
- * @param url the url to be looked up.
- * @param line the line of the function.
- */
-// export function lookupFunction(url: string, line: number) {
-
-//   const FUNC_ARG_NAMES = /function ([^(]*)\(([^)]*)\)/;
-//   const GUESS_FUNC = /['"]?([0-9A-Za-z$_]+)['"]?\s*[:=]\s*(function|eval|new Function)/;
-//   const MATCH_EXP = /(.*)\:\/\/([^:\/]+)([:\d]*)\/{0,1}([\s\S]*)/;
-//   const UNKNOWN_FUNC = 'Unknown Function';
-//   const SOURCE_CACHE = {};
-
-//   function getSource(url: string) {
-
-//     if (typeof url !== 'string') {
-//       return [];
-//     }
-
-//     if (!SOURCE_CACHE[url]) {
-
-//       // URL needs to be able to fetched within the acceptable domain.  Otherwise,
-//       // cross-domain errors will be triggered.
-//       /*
-//           Regex matches:
-//           0 - Full Url
-//           1 - Protocol
-//           2 - Domain
-//           3 - Port (Useful for internal applications)
-//           4 - Path
-//       */
-
-//       let source = '';
-//       let domain = '';
-
-//       try { domain = window.document.domain; } catch (e) { }
-//       const match = MATCH_EXP.exec(url);
-
-//       if (match && match[2] === domain) {
-//         source = fetch(url);
-//       }
-
-//       SOURCE_CACHE[url] = source ? source.split('\n') : [];
-
-//     }
-
-//     return SOURCE_CACHE[url];
-
-//   }
-
-//   let _line = '',
-//     maxLines = 10,
-//     source = getSource(url),
-//     m;
-
-//   if (!source.length)
-//     return UNKNOWN_FUNC;
-
-//   // Walk backwards from the first line in the function until we find the line which
-//   // matches the pattern above, which is the function definition
-//   for (let i = 0; i < maxLines; ++i) {
-
-//     _line = source[line - i] + _line;
-
-//     if (!isUndefined(_line)) {
-
-//       if ((m = GUESS_FUNC.exec(_line)))
-//         return m[1];
-
-//       else if ((m = FUNC_ARG_NAMES.exec(_line)))
-//         return m[1];
-
-//     }
-
-//   }
-
-//   return UNKNOWN_FUNC;
-
-// }
-
-/* Non-Mutating Array Modifications
-* TODO: consider using non mutating methods.
-***********************************************/
-
-/**
- * N-Pop
- * Pops/removes last element in array.
- *
- * @param arr the array to pop value from.
- * @param popped when false the array is returned instead of value.
- */
-// export function npop(arr: any[], popped: boolean = true): any {
-
-//   const value = arr[arr.length - 1];
-//   const _arr = nsplice(arr, 0, arr.length - 1);
-
-//   // If shifted return the
-//   // shifted/removed value.
-//   if (popped)
-//     return value;
-
-//   return _arr;
-
-// }
-
-// /**
-//  * N-Shift
-//  * Shifts/removes first element in array.
-//  *
-//  * @param arr the array to shift value from.
-//  * @param shifted when false the array is returned instead of value.
-//  */
-// export function nshift(arr: any[], shifted: boolean = true): any {
-
-//   const value = arr[0];
-//   const _arr = nsplice(arr, 0);
-
-//   // If shifted return the
-//   // shifted/removed value.
-//   if (shifted)
-//     return value;
-
-//   return _arr;
-
-// }
-
-// /**
-//  * N-Unshift
-//  * Unshifts a value to an array in a non mutable way.
-//  *
-//  * @param arr the array to be unshifted.
-//  * @param value the value to be unshifted
-//  */
-// export function nunshift(arr: any[], value: any): any[] {
-//   return [value].concat(arr);
-// }
-
-// /**
-//  * N-Push
-//  * Non mutating way to push to an array.
-//  *
-//  * @param arr the array to push items to.
-//  * @param items the items to be added.
-//  */
-// export function npush(arr: any[], ...items: any[]): any[] {
-//   return arr.concat(items);
-// }
-
-// /**
-//  * N-Splice
-//  * Non mutating way of splicing an array.
-//  *
-//  * TODO: need to builds some tests on this
-//  * not exactly [].splice behavior.
-//  *
-//  * @param arr the array to be spliced.
-//  * @param start the starting index (default: 0)
-//  * @param count the count to be spliced (default: 1)
-//  * @param items additional items to be concatenated.
-//  */
-// export function nsplice(arr: any[], start?: number, count?: number, ...items: any[]): any[] {
-
-//   start = start || 0;
-//   count = items.length && !count ? arr.length : count;
-
-//   let offset = start === 0 && count > 0 ? 1 : start;
-
-//   return arr.slice(0, offset)
-//     .concat(items)
-//     .concat(arr.slice(start + 1, count));
-
-// }
-
-
-//////////////////////////////
-// BROWSER
-//////////////////////////////
-
-/**
- * Detect Browser
- * Detects IE, Safari, Chrome, Opera, Firefox, Edge.
- */
-// export function detectBrowser() {
-
-//   // Return cached result if avalible, else get result then cache it.
-//   if (detectBrowser.prototype.__cached__)
-//     return detectBrowser.prototype.__cached__;
-
-//   let _window: any = window;
-//   let _document: any = document;
-
-//   // Opera 8.0+
-//   const isOpera = (!!_window.opr && !!opr.addons) || !!_window.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
-
-//   // Firefox 1.0+
-//   const isFirefox = typeof InstallTrigger !== 'undefined';
-
-//   // Safari 3.0+ "[object HTMLElementConstructor]"
-//   const isSafari = /constructor/i.test(_window.HTMLElement) || (function (p) {
-//     return p.toString() === '[object SafariRemoteNotification]';
-//   })(!window['safari'] || safari.pushNotification);
-
-//   // Internet Explorer 6-11
-//   const isIE = /*@cc_on!@*/false || !!_document.documentMode;
-
-//   // Edge 20+
-//   const isEdge = !isIE && !!_window.StyleMedia;
-
-//   // Chrome 1+
-//   const isChrome = !!_window.chrome && !!_window.chrome.webstore;
-
-//   // Blink engine detection
-//   // var isBlink = (isChrome || isOpera) && !!window.CSS;
-
-//   return detectBrowser.prototype.__cached__ =
-//     isOpera ? 'Opera' :
-//       isFirefox ? 'Firefox' :
-//         isSafari ? 'Safari' :
-//           isChrome ? 'Chrome' :
-//             isIE ? 'IE' :
-//               isEdge ? 'Edge' :
-//                 'Unknown';
-// }

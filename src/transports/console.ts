@@ -6,7 +6,10 @@ const defaults: IConsoleTransportOptions = {
 
   map: ['level', 'message', 'untyped', 'metadata'],
   padding: 'right',
-  colorize: true
+  colorize: true,
+  ministack: true,
+  pretty: true,
+  prettystack: false
 
 };
 
@@ -44,12 +47,12 @@ export class ConsoleTransport extends LogurTransport implements IConsoleTranspor
     const _console = console[output.level] ? console[output.level] : console.log;
 
     // Get mapped array.
-    let mapped = this.toMappedArray(output);
+    let mapped = this.toMapped(this.options, output);
 
     // If console method matches level
     // name use it for good measure.
     // Really only makes difference in Browser.
-    _console.apply(console, mapped);
+    _console.apply(console, mapped.array);
 
   }
 

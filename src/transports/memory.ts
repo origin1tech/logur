@@ -35,11 +35,11 @@ export class MemoryTransport extends LogurTransport implements IMemoryTransport 
   action(output: ILogurOutput) {
 
     // Get colorized ordered array.
-    let mapped = this.toMappedArray(output);
+    let mapped = this.toMapped(output);
 
     // Add mapped to collection.
     if (this.options.max < this.logs.length)
-      this.logs.push(mapped);
+      this.logs.push(mapped.array);
 
   }
 

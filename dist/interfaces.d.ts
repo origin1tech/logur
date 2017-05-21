@@ -57,7 +57,7 @@ export declare type Serializer = {
  * Timestamp Strategy
  * Type constraint for the timestamp strategy to be used.
  */
-export declare type TimestampStrategy = 'epoch' | 'iso' | 'local' | 'utc';
+export declare type TimestampStrategy = 'epoch' | 'iso' | 'local' | 'utc' | 'localdate' | 'localtime' | 'utcdate' | 'utctime';
 /**
  * File Output Strategy
  * Type constraint for how logs are formatted and output to file.
@@ -101,7 +101,6 @@ export declare type OutputStrategy = 'array' | 'object' | 'json';
  * @see https://github.com/chalk/chalk
  */
 export declare const STYLES = "red, green, yellow, blue, magenta, cyan, white, gray, black, bgRed,bgGreen, bgYellow, bgBlue, bgMagenta, bgCyan, bgWhite, bold, dim, italic, underline, inverse, strikethrough";
-export declare const COLOR_TYPE_MAP: IColorTypeMap;
 export interface IColorTypeMap {
     special: string;
     number: string;
@@ -112,9 +111,7 @@ export interface IColorTypeMap {
     symbol: string;
     date: string;
     regexp: string;
-    error: string;
-    ministack: string;
-    function: string;
+    [key: string]: string;
 }
 export interface IError extends Error {
     prepareStackTrace?(_: any, stack: any): any;
@@ -124,11 +121,11 @@ export interface ITimestamps {
     epoch: number;
     date: Date;
     iso: string;
-    localDate: string;
-    localTime: string;
+    localdate: string;
+    localtime: string;
     local: string;
-    utcDate: string;
-    utcTime: string;
+    utcdate: string;
+    utctime: string;
     utc: string;
 }
 export interface INotify {
@@ -365,30 +362,38 @@ export interface ILogurOutput {
     uuid?: string;
     level?: string;
     instance?: string;
-    transport?: string;
+    transports?: string[];
     message?: string;
     metadata?: IMetadata;
-    callback?: {
-        (output?: ILogurOutput);
-    };
     untyped: any[];
     args: any[];
-    map: string[];
+    map?: string[];
     levels: ILevels;
     profiles?: IProfiles;
     stacktrace?: IStacktrace[];
     env?: IEnvNode | IEnvBrowser;
     error?: Error;
     pkg?: IMetadata;
+    serializers?: ISerializers;
+    toMapped?<T>(options?: any): ILogurOutputMapped<T>;
+}
+export interface ILogurOutputMapped<T> {
+    array: any[];
+    object: T;
+    json: string;
 }
 export interface ILogurBaseOptions {
-    active?: boolean;
     level?: number;
     levels?: ILevels;
+    map?: string[];
+    pretty?: boolean;
+    ministack?: boolean;
+    prettystack?: boolean;
     uuid?: UUIDCallback;
     timestamp?: TimestampCallback | TimestampStrategy;
     colormap?: IMetadata;
-    uncaught?: boolean;
+    catcherr?: boolean;
+    exiterr?: boolean;
 }
 export interface ILogurInstanceOptions extends ILogurBaseOptions {
     cascade?: boolean;
@@ -396,10 +401,7 @@ export interface ILogurInstanceOptions extends ILogurBaseOptions {
     transports?: ILogurOptionsTransport[];
 }
 export interface ILogurTransportOptions extends ILogurBaseOptions {
-    map?: string[];
-    pretty?: boolean;
-    ministack?: boolean;
-    prettystack?: boolean;
+    active?: boolean;
     profiler?: boolean;
     exceptions?: boolean;
 }
@@ -438,17 +440,21 @@ export interface IStreamTransportOptions extends ILogurTransportOptions {
     colorize?: boolean;
 }
 export interface IConsoleTransport extends ILogurTransport {
+    options: IConsoleTransportOptions;
 }
 export interface IFileTransport extends ILogurTransport {
     streamroller: any;
     options: IFileTransportOptions;
 }
 export interface IHttpTransport extends ILogurTransport {
+    options: IHttpTransportOptions;
 }
 export interface IMemoryTransport extends ILogurTransport {
     logs: any[];
+    options: IMemoryTransportOptions;
 }
 export interface IStreamTransport extends ILogurTransport {
+    options: IStreamTransportOptions;
 }
 export interface ILogurTransports {
     [key: string]: {
@@ -460,15 +466,12 @@ export interface ILogurTransport {
     options: ILogurTransportOptions;
     setOption<T extends ILogurTransportOptions>(key: string | T, value?: any): void;
     active(state?: boolean): boolean;
-    colorize(obj: any, color?: string | string[], modifiers?: string | string[]): any;
+    colorize(str: any, style: string | string[]): any;
     stripColors(str: any): any;
-    padLevel(level: string, levels: string[], strategy?: PadStrategy): string;
-    ministack(options: any, output: ILogurOutput): string;
-    format(obj: any, options: any, output: ILogurOutput): any;
-    toMapped(as: 'array' | 'object', options: any, output: ILogurOutput): any;
-    toMappedArray(options: any, output: ILogurOutput): any[];
-    toMappedObject<T>(options: any, output: ILogurOutput): T;
-    action(output: ILogurOutput, done: TransportActionCallback): void;
+    padLevel(level: string, strategy: PadStrategy, levels?: string[]): string;
+    toMapped<T>(output: ILogurOutput): ILogurOutputMapped<T>;
+    toMapped<T>(options: ILogurTransportOptions | ILogurOutput, output?: ILogurOutput): ILogurOutputMapped<T>;
+    action(output: ILogurOutput): void;
     query(): void;
     dispose(): void;
 }
@@ -478,7 +481,7 @@ export interface ISerializers {
 export interface ISerializerMethods {
     get(name: string): Serializer;
     getAll(): ISerializers;
-    create(name: string, serializer: Serializer): ISerializerMethods;
+    add(name: string, serializer: Serializer): ISerializerMethods;
     remove(name: string): ISerializerMethods;
 }
 export interface ITransportMethods {
@@ -486,8 +489,8 @@ export interface ITransportMethods {
     get<T>(name?: string): T;
     getAll(): ILogurTransports;
     getList(): string[];
-    create<T extends ILogurTransport>(name: string, Transport?: TransportConstructor<T>): ITransportMethods;
-    create<T extends ILogurTransport>(name: string, options?: IMetadata | TransportConstructor<T>, Transport?: TransportConstructor<T>): ITransportMethods;
+    add<T extends ILogurTransport>(name: string, Transport?: TransportConstructor<T>): ITransportMethods;
+    add<T extends ILogurTransport>(name: string, options?: IMetadata | TransportConstructor<T>, Transport?: TransportConstructor<T>): ITransportMethods;
     extend(name: string): ITransportMethods;
     remove(name: string): ITransportMethods;
     active(name: string, state?: boolean): ITransportMethods;
@@ -527,8 +530,8 @@ export interface IProfileMethods {
     active(name: string, state?: boolean): boolean;
     status(name: string): boolean;
     until(name: string): boolean;
-    create(name: string, options: IProfileOptions): IProfile;
-    create(name: string, transports: string[] | IProfileOptions, options?: IProfileOptions): IProfile;
+    add(name: string, options: IProfileOptions): IProfile;
+    add(name: string, transports: string[] | IProfileOptions, options?: IProfileOptions): IProfile;
     start(name: string): void;
     stop(name: string): IProfileResult;
     remove(name: string, force?: boolean): void;
@@ -542,6 +545,8 @@ export interface ILogurInstance extends INotify {
     transports: ITransportMethods;
     profiles: IProfileMethods;
     serializers: ISerializerMethods;
+    logger(type: any, ...args: any[]): ILogurOutput;
+    logger(transports: string | string[], type: any, ...args: any[]): ILogurOutput;
     setOption<T extends ILogurInstanceOptions>(options: T): void;
     setOption<T extends ILogurInstanceOptions>(key: string | T, value?: any): void;
     active(state?: boolean): boolean;

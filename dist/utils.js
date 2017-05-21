@@ -1,9 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 var _clone = require("lodash.clonedeep");
-var chalk, util, statSync, parse, EOL;
+var env = require("./env");
+var colors = require("./colorize");
+var util, statSync, parse, EOL;
 if (!process.env.BROWSER) {
-    chalk = require('chalk');
+    // chalk = require('chalk');
     util = require('util');
     parse = require('path').parse;
     statSync = require('fs').statSync;
@@ -872,12 +874,12 @@ function timestamp(date) {
         epoch: epoch,
         date: dt,
         iso: iso,
-        localDate: localDate,
-        localTime: localTime,
         local: local,
-        utcDate: utcDate,
-        utcTime: utcTime,
-        utc: utc
+        utc: utc,
+        localdate: localDate,
+        localtime: localTime,
+        utcdate: utcDate,
+        utctime: utcTime
     };
     return obj;
 }
@@ -980,284 +982,258 @@ function activate(Type) {
 }
 exports.activate = activate;
 ///////////////////////////////
+// OUTPUT MAPPING
+///////////////////////////////
+/**
+ * Ministack
+ * Generates a mini stacktrace of the calling
+ * line, col etc.
+ *
+ * @param options the Logur Transport options.
+ * @param output the generated Logur Output object.
+ */
+function ministack(options, output) {
+    var _colorize = options.colorize && isNode() ? true : false;
+    // Check if ministack should be applied.
+    if (output.stacktrace && output.stacktrace.length) {
+        var stack = output.stacktrace[0];
+        var parsed = parsePath(stack.path);
+        // Handle ministack but don't display if
+        // msg is an error as it would be redundant.
+        if (options.ministack && stack && parsed && parsed.base) {
+            // Compile the mini stacktrace string.
+            var mini = "(" + parsed.base + ":" + stack.line + ":" + stack.column + ")";
+            if (_colorize) {
+                var clr = options.colormap && options.colormap.ministack ? options.colormap.ministack : 'gray';
+                mini = colorize(mini, clr);
+            }
+            return mini;
+        }
+    }
+    return '';
+}
+exports.ministack = ministack;
+/**
+ * Format By Type
+ * Inspects the type then colorizes.
+ *
+ * @param obj the value to inspect for colorization.
+ * @param options the Transport options object.
+ * @param output the Logur Output object.
+ */
+function formatByType(key, obj, options, output) {
+    var pretty = options.pretty && isNode();
+    var canColorize = options.colorize && isNode();
+    var colorMap = options.colormap;
+    var EOL = output.env && output.env.os ? output.env.os['EOL'] : '\n';
+    // If util extend with styles
+    // from node util.inspect.styles.
+    if (util)
+        colorMap = extend({}, util.inspect.styles, colorMap);
+    // Get the value's type.
+    var type = getType(obj, true, 'special');
+    function getStyle(t) {
+        if (!canColorize)
+            return false;
+        return colorMap[key] || colorMap[t];
+    }
+    function plainPrint(o) {
+        var result = '';
+        if (isArray(o)) {
+            o.forEach(function (item, i) {
+                var t = getType(item, true, 'special');
+                if (t === 'object' || t === 'array') {
+                    result += plainPrint(item);
+                }
+                else {
+                    if (t === 'function') {
+                        var name_2 = item.name || 'fn';
+                        item = "[Function: " + name_2 + "]";
+                    }
+                    var style = getStyle(t);
+                    if (style)
+                        result += (i + "=" + colorize(item, style) + ", ");
+                    else
+                        result += (i + "=" + item + ", ");
+                }
+            });
+        }
+        else {
+            for (var prop in o) {
+                var item = o[prop];
+                var t = getType(item, true, 'special');
+                if (t === 'array' || t === 'object') {
+                    result += plainPrint(item);
+                }
+                else {
+                    if (t === 'function') {
+                        var name_3 = item.name || 'fn';
+                        item = "[Function: " + name_3 + "]";
+                    }
+                    var style = getStyle(t);
+                    if (canColorize)
+                        result += (prop + "=" + colorize(item, style) + ", ");
+                    else
+                        result += (prop + "=" + item + ", ");
+                }
+            }
+        }
+        result = result.replace(/, $/, '');
+        return result;
+    }
+    // Handle error normalization.
+    if (type === 'error') {
+        // Otherwise normalize the error for output.
+        // Create the error message.
+        var tmp = obj.message || 'unknown error.';
+        var style = getStyle(type);
+        // colorize if enabled.
+        if (style)
+            tmp = colorize(tmp, style);
+        if (!obj.stack)
+            return { normalized: tmp };
+        var stack = obj.stack.split(EOL).slice(1);
+        // If pretty stacktrace use util.inspect.
+        if (options.prettystack) {
+            return { normalized: tmp, append: EOL + util.inspect({ name: obj.name || 'Error', message: obj.message || 'Unknown error', stack: env.stacktrace(obj, 1) }, true, null, canColorize) };
+        }
+        else {
+            return { normalized: tmp, append: EOL + stack.join(EOL) };
+        }
+    }
+    else if (type === 'object' || type === 'array') {
+        if (options.pretty) {
+            return {
+                append: EOL + util.inspect(obj, true, null, canColorize)
+            };
+        }
+        return { normalized: plainPrint(obj) };
+    }
+    else {
+        var style = getStyle(type);
+        if (!style)
+            return { normalized: obj };
+        return { normalized: colorize(obj, style) };
+    }
+}
+exports.formatByType = formatByType;
+/**
+ * To Mapped
+ * Normalizes data for output to array or object.
+ *
+ * @param options the calling Transport's options.
+ * @param output the generated Logur output.
+ */
+function toMapped(options, output) {
+    // Get list of levels we'll use this for padding.
+    var levels = keys(options.levels);
+    var EOL = output.env && output.env.os ? output.env.os['EOL'] : '\n';
+    var ignored = ['callback'];
+    var metaIndex = options.map.indexOf('metadata');
+    var metaLast = options.map.length - 1 === metaIndex;
+    // Metadata must be last index in map.
+    if (metaIndex !== -1 && !metaLast) {
+        options.map.splice(metaIndex, 1);
+        options.map.push('metadta');
+    }
+    // Var for resulting output array, object or json.
+    var arr = [], obj = {}, appended = [];
+    // Reference the logged level.
+    var level = output.level;
+    // Get the level's config object.
+    var levelObj = options.levels[level];
+    // Flag if we should colorize.
+    var colors = options.colorize && isNode() ? true : false;
+    // Iterate the map and build the object.
+    output.map.forEach(function (k) {
+        // ignored prop.
+        if (ignored.indexOf(k) !== -1)
+            return;
+        var value = get(output, k);
+        if (isUndefined(value))
+            return;
+        var serializer = output.serializers[k];
+        // If a serializer exists call and get value.
+        if (serializer)
+            value = serializer(value, output, options);
+        // Add value to object.
+        obj[k] = value;
+        // Handled untyped array.
+        if (k === 'untyped' && output.untyped) {
+            value.forEach(function (u) {
+                var result = formatByType(k, u, options, output);
+                if (result) {
+                    if (!isUndefined(result.normalized))
+                        arr.push(result.normalized);
+                    if (!isUndefined(result.append))
+                        appended.push(result.append);
+                }
+            });
+        }
+        else {
+            var result = formatByType(k, value, options, output);
+            if (result) {
+                arr.push(result.normalized);
+                if (!isUndefined(result.append))
+                    appended.push(result.append);
+            }
+        }
+    });
+    // Get level index in map.
+    var lvlIdx = options.map.indexOf('level');
+    // If index is valid check if should pad and colorize.
+    if (lvlIdx !== -1) {
+        var tmpLevel = level.trim();
+        // If padding pad the level.
+        if (options.padding) {
+            var idx = levels.indexOf(level);
+            if (idx !== -1) {
+                var padded = padValues(levels, options.padding);
+                tmpLevel = padded[idx];
+            }
+        }
+        if (colors)
+            tmpLevel = colorize(tmpLevel, levelObj.color);
+        if (options.padding)
+            tmpLevel += ':';
+        arr[lvlIdx] = tmpLevel;
+    }
+    // Check if should append with ministack.
+    if (options.ministack) {
+        var mini = ministack(options, output);
+        obj['ministack'] = mini;
+        arr.push(mini);
+    }
+    arr = arr.concat(appended);
+    return {
+        array: arr,
+        object: obj,
+        json: JSON.stringify(obj)
+    };
+}
+exports.toMapped = toMapped;
+///////////////////////////////
 // COLORIZATION
 ///////////////////////////////
 /**
  * Colorize
- * Convenience wrapper for chalk. Color can be
- * shorthand string ex: 'underline.bold.red'.
+ * Applies color styles to value.
  *
- * @see https://github.com/chalk/chalk
- *
- * @param obj the value to be colorized.
- * @param color the color to apply, modifiers, shorthand.
- * @param modifiers the optional modifier or modifiers.
+ * @param str the value to be colorized.
+ * @param style the ansi style or styles to be applied.
  */
-function colorize(obj, color, modifiers) {
-    // If not chalk can't colorize
-    // as we are in browser.
-    if (!chalk)
-        return obj;
-    if (!color && !modifiers)
-        return obj;
-    if (isArray(color)) {
-        modifiers = color;
-        color = undefined;
-    }
-    if (isString(modifiers))
-        modifiers = [modifiers];
-    // Just a loose exp we don't
-    // need much more for this.
-    var exp = /\./g;
-    // Array containing all styles.
-    var styles = [];
-    // Decorate from shorthand color
-    // when color is shorting format:
-    // bold.underline.red
-    if (exp.test(color))
-        styles = color.split('.');
-    else
-        styles = styles.concat([color]).concat(modifiers || []);
-    // Iterate defined styles and apply.
-    var i = styles.length;
-    while (i--) {
-        var style = styles[i];
-        obj = chalk[style](obj);
-    }
-    return obj;
+function colorize(str, style) {
+    return colors.style(str, style);
 }
 exports.colorize = colorize;
 /**
  * Strip Colors
- * Strips ansi colors from string, object, arrays etc.
+ * Strips ansi colors from value.
  *
- * @param str the object to strip color from.
+ * @param str the value to be stripped of color.
  */
-function stripColors(obj) {
-    var exp = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
-    if (isString(obj))
-        return obj.replace(exp, '');
-    // Strip object.
-    if (isPlainObject(obj)) {
-        for (var prop in obj) {
-            var val = obj[prop];
-            if (isString(val))
-                obj[prop] = val.replace(exp, '');
-            else
-                obj[prop] = stripColors(val);
-        }
-    }
-    else {
-        var arr = obj;
-        var i = arr.length;
-        while (i--)
-            // If string replace
-            if (isString(arr[i]))
-                arr[i] = arr[i].replace(exp, '');
-            else
-                arr[i] = stripColors(arr[i]);
-        return arr;
-    }
+function stripColors(str) {
+    return colors.strip(str);
 }
 exports.stripColors = stripColors;
-///////////////////////////////
-// PLACEHOLDER
-///////////////////////////////
-/**
- * Fetch
- * Trivial method to fetch url using xmlhttp.
- *
- * @param url the url to be fetched.
- */
-// export function fetch(url: string) {
-//   try {
-//     const xmlHttp = function () {
-//       try {
-//         return new (<any>window).XMLHttpRequest();
-//       }
-//       catch (e) {
-//         return new (<any>window).ActiveXObject('Microsoft.XMLHTTP');
-//       }
-//     };
-//     const req = xmlHttp();
-//     req.open('GET', url, false);
-//     req.send('');
-//     return req.responseText;
-//   }
-//   catch (e) {
-//     return '';
-//   }
-// }
-/**
- * Lookup Function
- * Attempts to lookup function for error handling via
- * xmlhttp request. Not perfect.
- *
- * @param url the url to be looked up.
- * @param line the line of the function.
- */
-// export function lookupFunction(url: string, line: number) {
-//   const FUNC_ARG_NAMES = /function ([^(]*)\(([^)]*)\)/;
-//   const GUESS_FUNC = /['"]?([0-9A-Za-z$_]+)['"]?\s*[:=]\s*(function|eval|new Function)/;
-//   const MATCH_EXP = /(.*)\:\/\/([^:\/]+)([:\d]*)\/{0,1}([\s\S]*)/;
-//   const UNKNOWN_FUNC = 'Unknown Function';
-//   const SOURCE_CACHE = {};
-//   function getSource(url: string) {
-//     if (typeof url !== 'string') {
-//       return [];
-//     }
-//     if (!SOURCE_CACHE[url]) {
-//       // URL needs to be able to fetched within the acceptable domain.  Otherwise,
-//       // cross-domain errors will be triggered.
-//       /*
-//           Regex matches:
-//           0 - Full Url
-//           1 - Protocol
-//           2 - Domain
-//           3 - Port (Useful for internal applications)
-//           4 - Path
-//       */
-//       let source = '';
-//       let domain = '';
-//       try { domain = window.document.domain; } catch (e) { }
-//       const match = MATCH_EXP.exec(url);
-//       if (match && match[2] === domain) {
-//         source = fetch(url);
-//       }
-//       SOURCE_CACHE[url] = source ? source.split('\n') : [];
-//     }
-//     return SOURCE_CACHE[url];
-//   }
-//   let _line = '',
-//     maxLines = 10,
-//     source = getSource(url),
-//     m;
-//   if (!source.length)
-//     return UNKNOWN_FUNC;
-//   // Walk backwards from the first line in the function until we find the line which
-//   // matches the pattern above, which is the function definition
-//   for (let i = 0; i < maxLines; ++i) {
-//     _line = source[line - i] + _line;
-//     if (!isUndefined(_line)) {
-//       if ((m = GUESS_FUNC.exec(_line)))
-//         return m[1];
-//       else if ((m = FUNC_ARG_NAMES.exec(_line)))
-//         return m[1];
-//     }
-//   }
-//   return UNKNOWN_FUNC;
-// }
-/* Non-Mutating Array Modifications
-* TODO: consider using non mutating methods.
-***********************************************/
-/**
- * N-Pop
- * Pops/removes last element in array.
- *
- * @param arr the array to pop value from.
- * @param popped when false the array is returned instead of value.
- */
-// export function npop(arr: any[], popped: boolean = true): any {
-//   const value = arr[arr.length - 1];
-//   const _arr = nsplice(arr, 0, arr.length - 1);
-//   // If shifted return the
-//   // shifted/removed value.
-//   if (popped)
-//     return value;
-//   return _arr;
-// }
-// /**
-//  * N-Shift
-//  * Shifts/removes first element in array.
-//  *
-//  * @param arr the array to shift value from.
-//  * @param shifted when false the array is returned instead of value.
-//  */
-// export function nshift(arr: any[], shifted: boolean = true): any {
-//   const value = arr[0];
-//   const _arr = nsplice(arr, 0);
-//   // If shifted return the
-//   // shifted/removed value.
-//   if (shifted)
-//     return value;
-//   return _arr;
-// }
-// /**
-//  * N-Unshift
-//  * Unshifts a value to an array in a non mutable way.
-//  *
-//  * @param arr the array to be unshifted.
-//  * @param value the value to be unshifted
-//  */
-// export function nunshift(arr: any[], value: any): any[] {
-//   return [value].concat(arr);
-// }
-// /**
-//  * N-Push
-//  * Non mutating way to push to an array.
-//  *
-//  * @param arr the array to push items to.
-//  * @param items the items to be added.
-//  */
-// export function npush(arr: any[], ...items: any[]): any[] {
-//   return arr.concat(items);
-// }
-// /**
-//  * N-Splice
-//  * Non mutating way of splicing an array.
-//  *
-//  * TODO: need to builds some tests on this
-//  * not exactly [].splice behavior.
-//  *
-//  * @param arr the array to be spliced.
-//  * @param start the starting index (default: 0)
-//  * @param count the count to be spliced (default: 1)
-//  * @param items additional items to be concatenated.
-//  */
-// export function nsplice(arr: any[], start?: number, count?: number, ...items: any[]): any[] {
-//   start = start || 0;
-//   count = items.length && !count ? arr.length : count;
-//   let offset = start === 0 && count > 0 ? 1 : start;
-//   return arr.slice(0, offset)
-//     .concat(items)
-//     .concat(arr.slice(start + 1, count));
-// }
-//////////////////////////////
-// BROWSER
-//////////////////////////////
-/**
- * Detect Browser
- * Detects IE, Safari, Chrome, Opera, Firefox, Edge.
- */
-// export function detectBrowser() {
-//   // Return cached result if avalible, else get result then cache it.
-//   if (detectBrowser.prototype.__cached__)
-//     return detectBrowser.prototype.__cached__;
-//   let _window: any = window;
-//   let _document: any = document;
-//   // Opera 8.0+
-//   const isOpera = (!!_window.opr && !!opr.addons) || !!_window.opera || navigator.userAgent.indexOf(' OPR/') >= 0;
-//   // Firefox 1.0+
-//   const isFirefox = typeof InstallTrigger !== 'undefined';
-//   // Safari 3.0+ "[object HTMLElementConstructor]"
-//   const isSafari = /constructor/i.test(_window.HTMLElement) || (function (p) {
-//     return p.toString() === '[object SafariRemoteNotification]';
-//   })(!window['safari'] || safari.pushNotification);
-//   // Internet Explorer 6-11
-//   const isIE = /*@cc_on!@*/false || !!_document.documentMode;
-//   // Edge 20+
-//   const isEdge = !isIE && !!_window.StyleMedia;
-//   // Chrome 1+
-//   const isChrome = !!_window.chrome && !!_window.chrome.webstore;
-//   // Blink engine detection
-//   // var isBlink = (isChrome || isOpera) && !!window.CSS;
-//   return detectBrowser.prototype.__cached__ =
-//     isOpera ? 'Opera' :
-//       isFirefox ? 'Firefox' :
-//         isSafari ? 'Safari' :
-//           isChrome ? 'Chrome' :
-//             isIE ? 'IE' :
-//               isEdge ? 'Edge' :
-//                 'Unknown';
-// }
 //# sourceMappingURL=utils.js.map

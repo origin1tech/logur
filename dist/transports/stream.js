@@ -12,25 +12,21 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var base_1 = require("./base");
 var u = require("../utils");
-var streamroller_1 = require("streamroller");
 var defaults = {
-    filename: './logs/app.log',
-    max: '100000',
-    json: true
+    pretty: true,
+    colorize: true
 };
-var FileTransport = (function (_super) {
-    __extends(FileTransport, _super);
+var StreamTransport = (function (_super) {
+    __extends(StreamTransport, _super);
     /**
-     * File Transport Constructor
+     * Memory Transport Constructor
      *
      * @param base the base options/defaults instantiated by Logur Instance.
      * @param options the Transport options.
      * @param logur the common Logur instance.
      */
-    function FileTransport(base, options, logur) {
-        var _this = _super.call(this, base, u.extend({}, defaults, options), logur) || this;
-        _this.streamroller = new streamroller_1.RollingFileStream(_this.options.filename, _this.options.max, _this.options.backups);
-        return _this;
+    function StreamTransport(base, options, logur) {
+        return _super.call(this, base, u.extend({}, defaults, options), logur) || this;
     }
     /**
      * Action
@@ -38,26 +34,26 @@ var FileTransport = (function (_super) {
      *
      * @param output the Logur output object for the actively logged message.
      */
-    FileTransport.prototype.action = function (output) {
-        // Get colorized mapped array.
+    StreamTransport.prototype.action = function (output) {
+        // Get colorized ordered array.
         var mapped = this.toMapped(output);
-    };
-    /**
-     * Query
-     * The transport query method for finding/searching previous logs.
-     */
-    FileTransport.prototype.query = function () {
-        throw new Error('Logur Transport query method must be overriden.');
     };
     /**
      * Dispose
      * Use the dispose method to close streams any any clean up.
      * Dispose is called after uncaught exceptions and SIGINT.
      */
-    FileTransport.prototype.dispose = function () {
+    StreamTransport.prototype.dispose = function () {
         throw new Error('Logur Transport dispose method must be overriden.');
     };
-    return FileTransport;
+    /**
+     * Query
+     * The transport query method for finding/searching previous logs.
+     */
+    StreamTransport.prototype.query = function () {
+        throw new Error('Logur Transport query method must be overriden.');
+    };
+    return StreamTransport;
 }(base_1.LogurTransport));
-exports.FileTransport = FileTransport;
-//# sourceMappingURL=file.js.map
+exports.StreamTransport = StreamTransport;
+//# sourceMappingURL=stream.js.map

@@ -10,7 +10,6 @@ var __extends = (this && this.__extends) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-var interfaces_1 = require("./interfaces");
 var notify_1 = require("./notify");
 var env = require("./env");
 var u = require("./utils");
@@ -18,8 +17,8 @@ var sprintf = require("sprintf-js");
 var ua_parser_js_1 = require("ua-parser-js");
 var defaults = {
     level: 5,
-    active: true,
     cascade: true,
+    map: ['level', 'timestamp', 'message', 'untyped', 'metadata'],
     levels: {
         error: { level: 0, color: 'red' },
         warn: { level: 1, color: 'yellow' },
@@ -27,11 +26,21 @@ var defaults = {
         verbose: { level: 3, color: 'green' },
         debug: { level: 4, color: 'magenta' },
     },
-    timestamp: 'utc',
+    timestamp: 'utctime',
     uuid: undefined,
     transports: [],
-    uncaught: false,
-    colormap: interfaces_1.COLOR_TYPE_MAP
+    catcherr: false,
+    exiterr: false,
+    // Maps Logur Output
+    // property to color.
+    colormap: {
+        timestamp: 'yellow',
+        uuid: 'magenta',
+        instance: 'gray',
+        ministack: 'gray',
+        error: 'bgRed.white',
+        function: 'cyan'
+    }
 };
 var profileDefaults = {
     transports: [],
@@ -76,7 +85,7 @@ var LogurInstance = (function (_super) {
         // Iterate Transports in options
         // and bind to the Instance.
         _this.options.transports.forEach(function (t) {
-            _this.transports.create(t.name, t.options, t.transport);
+            _this.transports.add(t.name, t.options, t.transport);
         });
         // Init UAParser, expose it publicly
         // in case user wants to parse headers
@@ -89,207 +98,6 @@ var LogurInstance = (function (_super) {
         return _this;
     }
     // PRIVATE METHODS
-    /**
-     * Log
-     * Iterates transports then calls base Logur.log method.
-     *
-     * @param type the type of log message.
-     * @param args array of arguments.
-     */
-    LogurInstance.prototype.logger = function (transports, type) {
-        var _this = this;
-        var args = [];
-        for (var _i = 2; _i < arguments.length; _i++) {
-            args[_i - 2] = arguments[_i];
-        }
-        // If Logur Instance isn't active return.
-        if (!this._active)
-            return;
-        // Get and flatten params.
-        var params = u.flatten([].slice.call(arguments, 1));
-        var isException;
-        // If transports is string
-        if (u.isString(transports)) {
-            type = transports;
-            transports = undefined;
-        }
-        else if (u.isArray(transports)) {
-            params.shift();
-        }
-        // If we have transports this is an unhandled
-        // exception. If not clear exception loop.
-        if (transports && transports.length)
-            isException = true;
-        // Clone the args.
-        var untyped = params.slice(0);
-        // Get level info.
-        var levelObj = this.options.levels[type];
-        // If no level object throw error.
-        if (!levelObj)
-            throw new Error("Cannot log using level " + type + " no available method was found.");
-        // Get the level index.
-        var level = levelObj.level;
-        // If is NodeJS debug mode set an override flag to always log.
-        var debugOverride = u.isNode() && u.isDebug() && type === 'debug' ? true : false;
-        // Transports either passed from unhandled
-        // exceptions or get the Instance's Transports.
-        transports = transports || this._transports;
-        var msg = untyped[0];
-        var meta;
-        var fn, stack, err;
-        /* Check Last is Callback
-        ****************************************/
-        if (u.isFunction(u.last(untyped)))
-            fn = untyped.pop();
-        /* Normalize Message Arguments
-        **************************************/
-        // If error remove from untyped.
-        if (u.isError(msg)) {
-            untyped.shift();
-            err = { name: msg.name || 'Error', message: msg.message || 'Unknown error.', stack: env.stacktrace(msg) };
-            err.__exit__ = msg.__exit__;
-        }
-        else if (u.isPlainObject(msg)) {
-            meta = msg;
-            untyped.shift();
-            msg = undefined;
-        }
-        else if (u.isString(msg)) {
-            // If is a string shift the first arg.
-            untyped.shift();
-            // Get the number of sprintf tokens in message.
-            // Note this RegExp isn't complete it just looks
-            // for matches that are token like, won't match entire
-            // sprintf expression but we don't really need that
-            // just need to know how many there are.
-            var tokens = msg.match(/%(\.|\(|[0-9])?\$?[0-9bcdieufgosxXj]/g);
-            // If there are tokens then we need to get the same
-            // number of args from our array as they are used
-            // for formatting. Whatever is left is likely metadata.
-            if (tokens && tokens.length) {
-                // Format the message.
-                msg = sprintf.vsprintf(msg, untyped.slice(0, tokens.length));
-                // Get resulting array.
-                untyped = params.slice(tokens.length + 1);
-            }
-        }
-        /* Build Metadata
-        *****************************************/
-        // Merge any metadata that was passed.
-        // remove from untyped array.
-        var i = untyped.length;
-        while (i--) {
-            if (u.isPlainObject(untyped[i]) && !u.isError(untyped[i])) {
-                meta = meta || {};
-                u.extend(meta, untyped[i]);
-                untyped.splice(i, 1);
-            }
-        }
-        /* Get Environment
-        *****************************************/
-        // For node we get env again because
-        // we need accurate load and memory usage.
-        // Get the stacktrace for calling log method.
-        stack = env.stacktrace(3);
-        var sysinfo;
-        if (u.isNode())
-            sysinfo = env.node();
-        else
-            sysinfo = this.env.browser;
-        /* Iterate Transports
-        *****************************************/
-        var run = function (t) {
-            // Get the transport object.
-            var transport = _this.transports.get(t);
-            if (isException)
-                // Ignore if the Transport isn't active.
-                if (!transport.active())
-                    return;
-            // Return if the level is greater
-            // that the transport's level.
-            if (!debugOverride && level > _this.options.level)
-                return;
-            /* Timestamp or User Defined Timestamp
-            *****************************************/
-            // Get all timestamp formats.
-            var timestamps = u.timestamp();
-            var ts;
-            // If is function call to get timestamp
-            // and format from user.
-            if (u.isFunction(_this.options.timestamp)) {
-                var func = _this.options.timestamp;
-                ts = func(timestamps);
-            }
-            else {
-                ts = timestamps[_this.options.timestamp];
-            }
-            // Construct object with all possible
-            // properties, we'll use this in our
-            // Tranport's action for final output
-            // to it's defined target.
-            var output = {
-                // Level Info
-                activeid: _this.options.level,
-                levelid: level,
-                levels: _this.options.levels,
-                // Property Map
-                // Used to generate array
-                // of ordered properties.
-                map: transport.options.map,
-                // Primary Fields
-                timestamp: ts,
-                uuid: u.uuid(),
-                level: type,
-                instance: _this._name,
-                transport: t,
-                message: msg,
-                untyped: untyped,
-                args: params,
-                // Error & Stack
-                stacktrace: stack,
-                // Environment Info
-                env: sysinfo,
-                pkg: _this._logur.pkg
-            };
-            // Set meta if exists.
-            if (meta)
-                output.metadata = meta;
-            // Set callback if exists.
-            if (fn)
-                output.callback = fn;
-            if (err)
-                output.error = err;
-            // Call the Transort's action passing
-            // the ordered args and the original args.
-            var clone = u.clone(output);
-            // Call the transports action.
-            transport.action(clone, function (ordered, modified) {
-                // User may have mutated the output
-                // object check if user passed modified.
-                modified = modified || clone;
-                // EVENT LISTENERS
-                // Emit typed log message.
-                // const levelClone = ordered.slice(0);
-                // levelClone.unshift(type);
-                _this.emit.call(_this, type, ordered, modified);
-                // Emit global logged message.
-                // const loggedClone = ordered.slice(0);
-                // loggedClone.unshift('logged');
-                _this.emit.call(_this, 'logged', ordered, modified);
-                // CALLBACK
-                if (fn)
-                    fn(ordered, modified);
-            });
-        };
-        // We don't really care about order of transports
-        // just run them in parallel if possible.
-        transports.forEach(function (t) {
-            if (_this.options.sync)
-                run(t);
-            else
-                u.tickThen(_this, run, t);
-        });
-    };
     /**
      * Handle Exceptions
      * Enables handling uncaught NodeJS exceptions.
@@ -352,7 +160,7 @@ var LogurInstance = (function (_super) {
         configurable: true
     });
     Object.defineProperty(LogurInstance.prototype, "transports", {
-        // PROTECTED & INSTANCE METHODS
+        // GETTERS
         /**
          * Transport
          * Exposes methods for adding, removing and getting transports.
@@ -404,7 +212,7 @@ var LogurInstance = (function (_super) {
              * @param options the options for the Transport.
              * @param Transport a Transport that extends LogurTransport.
              */
-            var create = function (name, options, Transport) {
+            var add = function (name, options, Transport) {
                 // Ensure name is lowered.
                 name = name.toLowerCase();
                 // Allow Type as second arg.
@@ -417,7 +225,7 @@ var LogurInstance = (function (_super) {
                 var transport = new Transport(_this.options, options, _this._logur);
                 // If transport handles exception add
                 // to list of transport exceptions.
-                if (transport.options.uncaught) {
+                if (transport.options.catcherr) {
                     _this._exceptions.push(name);
                     // Add uncaught/window exception handler listeners.
                     if (!_this._exceptionsInit) {
@@ -497,7 +305,7 @@ var LogurInstance = (function (_super) {
             methods = {
                 has: has,
                 get: get,
-                create: create,
+                add: add,
                 extend: extend,
                 remove: remove,
                 active: active,
@@ -568,14 +376,14 @@ var LogurInstance = (function (_super) {
                 return false;
             };
             /**
-             * Start
-             * Starts a profiler.
+             * Add
+             * Adds a profiler.
              *
              * @param name the name of the profile.
              * @param transports the Transports to run for this profiler or options object.
              * @param options the profile options.
              */
-            var create = function (name, transports, options) {
+            var add = function (name, transports, options) {
                 if (u.isPlainObject(transports)) {
                     options = transports;
                     transports = undefined;
@@ -670,7 +478,7 @@ var LogurInstance = (function (_super) {
                 getAll: getAll,
                 active: active,
                 until: until,
-                create: create,
+                add: add,
                 start: start,
                 stop: stop,
                 remove: remove
@@ -694,7 +502,7 @@ var LogurInstance = (function (_super) {
             var getAll = function () {
                 return _this._logur.serializers;
             };
-            var create = function (name, serializer) {
+            var add = function (name, serializer) {
                 _this._logur.serializers[name] = serializer;
                 return methods;
             };
@@ -705,7 +513,7 @@ var LogurInstance = (function (_super) {
             methods = {
                 get: get,
                 getAll: getAll,
-                create: create,
+                add: add,
                 remove: remove
             };
             return methods;
@@ -727,6 +535,205 @@ var LogurInstance = (function (_super) {
         enumerable: true,
         configurable: true
     });
+    // INSTANCE METHODS
+    /**
+     * Log
+     * Iterates transports then calls base Logur.log method.
+     *
+     * @param type the type of log message.
+     * @param args array of arguments.
+     */
+    LogurInstance.prototype.logger = function (transports, type) {
+        var _this = this;
+        var args = [];
+        for (var _i = 2; _i < arguments.length; _i++) {
+            args[_i - 2] = arguments[_i];
+        }
+        // If Logur Instance isn't active return.
+        if (!this._active)
+            return;
+        // Get and flatten params.
+        var params = u.flatten([].slice.call(arguments, 1));
+        var isException;
+        // If transports is string
+        if (u.isString(transports)) {
+            type = transports;
+            transports = undefined;
+        }
+        else if (u.isArray(transports)) {
+            params.shift();
+        }
+        // If we have transports this is an unhandled
+        // exception. If not clear exception loop.
+        if (transports && transports.length)
+            isException = true;
+        // Clone the args.
+        var untyped = params.slice(0);
+        // Get level info.
+        var levelObj = this.options.levels[type];
+        // If no level object throw error.
+        if (!levelObj)
+            throw new Error("Cannot log using level " + type + " no available method was found.");
+        // Get the level index.
+        var level = levelObj.level;
+        // If is NodeJS debug mode set an override flag to always log.
+        var debugOverride = u.isNode() && u.isDebug() && type === 'debug' ? true : false;
+        // Transports either passed from unhandled
+        // exceptions or get the Instance's Transports.
+        transports = transports || this._transports;
+        var msg = untyped[0];
+        var meta;
+        var fn, stack, err;
+        /* Check Last is Callback
+        ****************************************/
+        if (u.isFunction(u.last(untyped)))
+            fn = untyped.pop();
+        /* Normalize Message Arguments
+        **************************************/
+        // If error remove from untyped.
+        if (u.isError(msg)) {
+            untyped.shift();
+            // err = { name: msg.name || 'Error', message: msg.message || 'Unknown error.', stack: env.stacktrace(msg) };
+        }
+        else if (u.isPlainObject(msg)) {
+            meta = msg;
+            untyped.shift();
+            msg = undefined;
+        }
+        else if (u.isString(msg)) {
+            // If is a string shift the first arg.
+            untyped.shift();
+            // Get the number of sprintf tokens in message.
+            // Note this RegExp isn't complete it just looks
+            // for matches that are token like, won't match entire
+            // sprintf expression but we don't really need that
+            // just need to know how many there are.
+            var tokens = msg.match(/%(\.|\(|[0-9])?\$?[0-9bcdieufgosxXj]/g);
+            // If there are tokens then we need to get the same
+            // number of args from our array as they are used
+            // for formatting. Whatever is left is likely metadata.
+            if (tokens && tokens.length) {
+                // Format the message.
+                msg = sprintf.vsprintf(msg, untyped.slice(0, tokens.length));
+                // Get resulting array.
+                untyped = params.slice(tokens.length + 1);
+            }
+        }
+        /* Build Metadata
+        *****************************************/
+        // Merge any metadata that was passed.
+        // remove from untyped array.
+        var i = untyped.length;
+        while (i--) {
+            if (u.isPlainObject(untyped[i]) && !u.isError(untyped[i])) {
+                meta = meta || {};
+                u.extend(meta, untyped[i]);
+                untyped.splice(i, 1);
+            }
+        }
+        /* Get Environment
+        *****************************************/
+        // For node we get env again because
+        // we need accurate load and memory usage.
+        // Get the stacktrace for calling log method.
+        stack = env.stacktrace(3);
+        var sysinfo;
+        if (u.isNode())
+            sysinfo = env.node();
+        else
+            sysinfo = this.env.browser;
+        /* BUILD OUTPUT OBJECT
+        *****************************************/
+        // Return if the level is greater
+        // that the transport's level.
+        if (!debugOverride && level > this.options.level)
+            return;
+        /* Timestamp or User Defined Timestamp
+        *****************************************/
+        // Get all timestamp formats.
+        var timestamps = u.timestamp();
+        var ts;
+        // If is function call to get timestamp
+        // and format from user.
+        if (u.isFunction(this.options.timestamp)) {
+            var func = this.options.timestamp;
+            ts = func(timestamps);
+        }
+        else {
+            ts = timestamps[this.options.timestamp];
+        }
+        /* Build Output Object
+        *****************************************/
+        // Construct object with all possible
+        // properties, we'll use this in our
+        // Tranport's action for final output
+        // to it's defined target.
+        var output = {
+            // Level Info
+            activeid: this.options.level,
+            levelid: level,
+            levels: this.options.levels,
+            map: this.options.map,
+            // Primary Fields
+            timestamp: ts,
+            uuid: u.uuid(),
+            level: type,
+            instance: this._name,
+            message: msg,
+            untyped: untyped,
+            metadata: meta,
+            error: err,
+            args: params,
+            transports: transports,
+            serializers: this._logur.serializers,
+            // Error & Stack
+            stacktrace: stack,
+            // Environment Info
+            env: sysinfo,
+            pkg: this._logur.pkg
+        };
+        // Helper Method
+        // This only gets output to emitted events.
+        output.toMapped = function (options) {
+            return u.toMapped(options || _this.options, output);
+        };
+        /* EMIT EVENTS & CALLBACK
+        *****************************************/
+        // Emit typed log message.
+        this.emit(type, output, this);
+        // Emit global logged message.
+        this.emit('logged', output, this);
+        if (fn)
+            fn(output);
+        /* ITERATE ALL TRANSPORTS
+        *****************************************/
+        var run = function (t) {
+            // Get the transport object.
+            var transport = _this.transports.get(t);
+            if (!transport)
+                return;
+            // Ensure the transport is active.
+            if (!transport.active())
+                return;
+            // Clone the output object as we'll have some
+            // unique property values.
+            var clone = u.clone(output);
+            clone.map = transport.options.map;
+            // Delete mapped method in clone we don't need it.
+            delete clone.toMapped;
+            // Call the transports action.
+            transport.action(clone);
+        };
+        // We don't really care about order of transports
+        // just run them in parallel unless user specifies otherwise..
+        transports.forEach(function (t) {
+            if (_this.options.sync)
+                run(t);
+            else
+                u.tickThen(_this, run, t);
+        });
+        return output;
+    };
     /**
      * Set Option
      * Sets/updates options.
@@ -737,16 +744,15 @@ var LogurInstance = (function (_super) {
      */
     LogurInstance.prototype.setOption = function (key, value, cascade) {
         var _this = this;
+        // Properties that should not
+        // cascade and overwrite.
+        var noCascade = ['map', 'pretty', 'prettystack', 'ministack'];
         // If undefined set cascade to options val.
         if (u.isUndefined(cascade))
             cascade = this.options.cascade;
         // If not object of options just set key/value.
-        if (!u.isPlainObject(key)) {
-            // If not value log error.
-            if (!value)
-                this.logger('error', "cannot set option for key " + key + " using value of undefined.");
-            else
-                this.options[key] = value;
+        if (!u.isPlainObject(key) && !u.isUndefined(value)) {
+            this.options[key] = value;
         }
         else {
             this.options = u.extend({}, this.options, key);
@@ -754,6 +760,12 @@ var LogurInstance = (function (_super) {
         // If cascading is enabled cascade options
         // down to each bound transport.
         if (cascade) {
+            // If 'map' is key ignore.
+            if (!u.isUndefined(value) && key === 'map')
+                return;
+            // If Object remove map property.
+            if (u.isPlainObject(key))
+                delete key['map'];
             this._transports.forEach(function (t) {
                 var transport = _this.transports.get(t);
                 transport.setOption(key, value);

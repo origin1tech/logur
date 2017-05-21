@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { ILogur, IFileTransportOptions, IFileTransport, TransportActionCallback, ILogurOutput, ILogurInstanceOptions } from '../interfaces';
+import { ILogur, IFileTransportOptions, IFileTransport, ILogurOutput, ILogurInstanceOptions } from '../interfaces';
 import { LogurTransport } from './base';
 export declare class FileTransport extends LogurTransport implements IFileTransport {
     streamroller: NodeJS.WritableStream;
@@ -17,9 +17,8 @@ export declare class FileTransport extends LogurTransport implements IFileTransp
      * The transport action to be called when messages are logged.
      *
      * @param output the Logur output object for the actively logged message.
-     * @param done an callback on Transport done.
      */
-    action(output: ILogurOutput, done: TransportActionCallback): void;
+    action(output: ILogurOutput): void;
     /**
      * Query
      * The transport query method for finding/searching previous logs.

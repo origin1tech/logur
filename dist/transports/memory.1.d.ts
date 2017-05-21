@@ -1,4 +1,4 @@
-import { ILogur, IMemoryTransportOptions, IMemoryTransport, ILogurOutput, ILogurInstanceOptions } from '../interfaces';
+import { ILogur, IMemoryTransportOptions, IMemoryTransport, ILogurOutput, TransportActionCallback, ILogurInstanceOptions } from '../interfaces';
 import { LogurTransport } from './base';
 export declare class MemoryTransport extends LogurTransport implements IMemoryTransport {
     logs: any[];
@@ -16,17 +16,12 @@ export declare class MemoryTransport extends LogurTransport implements IMemoryTr
      * The transport action to be called when messages are logged.
      *
      * @param output the Logur output object for the actively logged message.
+     * @param done an callback on Transport done.
      */
-    action(output: ILogurOutput): void;
+    action(output: ILogurOutput, done: TransportActionCallback): void;
     /**
      * Query
      * The transport query method for finding/searching previous logs.
      */
     query(): void;
-    /**
-     * Dispose
-     * Use the dispose method to close streams any any clean up.
-     * Dispose is called after uncaught exceptions and SIGINT.
-     */
-    dispose(): void;
 }

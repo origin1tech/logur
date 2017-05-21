@@ -1,21 +1,26 @@
-import { ILogurTransport, ILogur, IHttpTransportOptions, IHttpTransport, ILogurOutput, TransportActionCallback, ILogurInstanceOptions } from '../interfaces';
+import { ILogurTransport, ILogur, IStreamTransportOptions, IStreamTransport, ILogurOutput, TransportActionCallback, ILogurInstanceOptions } from '../interfaces';
 import { LogurTransport } from './base';
 import * as u from '../utils';
 
-const defaults = {};
+const defaults: IStreamTransportOptions = {
 
-export class HttpTransport extends LogurTransport implements IHttpTransport {
+  pretty: true,
+  colorize: true
 
-  options: IHttpTransportOptions;
+};
+
+export class StreamTransport extends LogurTransport implements IStreamTransport {
+
+  options: IStreamTransportOptions;
 
   /**
-   * Http Transport Constructor
+   * Memory Transport Constructor
    *
    * @param base the base options/defaults instantiated by Logur Instance.
    * @param options the Transport options.
    * @param logur the common Logur instance.
    */
-  constructor(base: ILogurInstanceOptions, options: IHttpTransportOptions, logur: ILogur) {
+  constructor(base: ILogurInstanceOptions, options: IStreamTransportOptions, logur: ILogur) {
     super(base, u.extend({}, defaults, options), logur);
   }
 
@@ -27,17 +32,9 @@ export class HttpTransport extends LogurTransport implements IHttpTransport {
    */
   action(output: ILogurOutput) {
 
-    // Get colorized mapped array.
+    // Get colorized ordered array.
     let mapped = this.toMapped(output);
 
-  }
-
-  /**
-   * Query
-   * The transport query method for finding/searching previous logs.
-   */
-  query() {
-    throw new Error('Logur Transport query method must be overriden.');
   }
 
   /**
@@ -47,6 +44,14 @@ export class HttpTransport extends LogurTransport implements IHttpTransport {
    */
   dispose() {
     throw new Error('Logur Transport dispose method must be overriden.');
+  }
+
+  /**
+   * Query
+   * The transport query method for finding/searching previous logs.
+   */
+  query() {
+    throw new Error('Logur Transport query method must be overriden.');
   }
 
 }

@@ -30,12 +30,10 @@ var HttpTransport = (function (_super) {
      * The transport action to be called when messages are logged.
      *
      * @param output the Logur output object for the actively logged message.
-     * @param done an callback on Transport done.
      */
-    HttpTransport.prototype.action = function (output, done) {
+    HttpTransport.prototype.action = function (output) {
         // Get colorized mapped array.
-        var mapped = this.toMappedObject(this.options, output);
-        done(mapped);
+        var mapped = this.toMapped(output);
     };
     /**
      * Query

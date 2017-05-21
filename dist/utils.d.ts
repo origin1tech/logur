@@ -1,4 +1,4 @@
-import { ITimestamps, Constructor, PadStrategy, IParsedPath } from './interfaces';
+import { ITimestamps, Constructor, PadStrategy, IParsedPath, ILogurOutput, ILogurOutputMapped } from './interfaces';
 /**
  * Noop
  */
@@ -375,21 +375,43 @@ export declare function intersect<T, U>(first: T, second: U): T & U;
  */
 export declare function activate<T>(Type: Constructor<T>, ...args: any[]): T;
 /**
- * Colorize
- * Convenience wrapper for chalk. Color can be
- * shorthand string ex: 'underline.bold.red'.
+ * Ministack
+ * Generates a mini stacktrace of the calling
+ * line, col etc.
  *
- * @see https://github.com/chalk/chalk
- *
- * @param obj the value to be colorized.
- * @param color the color to apply, modifiers, shorthand.
- * @param modifiers the optional modifier or modifiers.
+ * @param options the Logur Transport options.
+ * @param output the generated Logur Output object.
  */
-export declare function colorize(obj: any, color?: string | string[], modifiers?: string | string[]): any;
+export declare function ministack(options: any, output: ILogurOutput): string;
+/**
+ * Format By Type
+ * Inspects the type then colorizes.
+ *
+ * @param obj the value to inspect for colorization.
+ * @param options the Transport options object.
+ * @param output the Logur Output object.
+ */
+export declare function formatByType(key: string, obj: any, options: any, output: ILogurOutput): any;
+/**
+ * To Mapped
+ * Normalizes data for output to array or object.
+ *
+ * @param options the calling Transport's options.
+ * @param output the generated Logur output.
+ */
+export declare function toMapped<T>(options: any, output: ILogurOutput): ILogurOutputMapped<T>;
+/**
+ * Colorize
+ * Applies color styles to value.
+ *
+ * @param str the value to be colorized.
+ * @param style the ansi style or styles to be applied.
+ */
+export declare function colorize(str: any, style: string | string[]): any;
 /**
  * Strip Colors
- * Strips ansi colors from string, object, arrays etc.
+ * Strips ansi colors from value.
  *
- * @param str the object to strip color from.
+ * @param str the value to be stripped of color.
  */
-export declare function stripColors(obj: any): any;
+export declare function stripColors(str: any): any;

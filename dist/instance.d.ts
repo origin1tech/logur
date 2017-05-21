@@ -1,4 +1,4 @@
-import { ILogurInstance, ILogur, ILogurInstanceOptions, ITransportMethods, IEnv, IProfiles, IProfileMethods, ISerializerMethods } from './interfaces';
+import { ILogurInstance, ILogur, ILogurInstanceOptions, ITransportMethods, ILogurOutput, IEnv, IProfiles, IProfileMethods, ISerializerMethods } from './interfaces';
 import { Notify } from './notify';
 import { UAParser } from 'ua-parser-js';
 /**
@@ -24,14 +24,6 @@ export declare class LogurInstance extends Notify implements ILogurInstance {
      * @param logur the common instance of Logur.
      */
     constructor(name: string, options: ILogurInstanceOptions, logur: ILogur);
-    /**
-     * Log
-     * Iterates transports then calls base Logur.log method.
-     *
-     * @param type the type of log message.
-     * @param args array of arguments.
-     */
-    private logger(transports, type, ...args);
     /**
      * Handle Exceptions
      * Enables handling uncaught NodeJS exceptions.
@@ -63,6 +55,14 @@ export declare class LogurInstance extends Notify implements ILogurInstance {
      * Returns the current environment information.
      */
     readonly env: IEnv;
+    /**
+     * Log
+     * Iterates transports then calls base Logur.log method.
+     *
+     * @param type the type of log message.
+     * @param args array of arguments.
+     */
+    logger(transports: string | string[], type: any, ...args: any[]): ILogurOutput;
     /**
      * Set Option
      * Sets/updates options.

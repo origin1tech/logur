@@ -1,4 +1,4 @@
-import { ILogurTransport, ILogur, ILogurTransportOptions, ILogurOutput, TransportActionCallback, PadStrategy, ILogurInstance, ILevelMethods } from '../interfaces';
+import { ILogurTransport, ILogur, ILogurTransportOptions, ILogurOutput, PadStrategy, ILogurInstance, ILevelMethods, ILogurOutputMapped } from '../interfaces';
 /**
  * Logur Base Transport
  */
@@ -36,15 +36,10 @@ export declare class LogurTransport implements ILogurTransport {
     /**
      * Colorize
      * Convenience wrapper to utils.colorize.
-     * shorthand string ex: 'underline.bold.red'.
-     *
-     * @see https://github.com/chalk/chalk
-     *
-     * @param obj the value to colorize.
-     * @param color the color to apply to the value.
-     * @param modifiers additional modifiers to be applied.
+     * @param str the value to colorize.
+     * @param style the style or array of styles to be applied.
      */
-    colorize(obj: any, color?: string | string[], modifiers?: string | string[]): any;
+    colorize(str: any, style: string | string[]): any;
     /**
      * Strip Color
      * Strips ansi colors from strings.
@@ -57,39 +52,19 @@ export declare class LogurTransport implements ILogurTransport {
      * Pads the level after calculating pad from possible levels.
      *
      * @param level the level to be padded.
-     * @param levels array of levels for calculating padding.
      * @param strategy the strategy to pad with left, right or none.
+     * @param levels array of levels for calculating padding.
      */
-    padLevel(level: string, levels?: string[] | PadStrategy, strategy?: PadStrategy): string;
+    padLevel(level: string, strategy: PadStrategy, levels?: string[]): string;
     /**
-     * Ministack
-     * Generates a mini stacktrace of the calling
-     * line, col etc.
+     * To Mapped
+     * Takes the generated Logur Output converting
+     * to mapped values in array, object or json.
      *
-     * @param options the Logur Transport options.
+     * @param options the Logur Tranport Options or Logur Output object.
      * @param output the generated Logur Output object.
      */
-    ministack(options: any, output: ILogurOutput): string;
-    /**
-     * Normalize By Type
-     * Inspects the type then colorizes.
-     *
-     * @param obj the value to inspect for colorization.
-     * @param pretty whether pretty printing should be applied when object.
-     * @param colors whether to colorize the value.
-     * @param map an optional map to apply colors by type.
-     */
-    format(obj: any, options: any, output: ILogurOutput): any;
-    /**
-     * To Output
-     * Normalizes data for output to array or object.
-     *
-     * @param options the calling Transport's options.
-     * @param output the generated Logur output.
-     */
-    toMapped(as: 'array' | 'object', options: any, output: ILogurOutput): any;
-    toMappedArray(options: any, output: ILogurOutput): any[];
-    toMappedObject<T>(options: any, output: ILogurOutput): T;
+    toMapped<T>(options: ILogurTransportOptions | ILogurOutput, output?: ILogurOutput): ILogurOutputMapped<T>;
     /**
      * Action
      * The transport action to be called when messages are logged.
@@ -97,7 +72,7 @@ export declare class LogurTransport implements ILogurTransport {
      * @param output the Logur output object for the actively logged message.
      * @param done an optional callback on Transport done.
      */
-    action(output: ILogurOutput, done: TransportActionCallback): void;
+    action(output: ILogurOutput): void;
     /**
      * Query
      * The transport query method for finding/searching previous logs.

@@ -35,7 +35,7 @@ export class FileTransport extends LogurTransport implements IFileTransport {
   action(output: ILogurOutput) {
 
     // Get colorized mapped array.
-    let mapped = this.toMappedObject(output);
+    let mapped = this.toMapped(output);
 
   }
 

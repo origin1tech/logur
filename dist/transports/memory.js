@@ -36,15 +36,13 @@ var MemoryTransport = (function (_super) {
      * The transport action to be called when messages are logged.
      *
      * @param output the Logur output object for the actively logged message.
-     * @param done an callback on Transport done.
      */
-    MemoryTransport.prototype.action = function (output, done) {
+    MemoryTransport.prototype.action = function (output) {
         // Get colorized ordered array.
-        var mapped = this.toMappedArray(this.options, output);
+        var mapped = this.toMapped(output);
         // Add mapped to collection.
         if (this.options.max < this.logs.length)
-            this.logs.push(mapped);
-        done(mapped);
+            this.logs.push(mapped.array);
     };
     /**
      * Query

@@ -1,5 +1,5 @@
 
-import { ILogurInstance, ILogur, ILogurInstanceOptions, ILogurTransportOptions, ILogurTransport, ITransportMethods, ILogurTransports, ILogurInstances, IMetadata, ILevel, TimestampCallback, ILogurOutput, ILoad, MemoryUsage, IProcess, IOS, IEnvBrowser, IEnvNode, IEnv, IProfiles, IProfileMethods, IProfileResult, IProfileOptions, IProfile, IStacktrace, TransportConstructor, ILogurOptionsTransport, ILevels, ILevelMethods, COLOR_TYPE_MAP, ISerializers, ISerializerMethods, Serializer, IError } from './interfaces';
+import { ILogurInstance, ILogur, ILogurInstanceOptions, ILogurTransportOptions, ILogurTransport, ITransportMethods, ILogurTransports, ILogurInstances, IMetadata, ILevel, TimestampCallback, ILogurOutput, ILoad, MemoryUsage, IProcess, IOS, IEnvBrowser, IEnvNode, IEnv, IProfiles, IProfileMethods, IProfileResult, IProfileOptions, IProfile, IStacktrace, TransportConstructor, ILogurOptionsTransport, ILevels, ILevelMethods, ISerializers, ISerializerMethods, Serializer, IError, ILogurOutputMapped } from './interfaces';
 import { LogurTransport, ConsoleTransport, FileTransport, HttpTransport } from './transports';
 import { Notify } from './notify';
 
@@ -12,6 +12,7 @@ const defaults: ILogurInstanceOptions = {
 
   level: 5,
   cascade: true,
+  map: ['level', 'timestamp', 'message', 'untyped', 'metadata'],
 
   levels: {
     error: { level: 0, color: 'red' },
@@ -21,11 +22,24 @@ const defaults: ILogurInstanceOptions = {
     debug: { level: 4, color: 'magenta' },
   },
 
-  timestamp: 'utc',
+  timestamp: 'utctime',
   uuid: undefined,
   transports: [],
   catcherr: false,
-  colormap: COLOR_TYPE_MAP
+  exiterr: false,
+
+  // Maps Logur Output
+  // property to color.
+  colormap: {
+
+    timestamp: 'yellow',
+    uuid: 'magenta',
+    instance: 'gray',
+    ministack: 'gray',
+    error: 'bgRed.white',
+    function: 'cyan'
+
+  }
 
 };
 
@@ -91,7 +105,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
     // Iterate Transports in options
     // and bind to the Instance.
     this.options.transports.forEach((t: ILogurOptionsTransport) => {
-      this.transports.create(t.name, t.options, t.transport);
+      this.transports.add(t.name, t.options, t.transport);
     });
 
     // Init UAParser, expose it publicly
@@ -107,255 +121,6 @@ export class LogurInstance extends Notify implements ILogurInstance {
   }
 
   // PRIVATE METHODS
-
-  /**
-   * Log
-   * Iterates transports then calls base Logur.log method.
-   *
-   * @param type the type of log message.
-   * @param args array of arguments.
-   */
-  private logger(transports: string | string[], type: any, ...args: any[]): void {
-
-    // If Logur Instance isn't active return.
-    if (!this._active)
-      return;
-
-    // Get and flatten params.
-    let params = u.flatten([].slice.call(arguments, 1));
-    let isException;
-
-    // If transports is string
-    if (u.isString(transports)) {
-      type = transports;
-      transports = undefined;
-    }
-
-    // If tranports passed remove
-    // the type from params.
-    else if (u.isArray(transports)) {
-      params.shift();
-    }
-
-    // If we have transports this is an unhandled
-    // exception. If not clear exception loop.
-    if (transports && transports.length)
-      isException = true;
-
-    // Clone the args.
-    let untyped = params.slice(0);
-
-    // Get level info.
-    let levelObj = this.options.levels[type];
-
-    // If no level object throw error.
-    if (!levelObj)
-      throw new Error(`Cannot log using level ${type} no available method was found.`);
-
-    // Get the level index.
-    const level = levelObj.level;
-
-    // If is NodeJS debug mode set an override flag to always log.
-    let debugOverride = u.isNode() && u.isDebug() && type === 'debug' ? true : false;
-
-    // Transports either passed from unhandled
-    // exceptions or get the Instance's Transports.
-    transports = transports || this._transports;
-
-    let msg = untyped[0];
-    let meta: any;
-    let fn, stack, err;
-
-    /* Check Last is Callback
-    ****************************************/
-
-    if (u.isFunction(u.last(untyped)))
-      fn = untyped.pop();
-
-    /* Normalize Message Arguments
-    **************************************/
-
-    // If error remove from untyped.
-    if (u.isError(msg)) {
-      untyped.shift();
-      err = { name: msg.name || 'Error', message: msg.message || 'Unknown error.', stack: env.stacktrace(msg) };
-      err.__exit__ = msg.__exit__;
-    }
-
-    else if (u.isPlainObject(msg)) {
-      meta = msg;
-      untyped.shift();
-      msg = undefined;
-    }
-
-    // If string inspect/format.
-    else if (u.isString(msg)) {
-
-      // If is a string shift the first arg.
-      untyped.shift();
-
-      // Get the number of sprintf tokens in message.
-      // Note this RegExp isn't complete it just looks
-      // for matches that are token like, won't match entire
-      // sprintf expression but we don't really need that
-      // just need to know how many there are.
-      const tokens = msg.match(/%(\.|\(|[0-9])?\$?[0-9bcdieufgosxXj]/g);
-
-      // If there are tokens then we need to get the same
-      // number of args from our array as they are used
-      // for formatting. Whatever is left is likely metadata.
-      if (tokens && tokens.length) {
-
-        // Format the message.
-        msg = sprintf.vsprintf(msg, untyped.slice(0, tokens.length));
-
-        // Get resulting array.
-        untyped = params.slice(tokens.length + 1);
-
-      }
-
-    }
-
-    /* Build Metadata
-    *****************************************/
-
-    // Merge any metadata that was passed.
-    // remove from untyped array.
-    let i = untyped.length;
-    while (i--) {
-      if (u.isPlainObject(untyped[i]) && !u.isError(untyped[i])) {
-        meta = meta || {};
-        u.extend(meta, untyped[i]);
-        untyped.splice(i, 1);
-      }
-    }
-
-    /* Get Environment
-    *****************************************/
-
-    // For node we get env again because
-    // we need accurate load and memory usage.
-
-    // Get the stacktrace for calling log method.
-    stack = env.stacktrace(3);
-
-    let sysinfo;
-
-    if (u.isNode())
-      sysinfo = env.node();
-    else
-      sysinfo = this.env.browser;
-
-    /* BUILD OUTPUT OBJECT
-    *****************************************/
-
-    // Return if the level is greater
-    // that the transport's level.
-    if (!debugOverride && level > this.options.level)
-      return;
-
-    /* Timestamp or User Defined Timestamp
-    *****************************************/
-
-    // Get all timestamp formats.
-    const timestamps = u.timestamp();
-    let ts;
-
-    // If is function call to get timestamp
-    // and format from user.
-    if (u.isFunction(this.options.timestamp)) {
-      const func: TimestampCallback = <TimestampCallback>this.options.timestamp;
-      ts = func(timestamps);
-    }
-
-    // Otherwise get timestamp from Logur
-    // defined timestamp.
-    else {
-      ts = timestamps[this.options.timestamp as string];
-    }
-
-    // Construct object with all possible
-    // properties, we'll use this in our
-    // Tranport's action for final output
-    // to it's defined target.
-    const output: ILogurOutput = {
-
-      // Level Info
-      activeid: this.options.level,
-      levelid: level,
-      levels: this.options.levels,
-
-      // Primary Fields
-      timestamp: ts,
-      uuid: u.uuid(),
-      level: type,
-      instance: this._name,
-      message: msg,
-      untyped: untyped,
-      args: params,
-
-      // Error & Stack
-      stacktrace: stack,
-
-      // Environment Info
-      env: sysinfo,
-      pkg: this._logur.pkg
-
-    };
-
-    // Set meta if exists.
-    if (meta)
-      output.metadata = meta;
-
-    // Set callback if exists.
-    if (fn)
-      output.callback = fn;
-
-    if (err)
-      output.error = err;
-
-    /* EMIT EVENTS & CALLBACK
-    *****************************************/
-
-    // Emit typed log message.
-    this.emit.call(this, type, output);
-
-    // Emit global logged message.
-    this.emit.call(this, 'logged', output);
-
-    if (fn) fn(output);
-
-    /* ITERATE ALL TRANSPORTS
-    *****************************************/
-
-    const run = (t: string) => {
-
-      // Get the transport object.
-      const transport = this.transports.get<ILogurTransport>(t);
-
-      // Ensure the transport is active.
-      if (!transport.active())
-        return;
-
-      const clone = u.clone<ILogurOutput>(output);
-      clone.map = transport.options.map;
-      clone.transports = <string[]>transports;
-
-      // Call the transports action.
-      transport.action(output);
-
-    };
-
-    // We don't really care about order of transports
-    // just run them in parallel unless user specifies otherwise..
-    (transports as string[]).forEach((t) => {
-      if (this.options.sync)
-        run(t);
-      else
-        u.tickThen(this, run, t);
-    });
-
-  }
 
   /**
    * Handle Exceptions
@@ -445,7 +210,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
     return this._logur.log;
   }
 
-  // PROTECTED & INSTANCE METHODS
+  // GETTERS
 
   /**
    * Transport
@@ -505,7 +270,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
      * @param options the options for the Transport.
      * @param Transport a Transport that extends LogurTransport.
      */
-    const create = <T extends ILogurTransport>(name: string, options?: IMetadata | TransportConstructor<T>, Transport?: TransportConstructor<T>): ITransportMethods => {
+    const add = <T extends ILogurTransport>(name: string, options?: IMetadata | TransportConstructor<T>, Transport?: TransportConstructor<T>): ITransportMethods => {
 
       // Ensure name is lowered.
       name = (name as string).toLowerCase();
@@ -633,7 +398,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
     methods = {
       has,
       get,
-      create,
+      add,
       extend,
       remove,
       active,
@@ -713,14 +478,14 @@ export class LogurInstance extends Notify implements ILogurInstance {
     };
 
     /**
-     * Start
-     * Starts a profiler.
+     * Add
+     * Adds a profiler.
      *
      * @param name the name of the profile.
      * @param transports the Transports to run for this profiler or options object.
      * @param options the profile options.
      */
-    const create = (name: string, transports: string[] | IProfileOptions, options?: IProfileOptions): IProfile => {
+    const add = (name: string, transports: string[] | IProfileOptions, options?: IProfileOptions): IProfile => {
 
       if (u.isPlainObject(transports)) {
         options = transports as IProfileOptions;
@@ -848,7 +613,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
       getAll,
       active,
       until,
-      create,
+      add,
       start,
       stop,
       remove
@@ -874,7 +639,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
       return this._logur.serializers;
     };
 
-    const create = (name: string, serializer: Serializer): ISerializerMethods => {
+    const add = (name: string, serializer: Serializer): ISerializerMethods => {
       this._logur.serializers[name] = serializer;
       return methods;
     };
@@ -887,7 +652,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
     methods = {
       get,
       getAll,
-      create,
+      add,
       remove
     };
 
@@ -906,6 +671,268 @@ export class LogurInstance extends Notify implements ILogurInstance {
     };
   }
 
+  // INSTANCE METHODS
+
+  /**
+   * Log
+   * Iterates transports then calls base Logur.log method.
+   *
+   * @param type the type of log message.
+   * @param args array of arguments.
+   */
+  logger(transports: string | string[], type: any, ...args: any[]): ILogurOutput {
+
+    // If Logur Instance isn't active return.
+    if (!this._active)
+      return;
+
+    // Get and flatten params.
+    let params = u.flatten([].slice.call(arguments, 1));
+    let isException;
+
+    // If transports is string
+    if (u.isString(transports)) {
+      type = transports;
+      transports = undefined;
+    }
+
+    // If tranports passed remove
+    // the type from params.
+    else if (u.isArray(transports)) {
+      params.shift();
+    }
+
+    // If we have transports this is an unhandled
+    // exception. If not clear exception loop.
+    if (transports && transports.length)
+      isException = true;
+
+    // Clone the args.
+    let untyped = params.slice(0);
+
+    // Get level info.
+    let levelObj = this.options.levels[type];
+
+    // If no level object throw error.
+    if (!levelObj)
+      throw new Error(`Cannot log using level ${type} no available method was found.`);
+
+    // Get the level index.
+    const level = levelObj.level;
+
+    // If is NodeJS debug mode set an override flag to always log.
+    let debugOverride = u.isNode() && u.isDebug() && type === 'debug' ? true : false;
+
+    // Transports either passed from unhandled
+    // exceptions or get the Instance's Transports.
+    transports = transports || this._transports;
+
+    let msg = untyped[0];
+    let meta: any;
+    let fn, stack, err;
+
+    /* Check Last is Callback
+    ****************************************/
+
+    if (u.isFunction(u.last(untyped)))
+      fn = untyped.pop();
+
+    /* Normalize Message Arguments
+    **************************************/
+
+    // If error remove from untyped.
+    if (u.isError(msg)) {
+      untyped.shift();
+      // err = { name: msg.name || 'Error', message: msg.message || 'Unknown error.', stack: env.stacktrace(msg) };
+    }
+
+    else if (u.isPlainObject(msg)) {
+      meta = msg;
+      untyped.shift();
+      msg = undefined;
+    }
+
+    // If string inspect/format.
+    else if (u.isString(msg)) {
+
+      // If is a string shift the first arg.
+      untyped.shift();
+
+      // Get the number of sprintf tokens in message.
+      // Note this RegExp isn't complete it just looks
+      // for matches that are token like, won't match entire
+      // sprintf expression but we don't really need that
+      // just need to know how many there are.
+      const tokens = msg.match(/%(\.|\(|[0-9])?\$?[0-9bcdieufgosxXj]/g);
+
+      // If there are tokens then we need to get the same
+      // number of args from our array as they are used
+      // for formatting. Whatever is left is likely metadata.
+      if (tokens && tokens.length) {
+
+        // Format the message.
+        msg = sprintf.vsprintf(msg, untyped.slice(0, tokens.length));
+
+        // Get resulting array.
+        untyped = params.slice(tokens.length + 1);
+
+      }
+
+    }
+
+    /* Build Metadata
+    *****************************************/
+
+    // Merge any metadata that was passed.
+    // remove from untyped array.
+    let i = untyped.length;
+    while (i--) {
+      if (u.isPlainObject(untyped[i]) && !u.isError(untyped[i])) {
+        meta = meta || {};
+        u.extend(meta, untyped[i]);
+        untyped.splice(i, 1);
+      }
+    }
+
+    /* Get Environment
+    *****************************************/
+
+    // For node we get env again because
+    // we need accurate load and memory usage.
+
+    // Get the stacktrace for calling log method.
+    stack = env.stacktrace(3);
+
+    let sysinfo;
+
+    if (u.isNode())
+      sysinfo = env.node();
+    else
+      sysinfo = this.env.browser;
+
+    /* BUILD OUTPUT OBJECT
+    *****************************************/
+
+    // Return if the level is greater
+    // that the transport's level.
+    if (!debugOverride && level > this.options.level)
+      return;
+
+    /* Timestamp or User Defined Timestamp
+    *****************************************/
+
+    // Get all timestamp formats.
+    const timestamps = u.timestamp();
+    let ts;
+
+    // If is function call to get timestamp
+    // and format from user.
+    if (u.isFunction(this.options.timestamp)) {
+      const func: TimestampCallback = <TimestampCallback>this.options.timestamp;
+      ts = func(timestamps);
+    }
+
+    // Otherwise get timestamp from Logur
+    // defined timestamp.
+    else {
+      ts = timestamps[this.options.timestamp as string];
+    }
+
+    /* Build Output Object
+    *****************************************/
+
+    // Construct object with all possible
+    // properties, we'll use this in our
+    // Tranport's action for final output
+    // to it's defined target.
+    const output: ILogurOutput = {
+
+      // Level Info
+      activeid: this.options.level,
+      levelid: level,
+      levels: this.options.levels,
+      map: this.options.map,
+
+      // Primary Fields
+      timestamp: ts,
+      uuid: u.uuid(),
+      level: type,
+      instance: this._name,
+      message: msg,
+      untyped: untyped,
+      metadata: meta,
+      error: err,
+      args: params,
+      transports: <string[]>transports,
+      serializers: this._logur.serializers,
+
+      // Error & Stack
+      stacktrace: stack,
+
+      // Environment Info
+      env: sysinfo,
+      pkg: this._logur.pkg
+
+    };
+
+    // Helper Method
+    // This only gets output to emitted events.
+    output.toMapped = <T>(options?: any): ILogurOutputMapped<T> => {
+      return u.toMapped<T>(options || this.options, output);
+    };
+
+    /* EMIT EVENTS & CALLBACK
+    *****************************************/
+
+    // Emit typed log message.
+    this.emit(type, output, this);
+
+    // Emit global logged message.
+    this.emit('logged', output, this);
+
+    if (fn) fn(output);
+
+    /* ITERATE ALL TRANSPORTS
+    *****************************************/
+
+    const run = (t: string) => {
+
+      // Get the transport object.
+      const transport = this.transports.get<ILogurTransport>(t);
+
+      if (!transport)
+        return;
+
+      // Ensure the transport is active.
+      if (!transport.active())
+        return;
+
+      // Clone the output object as we'll have some
+      // unique property values.
+      const clone = u.clone<ILogurOutput>(output);
+      clone.map = transport.options.map;
+
+      // Delete mapped method in clone we don't need it.
+      delete clone.toMapped;
+
+      // Call the transports action.
+      transport.action(clone);
+
+    };
+
+    // We don't really care about order of transports
+    // just run them in parallel unless user specifies otherwise..
+    (transports as string[]).forEach((t) => {
+      if (this.options.sync)
+        run(t);
+      else
+        u.tickThen(this, run, t);
+    });
+
+    return output;
+
+  }
+
   /**
    * Set Option
    * Sets/updates options.
@@ -916,31 +943,34 @@ export class LogurInstance extends Notify implements ILogurInstance {
    */
   setOption<T extends ILogurInstanceOptions>(key: string | T, value?: any, cascade?: boolean): void {
 
+    // Properties that should not
+    // cascade and overwrite.
+    const noCascade = ['map', 'pretty', 'prettystack', 'ministack'];
+
     // If undefined set cascade to options val.
     if (u.isUndefined(cascade))
       cascade = this.options.cascade;
 
     // If not object of options just set key/value.
-    if (!u.isPlainObject(key)) {
-
-      // If not value log error.
-      if (!value)
-        this.logger('error', `cannot set option for key ${key} using value of undefined.`);
-
-      else
-        this.options[key as string] = value;
-
+    if (!u.isPlainObject(key) && !u.isUndefined(value)) {
+      this.options[key as string] = value;
     }
 
     else {
-
       this.options = u.extend({}, this.options, key);
-
     }
 
     // If cascading is enabled cascade options
     // down to each bound transport.
     if (cascade) {
+
+      // If 'map' is key ignore.
+      if (!u.isUndefined(value) && key === 'map')
+        return;
+
+      // If Object remove map property.
+      if (u.isPlainObject(key))
+        delete key['map'];
 
       this._transports.forEach((t) => {
         const transport = this.transports.get<ILogurTransport>(t);
