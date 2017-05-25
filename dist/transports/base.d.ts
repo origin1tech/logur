@@ -65,6 +65,7 @@ export declare class LogurTransport implements ILogurTransport {
      * @param output the generated Logur Output object.
      */
     toMapped<T>(options: ILogurTransportOptions | ILogurOutput, output?: ILogurOutput): ILogurOutputMapped<T>;
+    normalizeQuery(): void;
     /**
      * Action
      * The transport action to be called when messages are logged.
@@ -74,14 +75,9 @@ export declare class LogurTransport implements ILogurTransport {
      */
     action(output: ILogurOutput): void;
     /**
-     * Query
-     * The transport query method for finding/searching previous logs.
-     */
-    query(): void;
-    /**
      * Dispose
      * Use the dispose method to close streams any any clean up.
      * Dispose is called after uncaught exceptions and SIGINT.
      */
-    dispose(): void;
+    dispose(fn: Function): void;
 }

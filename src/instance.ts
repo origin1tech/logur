@@ -1,6 +1,5 @@
 
-import { ILogurInstance, ILogur, ILogurInstanceOptions, ILogurTransportOptions, ILogurTransport, ITransportMethods, ILogurTransports, ILogurInstances, IMetadata, ILevel, TimestampCallback, ILogurOutput, ILoad, MemoryUsage, IProcess, IOS, IEnvBrowser, IEnvNode, IEnv, IProfiles, IProfileMethods, IProfileResult, IProfileOptions, IProfile, IStacktrace, TransportConstructor, ILogurOptionsTransport, ILevels, ILevelMethods, ISerializers, ISerializerMethods, Serializer, IError, ILogurOutputMapped } from './interfaces';
-import { LogurTransport, ConsoleTransport, FileTransport, HttpTransport } from './transports';
+import { ILogurInstance, ILogur, ILogurInstanceOptions, ILogurTransportOptions, ILogurTransport, ITransportMethods, ILogurTransports, ILogurInstances, IMetadata, ILevel, TimestampCallback, ILogurOutput, ILoad, MemoryUsage, IProcess, IOS, IEnvBrowser, IEnvNode, IEnv, IStacktrace, TransportConstructor, ILogurOptionsTransport, ILevels, ILevelMethods, ISerializers, ISerializerMethods, Serializer, IError, ILogurOutputMapped, IQuery, QueryResult } from './interfaces';
 import { Notify } from './notify';
 
 import * as env from './env';
@@ -12,7 +11,7 @@ const defaults: ILogurInstanceOptions = {
 
   level: 5,
   cascade: true,
-  map: ['level', 'timestamp', 'message', 'untyped', 'metadata'],
+  map: ['level', 'timestamp', 'message', 'metadata'],
 
   levels: {
     error: { level: 0, color: 'red' },
@@ -22,11 +21,15 @@ const defaults: ILogurInstanceOptions = {
     debug: { level: 4, color: 'magenta' },
   },
 
-  timestamp: 'utctime',
-  uuid: undefined,
+  // iso or epoch if you plan to query utc,
+  // local, utctime, localtime may be more
+  // friendly in console transports.
+  timestamp: 'iso',
+
+  uuid: undefined,    // if function will be used to gen. uuid.
   transports: [],
-  catcherr: false,
-  exiterr: false,
+  catcherr: false,    // when true Logur will handle unhandled errors.
+  exiterr: false,     // when true Logur will exit in Node on unhandled error.
 
   // Maps Logur Output
   // property to color.
@@ -41,11 +44,6 @@ const defaults: ILogurInstanceOptions = {
 
   }
 
-};
-
-const profileDefaults: IProfileOptions = {
-  transports: [],
-  max: 25
 };
 
 /**
@@ -66,7 +64,6 @@ export class LogurInstance extends Notify implements ILogurInstance {
   protected _logur: ILogur;
   protected _transports: string[] = [];
   protected _exceptions: string[] = [];
-  protected _profiles: IProfiles;
   protected _active: boolean = true;
 
   ua: UAParser;
@@ -86,21 +83,8 @@ export class LogurInstance extends Notify implements ILogurInstance {
     this._logur = logur;
     this.options = u.extend({}, defaults, options);
 
-    // Extend class with log method handlers.
-    u.keys(this.options.levels).forEach((k) => {
-
-      const level = this.options.levels[k];
-
-      // If a number convert to object.
-      if (u.isNumber(level))
-        this.options.levels[k] = { level: level };
-
-      this[k] = (...args: any[]) => {
-        this.logger(k, args);
-        return this;
-      };
-
-    });
+    // Initialize the instance log methods.
+    this.initLevels(this.options.levels);
 
     // Iterate Transports in options
     // and bind to the Instance.
@@ -121,6 +105,20 @@ export class LogurInstance extends Notify implements ILogurInstance {
   }
 
   // PRIVATE METHODS
+
+  private initLevels(levels) {
+
+    // Extend class with log method handlers.
+    u.keys(levels).forEach((k) => {
+
+      const level = levels[k];
+
+      this[k] = (...args: any[]) => {
+        this.logger(k, args);
+      };
+
+    });
+  }
 
   /**
    * Handle Exceptions
@@ -410,240 +408,50 @@ export class LogurInstance extends Notify implements ILogurInstance {
   }
 
   /**
-   * Profile
-   * Allows for profiling logs.
-   * TODO: Really needs its on class!
-   */
-  get profiles(): IProfileMethods {
-
-    let methods;
-
-    /**
-     * Get
-     * Gets an existing Profile.
-     *
-     * @param name the name of the Profile to get.
-     */
-    const get = (name: string): IProfile => {
-      return this._profiles[name];
-    };
-
-    /**
-     * Get All
-     * Gets all profiles stored in instance.
-     */
-    const getAll = (): IProfiles => {
-      return this._profiles;
-    };
-
-    /**
-     * Active
-     * Sets or gets the active state of a Profile.
-     *
-     * @param name the name of the Profile to get/set active state for.
-     * @param state the optional state to set.
-     */
-    const active = (name: string, state?: boolean): boolean => {
-
-      const profile = this.profiles.get(name);
-
-      if (!profile)
-        return;
-
-      if (u.isUndefined(state))
-        return profile.active;
-
-      return profile.active = state;
-
-    };
-
-    /**
-     * Until
-     * Inspects until property and max size property
-     * allows profile to run until false is returned.
-     *
-     * @param name the name of the Profile to check.
-     */
-    const until = (name: string): boolean => {
-      const profile = this.profiles.get(name);
-      if (!profile)
-        return;
-      if (!u.isUndefined(profile.options.until))
-        return profile.options.until();
-      const max = profile.options.max;
-      const count = profile.count;
-      if (max && ((count + 1) < max))
-        return true;
-      return false;
-    };
-
-    /**
-     * Add
-     * Adds a profiler.
-     *
-     * @param name the name of the profile.
-     * @param transports the Transports to run for this profiler or options object.
-     * @param options the profile options.
-     */
-    const add = (name: string, transports: string[] | IProfileOptions, options?: IProfileOptions): IProfile => {
-
-      if (u.isPlainObject(transports)) {
-        options = transports as IProfileOptions;
-        transports = undefined;
-      }
-
-      let profile;
-
-      // Extend the options with defaults.
-      options = u.extend({}, profileDefaults, options) as IProfileOptions;
-
-      // Ensure transports.
-      transports = transports || options.transports;
-
-      if (!transports || !(transports as string[]).length)
-        throw new Error(`Cannot start profile ${name} using transports of none.`);
-
-      const valid = [];
-
-      // Ensure transports can be used for profiling.
-      (transports as string[]).forEach((t) => {
-
-        // Get the transport.
-        const transport = this.transports.get<ILogurTransport>(t);
-
-        if (!transport)
-          throw new Error(`The Transport ${t} was NOT found, ensure the Transport is loaded.`);
-
-        if (!transport.options.profiler)
-          throw new Error(`Attempted to load Transport ${t} but profiling is NOT enabled..`);
-
-        valid.push(t);
-
-      });
-
-      // Add the profile.
-      profile = {
-        name: name,
-        options: options,
-        running: false,
-        instance: this._name,
-        transports: valid,
-        started: 0,
-        elapsed: 0,
-        count: 0,
-        start: methods.start.bind(this, name),
-        stop: methods.stop.bind(this, name),
-        remove: methods.remove.bind(this, name)
-      };
-
-      this._profiles[name] = profile;
-
-      return profile;
-
-    };
-
-    /**
-     * Start
-     * Starts an existing Profile instance.
-     *
-     * @param profile the Profile configuration.
-     */
-    const start = (name: string): void => {
-
-      const profile = this.profiles.get(name);
-
-      if (!profile)
-        return;
-
-      if (profile.active)
-        throw new Error(`Cannot start already active Profile ${name}.`);
-
-      profile.started = Date.now();
-      profile.active = true;
-
-    };
-
-    /**
-     * Stop
-     * Stops and returns the specified Profile result.
-     */
-    const stop = (name: string): IProfileResult => {
-
-      const profile = this.profiles.get(name);
-
-      if (!profile)
-        return;
-
-      profile.active = false;
-
-      const result = {
-        name: profile.name,
-        instance: profile.instance,
-        transports: profile.transports,
-        started: profile.started,
-        stopped: profile.stopped,
-        elapsed: profile.elapsed,
-        count: profile.count
-      };
-
-      if (profile.options.remove === 'stop')
-        delete this._profiles[profile.name];
-
-      return result;
-
-    };
-
-    /**
-     *
-     * @param name the name of the Profile to remove
-     * @param force when true will remove an active Profile.
-     */
-    const remove = (name: string, force?: boolean): void => {
-      const profile = this.profiles.get(name);
-      if (!profile)
-        return;
-      if (profile.active && !force)
-        throw new Error(`Cannot remove active Profile ${name}, stop or set force to true to remove.`);
-
-      delete this._profiles[name];
-    };
-
-    methods = {
-      get,
-      getAll,
-      active,
-      until,
-      add,
-      start,
-      stop,
-      remove
-    };
-
-    return methods;
-
-  }
-
-  /**
    * Serializers
    * Gets, creates and removes serializers.
+   * NOTE: Serializers are called before pretty
+   * print formatting and colorization.
    */
   get serializers(): ISerializerMethods {
 
     let methods;
 
+    /**
+     * Get
+     * Gets a serializer by name.
+     *
+     * @param name the name of the serializer
+     */
     const get = (name: string): Serializer => {
       return this._logur.serializers[name];
     };
 
+    /**
+     * Get All
+     * Gets all loaded serializers.
+     */
     const getAll = (): ISerializers => {
       return this._logur.serializers;
     };
 
+    /**
+     * Add
+     * Adds a serializer.
+     * @param name the name of the serializer to add.
+     * @param serializer the serializer function.
+     */
     const add = (name: string, serializer: Serializer): ISerializerMethods => {
       this._logur.serializers[name] = serializer;
       return methods;
     };
 
+    /**
+     * Remove
+     * Removes a serializer.
+     *
+     * @param name the name of the serializer.
+     */
     const remove = (name: string): ISerializerMethods => {
       delete this._logur.serializers[name];
       return methods;
@@ -743,7 +551,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
     // If error remove from untyped.
     if (u.isError(msg)) {
       untyped.shift();
-      // err = { name: msg.name || 'Error', message: msg.message || 'Unknown error.', stack: env.stacktrace(msg) };
+      msg.trace = env.stacktrace(msg);
     }
 
     else if (u.isPlainObject(msg)) {
@@ -858,10 +666,9 @@ export class LogurInstance extends Notify implements ILogurInstance {
       uuid: u.uuid(),
       level: type,
       instance: this._name,
-      message: msg,
+      message: msg || '',
       untyped: untyped,
       metadata: meta,
-      error: err,
       args: params,
       transports: <string[]>transports,
       serializers: this._logur.serializers,
@@ -900,11 +707,7 @@ export class LogurInstance extends Notify implements ILogurInstance {
       // Get the transport object.
       const transport = this.transports.get<ILogurTransport>(t);
 
-      if (!transport)
-        return;
-
-      // Ensure the transport is active.
-      if (!transport.active())
+      if (!transport || !transport.active())
         return;
 
       // Clone the output object as we'll have some
@@ -1002,10 +805,9 @@ export class LogurInstance extends Notify implements ILogurInstance {
    *
    * @param args arguments to pass to console.log.
    */
-  write(...args: any[]): ILogurInstance {
+  write(...args: any[]): void {
     if (console && console.log)
       console.log.apply(console, args);
-    return this;
   }
 
   /**
@@ -1018,6 +820,46 @@ export class LogurInstance extends Notify implements ILogurInstance {
     if (!u.isNode())
       return;
     process.exit(code);
+  }
+
+  /**
+   * Query
+   * Queries a transport.
+   *
+   * @param transport the transport to be queried.
+   * @param q the query object to execute.
+   * @param fn the callback function on done.
+   */
+  query(transport: string, q: IQuery, fn: QueryResult) {
+
+    // Get the transport to query.
+    const _transport = this.transports.get<ILogurTransport>(transport as string);
+
+    // Warn if not queryable.
+    if (!_transport.query)
+      return this.log.warn(`attempted to query non-queryable transport ${transport}.`);
+
+    // Query the transport.
+    _transport.query(q, fn);
+
+  }
+
+  /**
+   * Dispose
+   * Calls dispose on transports on
+   * teardown of instance.
+   *
+   * @param fn callback on done disposing transports.
+   */
+  dispose(fn: Function) {
+
+    const funcs = this._transports.map((t) => {
+      const transport = this.transports.get<ILogurTransport>(t);
+      if (transport.dispose) return transport.dispose;
+    });
+
+    u.asyncEach(funcs, fn);
+
   }
 
 }

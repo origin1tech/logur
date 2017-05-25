@@ -3,14 +3,17 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var u = require("./utils");
 var instance_1 = require("./instance");
 var transports_1 = require("./transports");
-var pkg;
+var pkg, readline;
 // If NodeJS get package info.
 if (u.isNode()) {
     var resolve = require('path').resolve;
     pkg = require(resolve(process.cwd(), 'package.json'));
+    readline = require('readline');
 }
 var defaults = {
+    // Keys to grab from package.json when using Node.
     package: ['name', 'description', 'version', 'main', 'repository', 'author', 'license'],
+    // Array of transports to load.
     transports: []
 };
 var Logur = (function () {
@@ -103,9 +106,34 @@ var Logur = (function () {
             throw Error('cannot remove default Logur Instance.');
         delete this.instances[name];
     };
+    /**
+     * Dispose
+     * Iterates all instances disposing of transports.
+     *
+     * @param exit when NOT false exit after disposing.
+     */
+    Logur.prototype.dispose = function (exit, fn) {
+        var _this = this;
+        var funcs = [];
+        if (u.isFunction(exit)) {
+            fn = exit;
+            exit = undefined;
+        }
+        fn = fn || u.noop;
+        u.keys(this.instances).forEach(function (k) {
+            var instance = _this.instances[k];
+            funcs.push(instance.dispose);
+        });
+        u.asyncEach(funcs, function () {
+            // Exit if true and is Node.
+            if (exit && u.isNode())
+                process.exit(0);
+            else
+                fn();
+        });
+    };
     return Logur;
 }());
-exports.Logur = Logur;
 /**
  * Init
  * Initializes Logur.

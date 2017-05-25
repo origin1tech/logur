@@ -19,13 +19,8 @@ export declare class StreamTransport extends LogurTransport implements IStreamTr
     action(output: ILogurOutput): void;
     /**
      * Dispose
-     * Use the dispose method to close streams any any clean up.
+     * Use the dispose method to close streams and any clean up.
      * Dispose is called after uncaught exceptions and SIGINT.
      */
     dispose(): void;
-    /**
-     * Query
-     * The transport query method for finding/searching previous logs.
-     */
-    query(): void;
 }

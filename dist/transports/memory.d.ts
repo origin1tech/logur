@@ -1,4 +1,4 @@
-import { ILogur, IMemoryTransportOptions, IMemoryTransport, ILogurOutput, ILogurInstanceOptions } from '../interfaces';
+import { ILogur, IMemoryTransportOptions, IMemoryTransport, ILogurOutput, ILogurInstanceOptions, IQuery, QueryResult } from '../interfaces';
 import { LogurTransport } from './base';
 export declare class MemoryTransport extends LogurTransport implements IMemoryTransport {
     logs: any[];
@@ -20,12 +20,15 @@ export declare class MemoryTransport extends LogurTransport implements IMemoryTr
     action(output: ILogurOutput): void;
     /**
      * Query
-     * The transport query method for finding/searching previous logs.
+     * Queries the logs.
+     *
+     * @param q the query options.
+     * @param fn the query result callback.
      */
-    query(): void;
+    query(q: IQuery, fn: QueryResult): void;
     /**
      * Dispose
-     * Use the dispose method to close streams any any clean up.
+     * Use the dispose method to close streams and any clean up.
      * Dispose is called after uncaught exceptions and SIGINT.
      */
     dispose(): void;

@@ -1,4 +1,4 @@
-import { ILogurInstance, ILogur, ILogurInstanceOptions, ITransportMethods, ILogurOutput, IEnv, IProfiles, IProfileMethods, ISerializerMethods } from './interfaces';
+import { ILogurInstance, ILogur, ILogurInstanceOptions, ITransportMethods, ILogurOutput, IEnv, ISerializerMethods, IQuery, QueryResult } from './interfaces';
 import { Notify } from './notify';
 import { UAParser } from 'ua-parser-js';
 /**
@@ -13,7 +13,6 @@ export declare class LogurInstance extends Notify implements ILogurInstance {
     protected _logur: ILogur;
     protected _transports: string[];
     protected _exceptions: string[];
-    protected _profiles: IProfiles;
     protected _active: boolean;
     ua: UAParser;
     options: ILogurInstanceOptions;
@@ -24,6 +23,7 @@ export declare class LogurInstance extends Notify implements ILogurInstance {
      * @param logur the common instance of Logur.
      */
     constructor(name: string, options: ILogurInstanceOptions, logur: ILogur);
+    private initLevels(levels);
     /**
      * Handle Exceptions
      * Enables handling uncaught NodeJS exceptions.
@@ -40,14 +40,10 @@ export declare class LogurInstance extends Notify implements ILogurInstance {
      */
     readonly transports: ITransportMethods;
     /**
-     * Profile
-     * Allows for profiling logs.
-     * TODO: Really needs its on class!
-     */
-    readonly profiles: IProfileMethods;
-    /**
      * Serializers
      * Gets, creates and removes serializers.
+     * NOTE: Serializers are called before pretty
+     * print formatting and colorization.
      */
     readonly serializers: ISerializerMethods;
     /**
@@ -86,7 +82,7 @@ export declare class LogurInstance extends Notify implements ILogurInstance {
      *
      * @param args arguments to pass to console.log.
      */
-    write(...args: any[]): ILogurInstance;
+    write(...args: any[]): void;
     /**
      * Exit
      * When env is node process.exit() is called.
@@ -94,4 +90,21 @@ export declare class LogurInstance extends Notify implements ILogurInstance {
      * @param code optional node error code.
      */
     exit(code?: number): void;
+    /**
+     * Query
+     * Queries a transport.
+     *
+     * @param transport the transport to be queried.
+     * @param q the query object to execute.
+     * @param fn the callback function on done.
+     */
+    query(transport: string, q: IQuery, fn: QueryResult): void;
+    /**
+     * Dispose
+     * Calls dispose on transports on
+     * teardown of instance.
+     *
+     * @param fn callback on done disposing transports.
+     */
+    dispose(fn: Function): void;
 }

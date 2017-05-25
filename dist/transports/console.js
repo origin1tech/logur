@@ -13,11 +13,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var base_1 = require("./base");
 var u = require("../utils");
 var defaults = {
-    map: ['level', 'message', 'untyped', 'metadata'],
+    map: ['level', 'timestamp', 'message', 'metadata'],
     padding: 'right',
     colorize: true,
     ministack: true,
-    pretty: true,
+    pretty: false,
     prettystack: false
 };
 var ConsoleTransport = (function (_super) {
@@ -55,19 +55,12 @@ var ConsoleTransport = (function (_super) {
         _console.apply(console, mapped.array);
     };
     /**
-     * Query
-     * The transport query method for finding/searching previous logs.
-     */
-    ConsoleTransport.prototype.query = function () {
-        throw new Error('Logur Transport query method must be overriden.');
-    };
-    /**
      * Dispose
-     * Use the dispose method to close streams any any clean up.
+     * Use the dispose method to close streams and any clean up.
      * Dispose is called after uncaught exceptions and SIGINT.
      */
     ConsoleTransport.prototype.dispose = function () {
-        throw new Error('Logur Transport dispose method must be overriden.');
+        // Nothing to dispose.
     };
     return ConsoleTransport;
 }(base_1.LogurTransport));

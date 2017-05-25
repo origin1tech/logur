@@ -53,10 +53,22 @@ export type UUIDCallback = { (): string };
 export type Serializer = { <T>(value: T, output?: ILogurOutput, options?: any): T };
 
 /**
+ * Query Result
+ * Callback type returning the queried result.
+ */
+export type QueryResult = { <T>(result: T[]) };
+
+/**
+ * Query Range
+ * Callback type returning array of found IQueryRange.
+ */
+export type QueryRange = { (range: IQueryRange[]) };
+
+/**
  * Timestamp Strategy
  * Type constraint for the timestamp strategy to be used.
  */
-export type TimestampStrategy = 'epoch' | 'iso' | 'local' | 'utc' | 'localdate' | 'localtime' | 'utcdate' | 'utctime';
+export type TimestampStrategy = 'epoch' | 'iso' | 'local' | 'utc' | 'utctime' | 'localtime';
 
 /**
  * File Output Strategy
@@ -228,9 +240,13 @@ export interface IStreamrollerOptions {
 // NODEJS
 ////////////////////////
 
-// Duplication here really so we don't need
-// to deal with importing NodeJS typings.
-// also stripped some props.
+// Duplication here really removing
+// unneeded props etc.
+
+export interface ITimer {
+  ref(): void;
+  unref(): void;
+}
 
 export interface IParsedPath {
 
@@ -422,6 +438,27 @@ export interface IEnv {
 // LOGUR COMMON
 ////////////////////////
 
+export interface IQuery {
+  from: Date | string;
+  to: Date | string;
+  skip: number;
+  take: number;
+  order: 'asc' | 'desc';
+  fields: string[];
+}
+
+export interface IQueryRange {
+  index?: number;
+  filename?: string;
+  line?: string;
+  start?: number;
+  end?: number;
+}
+
+export interface IQueryRanges {
+  [key: number]: IQueryRange;
+}
+
 export interface ILevel {
   level: number;                // the level number.
   color?: string;               // the level color.
@@ -436,15 +473,15 @@ export interface ILevels {
 }
 
 export interface ILevelMethodsBase {
-  [key: string]: (...args: any[]) => ILogurInstance;
+  [key: string]: (...args: any[]) => void;
 }
 
 export interface ILevelMethods extends ILevelMethodsBase {
-  error(...args: any[]): ILogurInstance;
-  warn(...args: any[]): ILogurInstance;
-  info(...args: any[]): ILogurInstance;
-  verbose(...args: any[]): ILogurInstance;
-  debug(...args: any[]): ILogurInstance;
+  error(...args: any[]): void;
+  warn(...args: any[]): void;
+  info(...args: any[]): void;
+  verbose(...args: any[]): void;
+  debug(...args: any[]): void;
 }
 
 export interface ILogurOutput {
@@ -469,12 +506,10 @@ export interface ILogurOutput {
   untyped: any[];                               // args that are not known types.
   args: any[];                                  // the originally logged args.
 
-  map?: string[];                                // array of ordered props for output.
+  map?: string[];                               // array of ordered props for output.
   levels: ILevels;                              // the levels configuration.
-  profiles?: IProfiles;
   stacktrace?: IStacktrace[];                   // parsed stacktrace frame.
   env?: IEnvNode | IEnvBrowser;                 // browser, os, process environment info.
-  error?: Error;                                // populated with parsed error if exists.
   pkg?: IMetadata;                              // defined package.json fields.
   serializers?: ISerializers;                   // reference to property serializers.
 
@@ -500,9 +535,6 @@ export interface ILogurBaseOptions {
   level?: number;               // the active log level.
   levels?: ILevels;             // Log levels configuration.
   map?: string[];               // array of properties to map log output.
-  pretty?: boolean;             // when true objects are pretty printed.
-  ministack?: boolean;          // When NOT false log append msgs w/ (file:line:col)
-  prettystack?: boolean;        // when true error stack trace is pretty printed.
   uuid?: UUIDCallback;          // when has value callsback to get generated uuid.
   timestamp?: TimestampCallback | TimestampStrategy; // timestamp strategy.
   colormap?: IMetadata;         // mimics util.inspect.styles for mapping type to color.
@@ -525,7 +557,9 @@ export interface ILogurInstanceOptions extends ILogurBaseOptions {
 export interface ILogurTransportOptions extends ILogurBaseOptions {
 
   active?: boolean;             // when NOT false is active.
-  profiler?: boolean;           // when true transport can be used for profiling.
+  pretty?: boolean;             // when true objects are pretty printed.
+  ministack?: boolean;          // When NOT false log append msgs w/ (file:line:col)
+  prettystack?: boolean;        // when true error stack trace is pretty printed.
   exceptions?: boolean;         // whether the transport is fired on exceptions.
 
 }
@@ -537,22 +571,20 @@ export interface IConsoleTransportOptions extends ILogurTransportOptions {
 
 export interface IFileTransportOptions extends ILogurTransportOptions {
   filename: string;             // filename.
-  max?: number;                 // max size in bytes.
-  backups?: number;             // number of backups to keep.
-  pattern?: string;             // date pattern for DateRollingStream.
   options?: {
     encoding?: string;          // defaults to 'utf8'.
     mode?: number;              // defaults to 0644.
     flags?: string;             // defaults to 'a'.
-    compress?: boolean;         // when True log files will be compressed w/ .gz exten.
-    alwaysIncludePattern: boolean;  // extend file with pattern defaults to false.
   };
+  size?: number;                // max size of a log file.
+  max: number;                  // maximum number of backup files.
+  interval: number;             // 0 to disable or milliseconds to check log roll at.
+  delimiter: '\t' | ';';        // delimiter to be used when json is set to false.
   json?: boolean;               // when true logged output is JSON.
 }
 
 export interface IMemoryTransportOptions extends ILogurTransportOptions {
   padding?: PadStrategy;        // the strategy for pading levels.
-  colorize?: boolean;           // when NOT false colorization is applied.
   max?: number;                 // maximum number of logs.
 }
 
@@ -565,8 +597,6 @@ export interface IHttpTransportOptions extends ILogurTransportOptions {
 }
 
 export interface IStreamTransportOptions extends ILogurTransportOptions {
-  padding?: PadStrategy;        // the strategy for pading levels.
-  colorize?: boolean;           // when NOT false colorization is applied.
 }
 
 ////////////////////////
@@ -585,8 +615,15 @@ export interface IConsoleTransport extends ILogurTransport {
 
 
 export interface IFileTransport extends ILogurTransport {
-  streamroller: any;
+  parsed: IParsedPath;            // the parsed filename that was supplied.
+  running: string;                // the active running filename/path.
+  interval: NodeJS.Timer;               // interval id.
+  writer: any;                    // the write stream.
   options: IFileTransportOptions;
+  startTimer(): void;
+  stopTimer(): void;
+  open(fn?: { (stream?: NodeJS.WritableStream) }): void;
+  close(): void;
 }
 
 /* Http
@@ -635,11 +672,14 @@ export interface ILogurTransport {
   toMapped<T>(output: ILogurOutput): ILogurOutputMapped<T>;
   toMapped<T>(options: ILogurTransportOptions | ILogurOutput, output?: ILogurOutput): ILogurOutputMapped<T>;
 
+  // Optional methods.
+
+  query?(q: IQuery, fn: QueryResult): void;
+  dispose?(fn: Function): void;
+
   // Must Override Methods
 
   action(output: ILogurOutput): void;
-  query(): void;
-  dispose(): void;
 
 }
 
@@ -654,7 +694,7 @@ export interface ISerializers {
 export interface ISerializerMethods {
   get(name: string): Serializer;
   getAll(): ISerializers;
-  add(name: string, serializer: Serializer): ISerializerMethods;
+  add(name: string, transports: string | string[] | Serializer, serializer: Serializer): ISerializerMethods;
   remove(name: string): ISerializerMethods;
 }
 
@@ -672,50 +712,6 @@ export interface ITransportMethods {
   setOption<T extends ILogurTransportOptions>(name: string, key: string | T, value?: any): ITransportMethods;
 }
 
-export interface IProfileOptions {
-  transports?: string[];            // list of transports to be used in profile.
-  max?: number;                     // max logs before auto stop. set to 0 to disable.
-  until?: { (): boolean };          // if defined profile until false.
-  remove?: ProfileRemoveStrategy;   // the strategy observed for removing the profile.
-}
-
-export interface IProfileResult {
-
-  name: string;           // name of the profile.
-  instance: string;       // name of instance that ran the profile.
-  transports: string[];   // array of transport names used in profile.
-  started: number;        // start timestamp.
-  stopped?: number;       // stop timestamp.
-  elapsed: number;        // elapsed time in ms.
-  count: number;          // number of log message.
-
-}
-
-export interface IProfile extends IProfileResult {
-  active: boolean;            // whether the profile is active.
-  options: IProfileOptions;
-  start(): void;
-  stop(): IProfileResult;
-  remove(): void;
-}
-
-export interface IProfiles {
-  [key: string]: IProfile;
-}
-
-export interface IProfileMethods {
-  get(name: string): IProfile;
-  getAll(): IProfiles;
-  active(name: string, state?: boolean): boolean;
-  status(name: string): boolean;
-  until(name: string): boolean;
-  add(name: string, options: IProfileOptions): IProfile;
-  add(name: string, transports: string[] | IProfileOptions, options?: IProfileOptions): IProfile;
-  start(name: string): void;
-  stop(name: string): IProfileResult;
-  remove(name: string, force?: boolean): void;
-}
-
 export interface ILogurInstances {
   [key: string]: any;
 }
@@ -725,16 +721,16 @@ export interface ILogurInstance extends INotify {
   env: IEnv;
   options: ILogurInstanceOptions;
   transports: ITransportMethods;
-  profiles: IProfileMethods;
   serializers: ISerializerMethods;
   logger(type: any, ...args: any[]): ILogurOutput;
   logger(transports: string | string[], type: any, ...args: any[]): ILogurOutput;
   setOption<T extends ILogurInstanceOptions>(options: T): void;
   setOption<T extends ILogurInstanceOptions>(key: string | T, value?: any): void;
   active(state?: boolean): boolean;
-
-  write(...args: any[]): ILogurInstance;
+  write(...args: any[]): void;
   exit(code?: number): void;
+  query(transport: string, q: IQuery, fn: QueryResult): void;
+  dispose(fn: Function): void;
 
 }
 
@@ -772,4 +768,5 @@ export interface ILogur {
   get<T extends ILevelMethodsBase>(name?: string): ILogurInstance & T;
   create<T extends ILevelMethodsBase>(name: string, options: ILogurInstanceOptions): ILogurInstance & T;
   remove(name: string): void;
+  dispose(exit: boolean | Function, fn?: Function): void;
 }

@@ -1,20 +1,18 @@
 
-import { ITimestamps, IError, IMetadata, ILogur, Constructor, PadStrategy, IParsedPath, ILogurOutput, ILevel, Serializer, ISerializers, ILogurOutputMapped } from './interfaces';
+import { ITimestamps, IError, IMetadata, ILogur, Constructor, PadStrategy, IParsedPath, ILogurOutput, ILevel, Serializer, ISerializers, ILogurOutputMapped, IQuery } from './interfaces';
 import * as _clone from 'lodash.clonedeep';
 import * as env from './env';
 import * as colors from './colorize';
 
-let util, statSync, parse, EOL;
+let util, parse, eol;
 
 if (!process.env.BROWSER) {
-  // chalk = require('chalk');
   util = require('util');
   parse = require('path').parse;
-  statSync = require('fs').statSync;
-  EOL = require('os').EOL;
+  eol = require('os').EOL;
 }
 else {
-  EOL = '\n';
+  eol = '\n';
 }
 
 declare var v8debug;
@@ -28,6 +26,12 @@ declare var performance;
 ///////////////////////////////
 
 const toString = Object.prototype.toString;
+
+/**
+ * EOL
+ * Line ending constant.
+ */
+export const EOL = eol;
 
 /**
  * Noop
@@ -1050,27 +1054,6 @@ export function bytesToSize(bytes: number, decimals?: number): { size: number, f
 }
 
 /**
- * Check Stat
- * Using stat check if file too large.
- *
- * @param filename the file name to stat.
- */
-export function checkStat(filename) {
-
-  const stats = statSync(filename);
-  const normalized = bytesToSize(stats.size, 0);
-
-  if (normalized.index > 2)
-    return false;
-
-  if (normalized.index === 2 && normalized.fixedzero >= 2)
-    return false;
-
-  return true;
-
-}
-
-/**
  * Intersect
  * Intersects two types.
  *
@@ -1111,6 +1094,87 @@ export function activate<T>(Type: Constructor<T>, ...args: any[]): T {
   let ctor: T = Object.create(Type.prototype);
   Type.apply(ctor, args);
   return ctor;
+}
+
+/**
+ * Async Each
+ * Itearate functions with callbacks asynchronously.
+ *
+ * @param funcs the functions to call whose signature contains a callback.
+ * @param fn
+ */
+export function asyncEach(funcs: { (fn: Function) }[], fn: Function): void {
+
+  let ctr = 0;
+
+  funcs.forEach((el, i, arr) => {
+
+    el(() => {
+
+      ctr++;
+
+      if (ctr === funcs.length)
+        fn();
+
+    });
+
+  });
+
+}
+
+/**
+ * Normalize Query
+ * Ensures default values witing IQuery object.
+ *
+ * @param q the query object to normalize.
+ */
+export function normalizeQuery(q: IQuery): IQuery {
+  q.fields = q.fields || [];
+  q.skip = q.skip || 0;
+  q.take = q.take || 0;
+  q.order = q.order || 'asc';
+  if (isString(q.from))
+    q.from = new Date(q.from as string);
+  if (isString(q.to))
+    q.to = new Date(q.to as string);
+  return q;
+}
+
+/**
+ * Parse Line
+ * Parses a queried log line from string or JSON.
+ *
+ * @param line the log line to be parsed.
+ * @param options the transport options object.
+ */
+export function parseLine(line: string, options: any): any {
+
+  options = options || {};
+
+  // If JSON just parse and return.
+  if (options.json)
+    return JSON.parse(line);
+
+  // If delimiter split string and map
+  // back using options.map.
+  if (options.delimiter) {
+
+    const obj: any = {};
+    const split = line.split(options.delimiter);
+
+    // map line to object.
+    options.map.forEach((prop, i) => {
+      obj[prop] = split[i];
+    });
+
+    return obj;
+  }
+
+  // Otherwise just return the original value.
+  else {
+    return line;
+  }
+
 }
 
 ///////////////////////////////
@@ -1170,7 +1234,6 @@ export function formatByType(key: string, obj: any, options: any, output: ILogur
   let pretty = options.pretty && isNode();
   let canColorize = options.colorize && isNode();
   let colorMap = options.colormap;
-  const EOL = output.env && output.env.os ? output.env.os['EOL'] : '\n';
 
   // If util extend with styles
   // from node util.inspect.styles.
@@ -1282,12 +1345,15 @@ export function formatByType(key: string, obj: any, options: any, output: ILogur
 
     // If pretty stacktrace use util.inspect.
     if (options.prettystack) {
-      return { normalized: tmp, append: EOL + util.inspect({ name: obj.name || 'Error', message: obj.message || 'Unknown error', stack: env.stacktrace(obj, 1) }, true, null, canColorize) };
+      if (options.pretty)
+        return { normalized: tmp, append: EOL + util.inspect({ name: obj.name || 'Error', message: obj.message || 'Unknown error', stack: env.stacktrace(obj, 1) }, true, null, canColorize) };
+      return { normalized: tmp + EOL + util.inspect({ name: obj.name || 'Error', message: obj.message || 'Unknown error', stack: env.stacktrace(obj, 1) }, true, null, canColorize) };
     }
 
-    // Check if fullstack should be shown.
     else {
-      return { normalized: tmp, append: EOL + stack.join(EOL) };
+      if (options.pretty)
+        return { normalized: tmp, append: EOL + stack.join(EOL) };
+      return { normalized: tmp + EOL + stack.join(EOL) };
     }
 
   }
@@ -1324,19 +1390,19 @@ export function toMapped<T>(options: any, output: ILogurOutput): ILogurOutputMap
 
   // Get list of levels we'll use this for padding.
   const levels = keys(options.levels);
-  const EOL = output.env && output.env.os ? output.env.os['EOL'] : '\n';
   const ignored = ['callback'];
-  const metaIndex = options.map.indexOf('metadata');
-  const metaLast = options.map.length - 1 === metaIndex;
+  const map = options.map.slice(0);
+  const metaIndex = map.indexOf('metadata');
+  const metaLast = map.length - 1 === metaIndex;
 
   // Metadata must be last index in map.
   if (metaIndex !== -1 && !metaLast) {
-    options.map.splice(metaIndex, 1);
-    options.map.push('metadta');
+    map.splice(metaIndex, 1);
+    map.push('metadta');
   }
 
   // Var for resulting output array, object or json.
-  let arr = [], obj = {}, appended = [];
+  let arr = [], obj = {}, appended = [], untyped = [];
 
   // Reference the logged level.
   let level = output.level;
@@ -1347,8 +1413,11 @@ export function toMapped<T>(options: any, output: ILogurOutput): ILogurOutputMap
   // Flag if we should colorize.
   const colors = options.colorize && isNode() ? true : false;
 
+  // add untyped to mapped.
+  map.push('untyped');
+
   // Iterate the map and build the object.
-  output.map.forEach((k) => {
+  map.forEach((k) => {
 
     // ignored prop.
     if (ignored.indexOf(k) !== -1)
@@ -1365,39 +1434,53 @@ export function toMapped<T>(options: any, output: ILogurOutput): ILogurOutputMap
     if (serializer)
       value = serializer(value, output, options);
 
-    // Add value to object.
-    obj[k] = value;
+    if (k === 'untyped') {
 
-    // Handled untyped array.
-    if (k === 'untyped' && output.untyped) {
+      if (value && value.length) {
 
-      value.forEach((u) => {
-        const result = formatByType(k, u, options, output);
-        if (result) {
-          if (!isUndefined(result.normalized))
-            arr.push(result.normalized);
-          if (!isUndefined(result.append))
-            appended.push(result.append);
-        }
-      });
+        value.forEach((u) => {
+
+          const result = formatByType(k, u, options, output);
+
+          if (result) {
+
+            if (!isUndefined(result.normalized))
+              untyped.push(result.normalized);
+
+            if (!isUndefined(result.append))
+              appended.push(result.append);
+
+          }
+
+        });
+
+      }
 
     }
 
     // Handle named properties.
     else {
+
       const result = formatByType(k, value, options, output);
+
       if (result) {
-        arr.push(result.normalized);
+
+        if (!isUndefined(result.normalized))
+          arr.push(result.normalized);
+
         if (!isUndefined(result.append))
           appended.push(result.append);
-      }
-    }
 
+      }
+
+      obj[k] = value;
+
+    }
 
   });
 
   // Get level index in map.
-  const lvlIdx = options.map.indexOf('level');
+  const lvlIdx = map.indexOf('level');
 
   // If index is valid check if should pad and colorize.
   if (lvlIdx !== -1) {
@@ -1428,6 +1511,14 @@ export function toMapped<T>(options: any, output: ILogurOutput): ILogurOutputMap
     obj['ministack'] = mini;
     arr.push(mini);
   }
+
+  // Add untyped to message now
+  // that it has been formatted.
+  const msgIdx = options.map.indexOf('message');
+  arr[msgIdx] = arr[msgIdx] + ' ' + untyped.join(' ');
+
+  // Add untyped to obj.message.
+  obj['message'] = obj['message'] + ' ' + untyped.join(' ');
 
   arr = arr.concat(appended);
 

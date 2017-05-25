@@ -4,20 +4,26 @@ import { ILogur, ILogurInstanceOptions, ILogurTransport, ILogurInstance, ILogurT
 import { LogurInstance } from './instance';
 import { ConsoleTransport } from './transports';
 
-let pkg;
+let pkg, readline;
 
 // If NodeJS get package info.
 if (u.isNode()) {
   const resolve = require('path').resolve;
   pkg = require(resolve(process.cwd(), 'package.json'));
+  readline = require('readline');
 }
 
 const defaults = {
+
+  // Keys to grab from package.json when using Node.
   package: ['name', 'description', 'version', 'main', 'repository', 'author', 'license'],
+
+  // Array of transports to load.
   transports: []
+
 };
 
-export class Logur implements ILogur {
+class Logur implements ILogur {
 
   static instance: Logur;
 
@@ -139,6 +145,42 @@ export class Logur implements ILogur {
     delete this.instances[name];
   }
 
+  /**
+   * Dispose
+   * Iterates all instances disposing of transports.
+   *
+   * @param exit when NOT false exit after disposing.
+   */
+  dispose(exit: boolean | Function, fn?: Function) {
+
+    const funcs = [];
+
+    if (u.isFunction(exit)) {
+      fn = exit as Function;
+      exit = undefined;
+    }
+
+    fn = fn || u.noop;
+
+    u.keys(this.instances).forEach((k) => {
+      const instance = this.instances[k];
+      funcs.push(instance.dispose);
+    });
+
+    u.asyncEach(funcs, () => {
+
+      // Exit if true and is Node.
+      if (exit && u.isNode())
+        process.exit(0);
+
+      // Otherwise call callback.
+      else
+        fn();
+
+    });
+
+  }
+
 }
 
 /**
@@ -187,4 +229,4 @@ export {
   init,
   get,
   getDefault
-}
+};

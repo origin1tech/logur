@@ -5,7 +5,7 @@ const expect = chai.expect;
 const should = chai.should;
 const assert = chai.assert;
 
-import { getDefault, Logur, ILogur, LogurInstance, ILevelMethods, ConsoleTransport } from '../src';
+import { getDefault, Logur, ILogur, LogurInstance, ILevelMethods, ConsoleTransport, ILogurTransport } from '../src';
 
 // Instantiate Logur manually.
 let logur = new Logur();
@@ -76,6 +76,22 @@ describe('Logur:Main', () => {
       assert.equal('log message', output.message);
       done();
     });
+  });
+
+  it('should on "logged" message emit Logur Output.', (done) => {
+    log.on('logged', (output, instance) => {
+      assert.equal(output.message, 'log message');
+      done();
+    });
+    log.logger([], 'info', 'log message');
+  });
+
+  it('should update level in options cascading to transports.', () => {
+
+    log.setOption('level', 3);
+    const transport = log.transports.get<ILogurTransport>('console');
+    assert.equal(3, transport.options.level);
+
   });
 
 });

@@ -3,21 +3,24 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var _clone = require("lodash.clonedeep");
 var env = require("./env");
 var colors = require("./colorize");
-var util, statSync, parse, EOL;
+var util, parse, eol;
 if (!process.env.BROWSER) {
-    // chalk = require('chalk');
     util = require('util');
     parse = require('path').parse;
-    statSync = require('fs').statSync;
-    EOL = require('os').EOL;
+    eol = require('os').EOL;
 }
 else {
-    EOL = '\n';
+    eol = '\n';
 }
 ///////////////////////////////
 // COMMON UTILS
 ///////////////////////////////
 var toString = Object.prototype.toString;
+/**
+ * EOL
+ * Line ending constant.
+ */
+exports.EOL = eol;
 /**
  * Noop
  */
@@ -919,22 +922,6 @@ function bytesToSize(bytes, decimals) {
 }
 exports.bytesToSize = bytesToSize;
 /**
- * Check Stat
- * Using stat check if file too large.
- *
- * @param filename the file name to stat.
- */
-function checkStat(filename) {
-    var stats = statSync(filename);
-    var normalized = bytesToSize(stats.size, 0);
-    if (normalized.index > 2)
-        return false;
-    if (normalized.index === 2 && normalized.fixedzero >= 2)
-        return false;
-    return true;
-}
-exports.checkStat = checkStat;
-/**
  * Intersect
  * Intersects two types.
  *
@@ -981,6 +968,70 @@ function activate(Type) {
     return ctor;
 }
 exports.activate = activate;
+/**
+ * Async Each
+ * Itearate functions with callbacks asynchronously.
+ *
+ * @param funcs the functions to call whose signature contains a callback.
+ * @param fn
+ */
+function asyncEach(funcs, fn) {
+    var ctr = 0;
+    funcs.forEach(function (el, i, arr) {
+        el(function () {
+            ctr++;
+            if (ctr === funcs.length)
+                fn();
+        });
+    });
+}
+exports.asyncEach = asyncEach;
+/**
+ * Normalize Query
+ * Ensures default values witing IQuery object.
+ *
+ * @param q the query object to normalize.
+ */
+function normalizeQuery(q) {
+    q.fields = q.fields || [];
+    q.skip = q.skip || 0;
+    q.take = q.take || 0;
+    q.order = q.order || 'asc';
+    if (isString(q.from))
+        q.from = new Date(q.from);
+    if (isString(q.to))
+        q.to = new Date(q.to);
+    return q;
+}
+exports.normalizeQuery = normalizeQuery;
+/**
+ * Parse Line
+ * Parses a queried log line from string or JSON.
+ *
+ * @param line the log line to be parsed.
+ * @param options the transport options object.
+ */
+function parseLine(line, options) {
+    options = options || {};
+    // If JSON just parse and return.
+    if (options.json)
+        return JSON.parse(line);
+    // If delimiter split string and map
+    // back using options.map.
+    if (options.delimiter) {
+        var obj_1 = {};
+        var split_2 = line.split(options.delimiter);
+        // map line to object.
+        options.map.forEach(function (prop, i) {
+            obj_1[prop] = split_2[i];
+        });
+        return obj_1;
+    }
+    else {
+        return line;
+    }
+}
+exports.parseLine = parseLine;
 ///////////////////////////////
 // OUTPUT MAPPING
 ///////////////////////////////
@@ -1025,7 +1076,6 @@ function formatByType(key, obj, options, output) {
     var pretty = options.pretty && isNode();
     var canColorize = options.colorize && isNode();
     var colorMap = options.colormap;
-    var EOL = output.env && output.env.os ? output.env.os['EOL'] : '\n';
     // If util extend with styles
     // from node util.inspect.styles.
     if (util)
@@ -1092,19 +1142,23 @@ function formatByType(key, obj, options, output) {
             tmp = colorize(tmp, style);
         if (!obj.stack)
             return { normalized: tmp };
-        var stack = obj.stack.split(EOL).slice(1);
+        var stack = obj.stack.split(exports.EOL).slice(1);
         // If pretty stacktrace use util.inspect.
         if (options.prettystack) {
-            return { normalized: tmp, append: EOL + util.inspect({ name: obj.name || 'Error', message: obj.message || 'Unknown error', stack: env.stacktrace(obj, 1) }, true, null, canColorize) };
+            if (options.pretty)
+                return { normalized: tmp, append: exports.EOL + util.inspect({ name: obj.name || 'Error', message: obj.message || 'Unknown error', stack: env.stacktrace(obj, 1) }, true, null, canColorize) };
+            return { normalized: tmp + exports.EOL + util.inspect({ name: obj.name || 'Error', message: obj.message || 'Unknown error', stack: env.stacktrace(obj, 1) }, true, null, canColorize) };
         }
         else {
-            return { normalized: tmp, append: EOL + stack.join(EOL) };
+            if (options.pretty)
+                return { normalized: tmp, append: exports.EOL + stack.join(exports.EOL) };
+            return { normalized: tmp + exports.EOL + stack.join(exports.EOL) };
         }
     }
     else if (type === 'object' || type === 'array') {
         if (options.pretty) {
             return {
-                append: EOL + util.inspect(obj, true, null, canColorize)
+                append: exports.EOL + util.inspect(obj, true, null, canColorize)
             };
         }
         return { normalized: plainPrint(obj) };
@@ -1127,25 +1181,27 @@ exports.formatByType = formatByType;
 function toMapped(options, output) {
     // Get list of levels we'll use this for padding.
     var levels = keys(options.levels);
-    var EOL = output.env && output.env.os ? output.env.os['EOL'] : '\n';
     var ignored = ['callback'];
-    var metaIndex = options.map.indexOf('metadata');
-    var metaLast = options.map.length - 1 === metaIndex;
+    var map = options.map.slice(0);
+    var metaIndex = map.indexOf('metadata');
+    var metaLast = map.length - 1 === metaIndex;
     // Metadata must be last index in map.
     if (metaIndex !== -1 && !metaLast) {
-        options.map.splice(metaIndex, 1);
-        options.map.push('metadta');
+        map.splice(metaIndex, 1);
+        map.push('metadta');
     }
     // Var for resulting output array, object or json.
-    var arr = [], obj = {}, appended = [];
+    var arr = [], obj = {}, appended = [], untyped = [];
     // Reference the logged level.
     var level = output.level;
     // Get the level's config object.
     var levelObj = options.levels[level];
     // Flag if we should colorize.
     var colors = options.colorize && isNode() ? true : false;
+    // add untyped to mapped.
+    map.push('untyped');
     // Iterate the map and build the object.
-    output.map.forEach(function (k) {
+    map.forEach(function (k) {
         // ignored prop.
         if (ignored.indexOf(k) !== -1)
             return;
@@ -1156,31 +1212,32 @@ function toMapped(options, output) {
         // If a serializer exists call and get value.
         if (serializer)
             value = serializer(value, output, options);
-        // Add value to object.
-        obj[k] = value;
-        // Handled untyped array.
-        if (k === 'untyped' && output.untyped) {
-            value.forEach(function (u) {
-                var result = formatByType(k, u, options, output);
-                if (result) {
-                    if (!isUndefined(result.normalized))
-                        arr.push(result.normalized);
-                    if (!isUndefined(result.append))
-                        appended.push(result.append);
-                }
-            });
+        if (k === 'untyped') {
+            if (value && value.length) {
+                value.forEach(function (u) {
+                    var result = formatByType(k, u, options, output);
+                    if (result) {
+                        if (!isUndefined(result.normalized))
+                            untyped.push(result.normalized);
+                        if (!isUndefined(result.append))
+                            appended.push(result.append);
+                    }
+                });
+            }
         }
         else {
             var result = formatByType(k, value, options, output);
             if (result) {
-                arr.push(result.normalized);
+                if (!isUndefined(result.normalized))
+                    arr.push(result.normalized);
                 if (!isUndefined(result.append))
                     appended.push(result.append);
             }
+            obj[k] = value;
         }
     });
     // Get level index in map.
-    var lvlIdx = options.map.indexOf('level');
+    var lvlIdx = map.indexOf('level');
     // If index is valid check if should pad and colorize.
     if (lvlIdx !== -1) {
         var tmpLevel = level.trim();
@@ -1204,6 +1261,12 @@ function toMapped(options, output) {
         obj['ministack'] = mini;
         arr.push(mini);
     }
+    // Add untyped to message now
+    // that it has been formatted.
+    var msgIdx = options.map.indexOf('message');
+    arr[msgIdx] = arr[msgIdx] + ' ' + untyped.join(' ');
+    // Add untyped to obj.message.
+    obj['message'] = obj['message'] + ' ' + untyped.join(' ');
     arr = arr.concat(appended);
     return {
         array: arr,

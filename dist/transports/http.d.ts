@@ -24,7 +24,7 @@ export declare class HttpTransport extends LogurTransport implements IHttpTransp
     query(): void;
     /**
      * Dispose
-     * Use the dispose method to close streams any any clean up.
+     * Use the dispose method to close streams and any clean up.
      * Dispose is called after uncaught exceptions and SIGINT.
      */
     dispose(): void;

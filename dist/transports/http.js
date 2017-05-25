@@ -33,7 +33,7 @@ var HttpTransport = (function (_super) {
      */
     HttpTransport.prototype.action = function (output) {
         // Get colorized mapped array.
-        var mapped = this.toMapped(output);
+        var mapped = this.toMapped(this.options, output);
     };
     /**
      * Query
@@ -44,11 +44,11 @@ var HttpTransport = (function (_super) {
     };
     /**
      * Dispose
-     * Use the dispose method to close streams any any clean up.
+     * Use the dispose method to close streams and any clean up.
      * Dispose is called after uncaught exceptions and SIGINT.
      */
     HttpTransport.prototype.dispose = function () {
-        throw new Error('Logur Transport dispose method must be overriden.');
+        // Nothing to dispose.
     };
     return HttpTransport;
 }(base_1.LogurTransport));

@@ -14,7 +14,6 @@ var base_1 = require("./base");
 var u = require("../utils");
 var defaults = {
     pretty: true,
-    colorize: true,
     max: 100
 };
 var MemoryTransport = (function (_super) {
@@ -39,25 +38,28 @@ var MemoryTransport = (function (_super) {
      */
     MemoryTransport.prototype.action = function (output) {
         // Get colorized ordered array.
-        var mapped = this.toMapped(output);
+        var mapped = this.toMapped(this.options, output);
         // Add mapped to collection.
         if (this.options.max < this.logs.length)
             this.logs.push(mapped.array);
     };
     /**
      * Query
-     * The transport query method for finding/searching previous logs.
+     * Queries the logs.
+     *
+     * @param q the query options.
+     * @param fn the query result callback.
      */
-    MemoryTransport.prototype.query = function () {
-        throw new Error('Logur Transport query method must be overriden.');
+    MemoryTransport.prototype.query = function (q, fn) {
+        q = u.normalizeQuery(q);
     };
     /**
      * Dispose
-     * Use the dispose method to close streams any any clean up.
+     * Use the dispose method to close streams and any clean up.
      * Dispose is called after uncaught exceptions and SIGINT.
      */
     MemoryTransport.prototype.dispose = function () {
-        throw new Error('Logur Transport dispose method must be overriden.');
+        delete this.logs;
     };
     return MemoryTransport;
 }(base_1.LogurTransport));

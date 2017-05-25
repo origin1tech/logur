@@ -7,7 +7,6 @@ if (!process.env.BROWSER) {
 }
 var defaults = {
     active: true,
-    profiler: true,
     exceptions: true
 };
 /**
@@ -22,9 +21,12 @@ var LogurTransport = (function () {
      * @param logur the common Logur instance.
      */
     function LogurTransport(base, options, logur) {
-        this._active = true;
         this._logur = logur;
         this.options = u.extend({}, base, defaults, options);
+        this._active = this.options.active;
+        // ensure map contains 'message' property which is required.
+        if (!u.contains(this.options.map, 'message'))
+            throw new Error('Invalid Transport map, must included property "message".');
     }
     Object.defineProperty(LogurTransport.prototype, "log", {
         /**
@@ -123,6 +125,8 @@ var LogurTransport = (function () {
         options = options || this.options;
         return u.toMapped(options, output);
     };
+    LogurTransport.prototype.normalizeQuery = function () {
+    };
     // MUST & OPTIONAL OVERRIDE METHODS
     /**
      * Action
@@ -135,18 +139,11 @@ var LogurTransport = (function () {
         throw new Error('Logur Transport action method must be overriden.');
     };
     /**
-     * Query
-     * The transport query method for finding/searching previous logs.
-     */
-    LogurTransport.prototype.query = function () {
-        throw new Error('Logur Transport query method must be overriden.');
-    };
-    /**
      * Dispose
      * Use the dispose method to close streams any any clean up.
      * Dispose is called after uncaught exceptions and SIGINT.
      */
-    LogurTransport.prototype.dispose = function () {
+    LogurTransport.prototype.dispose = function (fn) {
         throw new Error('Logur Transport dispose method must be overriden.');
     };
     return LogurTransport;

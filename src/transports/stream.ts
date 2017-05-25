@@ -4,8 +4,7 @@ import * as u from '../utils';
 
 const defaults: IStreamTransportOptions = {
 
-  pretty: true,
-  colorize: true
+  pretty: true
 
 };
 
@@ -33,25 +32,17 @@ export class StreamTransport extends LogurTransport implements IStreamTransport 
   action(output: ILogurOutput) {
 
     // Get colorized ordered array.
-    let mapped = this.toMapped(output);
+    let mapped = this.toMapped(this.options, output);
 
   }
 
   /**
    * Dispose
-   * Use the dispose method to close streams any any clean up.
+   * Use the dispose method to close streams and any clean up.
    * Dispose is called after uncaught exceptions and SIGINT.
    */
   dispose() {
-    throw new Error('Logur Transport dispose method must be overriden.');
-  }
-
-  /**
-   * Query
-   * The transport query method for finding/searching previous logs.
-   */
-  query() {
-    throw new Error('Logur Transport query method must be overriden.');
+    // Nothing to dispose.
   }
 
 }

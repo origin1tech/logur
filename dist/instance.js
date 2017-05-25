@@ -18,7 +18,7 @@ var ua_parser_js_1 = require("ua-parser-js");
 var defaults = {
     level: 5,
     cascade: true,
-    map: ['level', 'timestamp', 'message', 'untyped', 'metadata'],
+    map: ['level', 'timestamp', 'message', 'metadata'],
     levels: {
         error: { level: 0, color: 'red' },
         warn: { level: 1, color: 'yellow' },
@@ -26,7 +26,10 @@ var defaults = {
         verbose: { level: 3, color: 'green' },
         debug: { level: 4, color: 'magenta' },
     },
-    timestamp: 'utctime',
+    // iso or epoch if you plan to query utc,
+    // local, utctime, localtime may be more
+    // friendly in console transports.
+    timestamp: 'iso',
     uuid: undefined,
     transports: [],
     catcherr: false,
@@ -41,10 +44,6 @@ var defaults = {
         error: 'bgRed.white',
         function: 'cyan'
     }
-};
-var profileDefaults = {
-    transports: [],
-    max: 25
 };
 /**
  * Logur Instance
@@ -67,21 +66,8 @@ var LogurInstance = (function (_super) {
         _this._name = name;
         _this._logur = logur;
         _this.options = u.extend({}, defaults, options);
-        // Extend class with log method handlers.
-        u.keys(_this.options.levels).forEach(function (k) {
-            var level = _this.options.levels[k];
-            // If a number convert to object.
-            if (u.isNumber(level))
-                _this.options.levels[k] = { level: level };
-            _this[k] = function () {
-                var args = [];
-                for (var _i = 0; _i < arguments.length; _i++) {
-                    args[_i] = arguments[_i];
-                }
-                _this.logger(k, args);
-                return _this;
-            };
-        });
+        // Initialize the instance log methods.
+        _this.initLevels(_this.options.levels);
         // Iterate Transports in options
         // and bind to the Instance.
         _this.options.transports.forEach(function (t) {
@@ -98,6 +84,20 @@ var LogurInstance = (function (_super) {
         return _this;
     }
     // PRIVATE METHODS
+    LogurInstance.prototype.initLevels = function (levels) {
+        var _this = this;
+        // Extend class with log method handlers.
+        u.keys(levels).forEach(function (k) {
+            var level = levels[k];
+            _this[k] = function () {
+                var args = [];
+                for (var _i = 0; _i < arguments.length; _i++) {
+                    args[_i] = arguments[_i];
+                }
+                _this.logger(k, args);
+            };
+        });
+    };
     /**
      * Handle Exceptions
      * Enables handling uncaught NodeJS exceptions.
@@ -316,196 +316,48 @@ var LogurInstance = (function (_super) {
         enumerable: true,
         configurable: true
     });
-    Object.defineProperty(LogurInstance.prototype, "profiles", {
+    Object.defineProperty(LogurInstance.prototype, "serializers", {
         /**
-         * Profile
-         * Allows for profiling logs.
-         * TODO: Really needs its on class!
+         * Serializers
+         * Gets, creates and removes serializers.
+         * NOTE: Serializers are called before pretty
+         * print formatting and colorization.
          */
         get: function () {
             var _this = this;
             var methods;
             /**
              * Get
-             * Gets an existing Profile.
+             * Gets a serializer by name.
              *
-             * @param name the name of the Profile to get.
+             * @param name the name of the serializer
              */
-            var get = function (name) {
-                return _this._profiles[name];
-            };
-            /**
-             * Get All
-             * Gets all profiles stored in instance.
-             */
-            var getAll = function () {
-                return _this._profiles;
-            };
-            /**
-             * Active
-             * Sets or gets the active state of a Profile.
-             *
-             * @param name the name of the Profile to get/set active state for.
-             * @param state the optional state to set.
-             */
-            var active = function (name, state) {
-                var profile = _this.profiles.get(name);
-                if (!profile)
-                    return;
-                if (u.isUndefined(state))
-                    return profile.active;
-                return profile.active = state;
-            };
-            /**
-             * Until
-             * Inspects until property and max size property
-             * allows profile to run until false is returned.
-             *
-             * @param name the name of the Profile to check.
-             */
-            var until = function (name) {
-                var profile = _this.profiles.get(name);
-                if (!profile)
-                    return;
-                if (!u.isUndefined(profile.options.until))
-                    return profile.options.until();
-                var max = profile.options.max;
-                var count = profile.count;
-                if (max && ((count + 1) < max))
-                    return true;
-                return false;
-            };
-            /**
-             * Add
-             * Adds a profiler.
-             *
-             * @param name the name of the profile.
-             * @param transports the Transports to run for this profiler or options object.
-             * @param options the profile options.
-             */
-            var add = function (name, transports, options) {
-                if (u.isPlainObject(transports)) {
-                    options = transports;
-                    transports = undefined;
-                }
-                var profile;
-                // Extend the options with defaults.
-                options = u.extend({}, profileDefaults, options);
-                // Ensure transports.
-                transports = transports || options.transports;
-                if (!transports || !transports.length)
-                    throw new Error("Cannot start profile " + name + " using transports of none.");
-                var valid = [];
-                // Ensure transports can be used for profiling.
-                transports.forEach(function (t) {
-                    // Get the transport.
-                    var transport = _this.transports.get(t);
-                    if (!transport)
-                        throw new Error("The Transport " + t + " was NOT found, ensure the Transport is loaded.");
-                    if (!transport.options.profiler)
-                        throw new Error("Attempted to load Transport " + t + " but profiling is NOT enabled..");
-                    valid.push(t);
-                });
-                // Add the profile.
-                profile = {
-                    name: name,
-                    options: options,
-                    running: false,
-                    instance: _this._name,
-                    transports: valid,
-                    started: 0,
-                    elapsed: 0,
-                    count: 0,
-                    start: methods.start.bind(_this, name),
-                    stop: methods.stop.bind(_this, name),
-                    remove: methods.remove.bind(_this, name)
-                };
-                _this._profiles[name] = profile;
-                return profile;
-            };
-            /**
-             * Start
-             * Starts an existing Profile instance.
-             *
-             * @param profile the Profile configuration.
-             */
-            var start = function (name) {
-                var profile = _this.profiles.get(name);
-                if (!profile)
-                    return;
-                if (profile.active)
-                    throw new Error("Cannot start already active Profile " + name + ".");
-                profile.started = Date.now();
-                profile.active = true;
-            };
-            /**
-             * Stop
-             * Stops and returns the specified Profile result.
-             */
-            var stop = function (name) {
-                var profile = _this.profiles.get(name);
-                if (!profile)
-                    return;
-                profile.active = false;
-                var result = {
-                    name: profile.name,
-                    instance: profile.instance,
-                    transports: profile.transports,
-                    started: profile.started,
-                    stopped: profile.stopped,
-                    elapsed: profile.elapsed,
-                    count: profile.count
-                };
-                if (profile.options.remove === 'stop')
-                    delete _this._profiles[profile.name];
-                return result;
-            };
-            /**
-             *
-             * @param name the name of the Profile to remove
-             * @param force when true will remove an active Profile.
-             */
-            var remove = function (name, force) {
-                var profile = _this.profiles.get(name);
-                if (!profile)
-                    return;
-                if (profile.active && !force)
-                    throw new Error("Cannot remove active Profile " + name + ", stop or set force to true to remove.");
-                delete _this._profiles[name];
-            };
-            methods = {
-                get: get,
-                getAll: getAll,
-                active: active,
-                until: until,
-                add: add,
-                start: start,
-                stop: stop,
-                remove: remove
-            };
-            return methods;
-        },
-        enumerable: true,
-        configurable: true
-    });
-    Object.defineProperty(LogurInstance.prototype, "serializers", {
-        /**
-         * Serializers
-         * Gets, creates and removes serializers.
-         */
-        get: function () {
-            var _this = this;
-            var methods;
             var get = function (name) {
                 return _this._logur.serializers[name];
             };
+            /**
+             * Get All
+             * Gets all loaded serializers.
+             */
             var getAll = function () {
                 return _this._logur.serializers;
             };
+            /**
+             * Add
+             * Adds a serializer.
+             * @param name the name of the serializer to add.
+             * @param serializer the serializer function.
+             */
             var add = function (name, serializer) {
                 _this._logur.serializers[name] = serializer;
                 return methods;
             };
+            /**
+             * Remove
+             * Removes a serializer.
+             *
+             * @param name the name of the serializer.
+             */
             var remove = function (name) {
                 delete _this._logur.serializers[name];
                 return methods;
@@ -593,7 +445,7 @@ var LogurInstance = (function (_super) {
         // If error remove from untyped.
         if (u.isError(msg)) {
             untyped.shift();
-            // err = { name: msg.name || 'Error', message: msg.message || 'Unknown error.', stack: env.stacktrace(msg) };
+            msg.trace = env.stacktrace(msg);
         }
         else if (u.isPlainObject(msg)) {
             meta = msg;
@@ -679,10 +531,9 @@ var LogurInstance = (function (_super) {
             uuid: u.uuid(),
             level: type,
             instance: this._name,
-            message: msg,
+            message: msg || '',
             untyped: untyped,
             metadata: meta,
-            error: err,
             args: params,
             transports: transports,
             serializers: this._logur.serializers,
@@ -710,10 +561,7 @@ var LogurInstance = (function (_super) {
         var run = function (t) {
             // Get the transport object.
             var transport = _this.transports.get(t);
-            if (!transport)
-                return;
-            // Ensure the transport is active.
-            if (!transport.active())
+            if (!transport || !transport.active())
                 return;
             // Clone the output object as we'll have some
             // unique property values.
@@ -798,7 +646,6 @@ var LogurInstance = (function (_super) {
         }
         if (console && console.log)
             console.log.apply(console, args);
-        return this;
     };
     /**
      * Exit
@@ -810,6 +657,39 @@ var LogurInstance = (function (_super) {
         if (!u.isNode())
             return;
         process.exit(code);
+    };
+    /**
+     * Query
+     * Queries a transport.
+     *
+     * @param transport the transport to be queried.
+     * @param q the query object to execute.
+     * @param fn the callback function on done.
+     */
+    LogurInstance.prototype.query = function (transport, q, fn) {
+        // Get the transport to query.
+        var _transport = this.transports.get(transport);
+        // Warn if not queryable.
+        if (!_transport.query)
+            return this.log.warn("attempted to query non-queryable transport " + transport + ".");
+        // Query the transport.
+        _transport.query(q, fn);
+    };
+    /**
+     * Dispose
+     * Calls dispose on transports on
+     * teardown of instance.
+     *
+     * @param fn callback on done disposing transports.
+     */
+    LogurInstance.prototype.dispose = function (fn) {
+        var _this = this;
+        var funcs = this._transports.map(function (t) {
+            var transport = _this.transports.get(t);
+            if (transport.dispose)
+                return transport.dispose;
+        });
+        u.asyncEach(funcs, fn);
     };
     return LogurInstance;
 }(notify_1.Notify));

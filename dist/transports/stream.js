@@ -13,8 +13,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var base_1 = require("./base");
 var u = require("../utils");
 var defaults = {
-    pretty: true,
-    colorize: true
+    pretty: true
 };
 var StreamTransport = (function (_super) {
     __extends(StreamTransport, _super);
@@ -36,22 +35,15 @@ var StreamTransport = (function (_super) {
      */
     StreamTransport.prototype.action = function (output) {
         // Get colorized ordered array.
-        var mapped = this.toMapped(output);
+        var mapped = this.toMapped(this.options, output);
     };
     /**
      * Dispose
-     * Use the dispose method to close streams any any clean up.
+     * Use the dispose method to close streams and any clean up.
      * Dispose is called after uncaught exceptions and SIGINT.
      */
     StreamTransport.prototype.dispose = function () {
-        throw new Error('Logur Transport dispose method must be overriden.');
-    };
-    /**
-     * Query
-     * The transport query method for finding/searching previous logs.
-     */
-    StreamTransport.prototype.query = function () {
-        throw new Error('Logur Transport query method must be overriden.');
+        // Nothing to dispose.
     };
     return StreamTransport;
 }(base_1.LogurTransport));

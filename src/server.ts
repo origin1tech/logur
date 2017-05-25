@@ -14,6 +14,6 @@ let server: Server = createServer(app);
 server.listen(3000, () => {
   const host = server.address().address;
   const port = server.address().port;
-  log.write('Spec server listening at %s:%s', host, port).write();
+  log.write('Spec server listening at %s:%s', host, port);
 });
 

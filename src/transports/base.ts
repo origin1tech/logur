@@ -9,7 +9,6 @@ if (!process.env.BROWSER) {
 
 const defaults: ILogurTransportOptions = {
   active: true,
-  profiler: true,
   exceptions: true
 };
 
@@ -18,7 +17,7 @@ const defaults: ILogurTransportOptions = {
  */
 export class LogurTransport implements ILogurTransport {
 
-  protected _active: boolean = true;
+  protected _active: boolean;
   protected _logur: ILogur;
 
   options: any;
@@ -33,6 +32,10 @@ export class LogurTransport implements ILogurTransport {
   constructor(base: any, options: any, logur: ILogur) {
     this._logur = logur;
     this.options = u.extend({}, base, defaults, options);
+    this._active = this.options.active;
+    // ensure map contains 'message' property which is required.
+    if (!u.contains(this.options.map, 'message'))
+      throw new Error('Invalid Transport map, must included property "message".');
   }
 
   /**
@@ -148,6 +151,10 @@ export class LogurTransport implements ILogurTransport {
 
   }
 
+  normalizeQuery() {
+
+  }
+
   // MUST & OPTIONAL OVERRIDE METHODS
 
   /**
@@ -162,19 +169,11 @@ export class LogurTransport implements ILogurTransport {
   }
 
   /**
-   * Query
-   * The transport query method for finding/searching previous logs.
-   */
-  query() {
-    throw new Error('Logur Transport query method must be overriden.');
-  }
-
-  /**
    * Dispose
    * Use the dispose method to close streams any any clean up.
    * Dispose is called after uncaught exceptions and SIGINT.
    */
-  dispose() {
+  dispose(fn: Function) {
     throw new Error('Logur Transport dispose method must be overriden.');
   }
 

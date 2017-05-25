@@ -4,11 +4,11 @@ import * as u from '../utils';
 
 const defaults: IConsoleTransportOptions = {
 
-  map: ['level', 'message', 'untyped', 'metadata'],
+  map: ['level', 'timestamp', 'message', 'metadata'],
   padding: 'right',
   colorize: true,
   ministack: true,
-  pretty: true,
+  pretty: false,
   prettystack: false
 
 };
@@ -57,20 +57,12 @@ export class ConsoleTransport extends LogurTransport implements IConsoleTranspor
   }
 
   /**
-   * Query
-   * The transport query method for finding/searching previous logs.
-   */
-  query() {
-    throw new Error('Logur Transport query method must be overriden.');
-  }
-
-  /**
    * Dispose
-   * Use the dispose method to close streams any any clean up.
+   * Use the dispose method to close streams and any clean up.
    * Dispose is called after uncaught exceptions and SIGINT.
    */
   dispose() {
-    throw new Error('Logur Transport dispose method must be overriden.');
+    // Nothing to dispose.
   }
 
 }

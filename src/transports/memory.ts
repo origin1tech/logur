@@ -1,11 +1,10 @@
-import { ILogurTransport, ILogur, IMemoryTransportOptions, IMemoryTransport, ILogurOutput, TransportActionCallback, ILogurInstanceOptions } from '../interfaces';
+import { ILogurTransport, ILogur, IMemoryTransportOptions, IMemoryTransport, ILogurOutput, TransportActionCallback, ILogurInstanceOptions, IQuery, QueryResult } from '../interfaces';
 import { LogurTransport } from './base';
 import * as u from '../utils';
 
 const defaults: IMemoryTransportOptions = {
 
   pretty: true,
-  colorize: true,
   max: 100
 
 };
@@ -35,7 +34,7 @@ export class MemoryTransport extends LogurTransport implements IMemoryTransport 
   action(output: ILogurOutput) {
 
     // Get colorized ordered array.
-    let mapped = this.toMapped(output);
+    let mapped = this.toMapped(this.options, output);
 
     // Add mapped to collection.
     if (this.options.max < this.logs.length)
@@ -45,19 +44,26 @@ export class MemoryTransport extends LogurTransport implements IMemoryTransport 
 
   /**
    * Query
-   * The transport query method for finding/searching previous logs.
+   * Queries the logs.
+   *
+   * @param q the query options.
+   * @param fn the query result callback.
    */
-  query() {
-    throw new Error('Logur Transport query method must be overriden.');
+  query(q: IQuery, fn: QueryResult) {
+
+    q = u.normalizeQuery(q);
+
+
+
   }
 
   /**
    * Dispose
-   * Use the dispose method to close streams any any clean up.
+   * Use the dispose method to close streams and any clean up.
    * Dispose is called after uncaught exceptions and SIGINT.
    */
   dispose() {
-    throw new Error('Logur Transport dispose method must be overriden.');
+    delete this.logs;
   }
 
 }

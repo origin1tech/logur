@@ -1,4 +1,9 @@
-import { ITimestamps, Constructor, PadStrategy, IParsedPath, ILogurOutput, ILogurOutputMapped } from './interfaces';
+import { ITimestamps, Constructor, PadStrategy, IParsedPath, ILogurOutput, ILogurOutputMapped, IQuery } from './interfaces';
+/**
+ * EOL
+ * Line ending constant.
+ */
+export declare const EOL: any;
 /**
  * Noop
  */
@@ -342,13 +347,6 @@ export declare function bytesToSize(bytes: number, decimals?: number): {
     index: number;
 };
 /**
- * Check Stat
- * Using stat check if file too large.
- *
- * @param filename the file name to stat.
- */
-export declare function checkStat(filename: any): boolean;
-/**
  * Intersect
  * Intersects two types.
  *
@@ -374,6 +372,31 @@ export declare function intersect<T, U>(first: T, second: U): T & U;
  * @param args the arguments to pass on init.
  */
 export declare function activate<T>(Type: Constructor<T>, ...args: any[]): T;
+/**
+ * Async Each
+ * Itearate functions with callbacks asynchronously.
+ *
+ * @param funcs the functions to call whose signature contains a callback.
+ * @param fn
+ */
+export declare function asyncEach(funcs: {
+    (fn: Function);
+}[], fn: Function): void;
+/**
+ * Normalize Query
+ * Ensures default values witing IQuery object.
+ *
+ * @param q the query object to normalize.
+ */
+export declare function normalizeQuery(q: IQuery): IQuery;
+/**
+ * Parse Line
+ * Parses a queried log line from string or JSON.
+ *
+ * @param line the log line to be parsed.
+ * @param options the transport options object.
+ */
+export declare function parseLine(line: string, options: any): any;
 /**
  * Ministack
  * Generates a mini stacktrace of the calling
