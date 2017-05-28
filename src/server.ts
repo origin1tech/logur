@@ -1,15 +1,20 @@
 import * as express from 'express';
 import * as logur from './';
-import { createServer, Server, IncomingMessage, ClientResponse } from 'http';
+import { createServer, Server } from 'http';
 const log = logur.getDefault();
 
-let app = express();
+let app: express.Application = express();
+let server: Server;
 
-app.get('/contact', (req: IncomingMessage, res: ClientResponse) => {
-
+app.get('/', (req: express.Request, res: express.Response) => {
+  res.send('home');
 });
 
-let server: Server = createServer(app);
+app.get('/about', (req: express.Request, res: express.Response) => {
+  res.send('about');
+});
+
+server = createServer(app);
 
 server.listen(3000, () => {
   const host = server.address().address;

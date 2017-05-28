@@ -1,4 +1,4 @@
-import { ILogur, IConsoleTransportOptions, IConsoleTransport, ILogurOutput, ILogurInstanceOptions } from '../interfaces';
+import { ILogur, IConsoleTransportOptions, IConsoleTransport, ILogurOutput, ILogurInstanceOptions, TransportActionCallback } from '../interfaces';
 import { LogurTransport } from './base';
 export declare class ConsoleTransport extends LogurTransport implements IConsoleTransport {
     options: IConsoleTransportOptions;
@@ -15,8 +15,9 @@ export declare class ConsoleTransport extends LogurTransport implements IConsole
      * The transport action to be called when messages are logged.
      *
      * @param output the Logur output object for the actively logged message.
+     * @param fn callback function on action completed.
      */
-    action(output: ILogurOutput): void;
+    action(output: ILogurOutput, fn: TransportActionCallback): void;
     /**
      * Dispose
      * Use the dispose method to close streams and any clean up.

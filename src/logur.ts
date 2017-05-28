@@ -4,13 +4,12 @@ import { ILogur, ILogurInstanceOptions, ILogurTransport, ILogurInstance, ILogurT
 import { LogurInstance } from './instance';
 import { ConsoleTransport } from './transports';
 
-let pkg, readline;
+let pkg;
 
 // If NodeJS get package info.
 if (u.isNode()) {
   const resolve = require('path').resolve;
   pkg = require(resolve(process.cwd(), 'package.json'));
-  readline = require('readline');
 }
 
 const defaults = {
@@ -23,7 +22,7 @@ const defaults = {
 
 };
 
-class Logur implements ILogur {
+export class Logur implements ILogur {
 
   static instance: Logur;
 
@@ -31,7 +30,7 @@ class Logur implements ILogur {
   instances: ILogurInstances = {};
   transports: ILogurTransports = {};
   serializers: ISerializers = {};
-  log: ILogurInstance & ILevelMethods;
+  log: ILogurInstance<ILevelMethods> & ILevelMethods;
   options: ILogurOptions;
 
   /**
@@ -111,7 +110,7 @@ class Logur implements ILogur {
    *
    * @param name the name of the Logur Instance to get.
    */
-  get<T extends ILevelMethodsBase>(name?: string): ILogurInstance & T {
+  get<T extends ILevelMethodsBase>(name?: string): ILogurInstance<T> & T {
     return this.instances[name];
   }
 
@@ -122,12 +121,12 @@ class Logur implements ILogur {
    * @param name the name of the Logur Instance to create.
    * @param options Logur Instance options.
    */
-  create<T extends ILevelMethodsBase>(name: string, options: ILogurInstanceOptions): ILogurInstance & T {
+  create<T extends ILevelMethodsBase>(name: string, options?: ILogurInstanceOptions): ILogurInstance<T> & T {
 
     if (!name)
       throw new Error('Failed to create Logur Instance using name of undefined.');
 
-    this.instances[name] = <LogurInstance & T>new LogurInstance(name, options, this);
+    this.instances[name] = new LogurInstance<T>(name, options, this);
 
     return this.instances[name];
 
@@ -198,7 +197,7 @@ function init(options?: ILogurOptions): ILogur {
   if (!logur) {
     logur = new Logur(options);
     const instance = logur.create<ILevelMethods>('default', { transports: logur.options.transports });
-    // store the default logger.
+    // save the default logger.
     logur.log = instance;
   }
 
@@ -212,17 +211,24 @@ function init(options?: ILogurOptions): ILogur {
  *
  * @param name the name of the Logur Instance to get.
  */
-function get<T extends ILevelMethodsBase>(name: string): ILogurInstance & T {
+function get<T extends ILevelMethodsBase>(name: string, options?: ILogurInstanceOptions): ILogurInstance<T> & T {
+  // Ensure Logur instance.
   const logur = init();
-  return <ILogurInstance & T>logur.get<T>(name);
+  const transport = <ILogurInstance<T> & T>logur.get<T>(name);
+  if (options)
+    transport.setOption(options);
+  return transport;
 }
 
 /**
  * Get
  * Gets the default Logur Instance.
  */
-function getDefault(): ILogurInstance & ILevelMethods {
-  return get<ILevelMethods>('default');
+function getDefault(options?: ILogurInstanceOptions): ILogurInstance<ILevelMethods> & ILevelMethods {
+  const transport = get<ILevelMethods>('default');
+  if (options)
+    transport.setOption(options);
+  return transport;
 }
 
 export {

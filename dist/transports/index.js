@@ -7,5 +7,6 @@ __export(require("./base"));
 __export(require("./console"));
 __export(require("./memory"));
 __export(require("./file"));
-// export * from './http'; 
+__export(require("./http"));
+__export(require("./stream"));
 //# sourceMappingURL=index.js.map

@@ -1,11 +1,17 @@
-import { ILogurTransport, ILogur, IFileTransportOptions, IFileTransport, TransportActionCallback, ILogurOutput, ILogurInstanceOptions, IParsedPath, ITimer, IQuery, QueryResult, IQueryRange, IQueryRanges, QueryRange, IMetadata } from '../interfaces';
+/**
+ * FILE TRANSPORT
+ *
+ * File Transport handles basic log rotation and is provided as
+ * proof of concept. It should work fine in most cases however you
+ * may wish to extend the base "LogurTransport" and uses something
+ * like "StreamRoller" for better control/rotations of logs.
+ * @see https://www.npmjs.com/package/streamroller
+ *
+ */
+
+import { ILogurTransport, ILogur, IFileTransportOptions, IFileTransport, ILogurOutput, ILogurInstanceOptions, IParsedPath, ITimer, IQuery, QueryResult, IQueryRange, IQueryRanges, QueryRange, IMetadata, TransportActionCallback, IInstanceMethodsExtended } from '../interfaces';
 import { LogurTransport } from './base';
 import * as u from '../utils';
-
-import * as _path from 'path';
-import * as _fs from 'fs';
-import * as _glob from 'glob';
-import * as _readline from 'readline';
 
 let fs, createWriteStream, path, glob, readline;
 
@@ -18,7 +24,8 @@ if (!process.env.BROWSER) {
 
 const defaults = {
   map: ['timestamp', 'level', 'message', 'metadata'],
-  filename: 'logs/app.log',
+  strategy: 'json',
+  filename: undefined,
   options: {
     mode: '0666',
     encoding: 'utf8',
@@ -27,16 +34,17 @@ const defaults = {
   size: 1000000,    // in bytes, default 1(MB)
   max: 21,          // max number of backup before rotating.
   interval: 0,      // set to milliseconds to watch for rotations.
-  delimiter: '\t',  // used when json is false.
-  json: true        // logs messages in JSON format.
+  delimiter: '\t',  // used when array is used.
+  queryable: true
 };
 
 export class FileTransport extends LogurTransport implements IFileTransport {
 
-  parsed: IParsedPath;
-  running: string;
-  interval: ITimer;
-  writer: NodeJS.WritableStream;
+  private _parsed: IParsedPath;
+  private _running: string;
+  private _interval: ITimer;
+  private _writer: NodeJS.WritableStream;
+
   options: IFileTransportOptions;
 
   /**
@@ -50,25 +58,31 @@ export class FileTransport extends LogurTransport implements IFileTransport {
     super(base, u.extend({}, defaults, options), logur);
 
     if (!u.isNode())
-      return;
+      throw new Error('File Transport is not supported in Browser mode.');
+
+    // Generate filename if not provided.
+    if (!this.options.filename) {
+      const name = this._logur.pkg && this._logur.pkg.name ? this._logur.pkg.name : 'app';
+      this.options.filename = `logs/${name}.log`;
+    }
 
     // Don't allow comma for delimiter.
     if (this.options.delimiter !== ';' && this.options.delimiter !== '\t')
       this.options.delimiter = ';';
 
     // Parse the filename path.
-    this.parsed = path.parse(path.normalize(this.options.filename));
+    this._parsed = path.parse(path.normalize(this.options.filename));
 
     // We can use sync here as this will
     // only be used when fired up and constructed.
     // We'll use async methods for other methods
     // in case user wants to roll logs while
     // process is running.
-    if (!fs.existsSync(this.parsed.dir)) {
-      fs.mkdirSync(this.parsed.dir);
-    }
+    if (!fs.existsSync(this._parsed.dir))
+      fs.mkdirSync(this._parsed.dir);
 
     // Ensure pretty print and stack are disabled.
+    // File transport works best as a simple array or json.
     this.options.pretty = false;
     this.options.prettystack = false;
 
@@ -96,7 +110,7 @@ export class FileTransport extends LogurTransport implements IFileTransport {
    */
   private glob(fn: { (err: Error, files: string[]) }) {
 
-    const parsed = this.parsed;
+    const parsed = this._parsed;
 
     // Create path using glob to lookup
     // all log files.
@@ -115,7 +129,7 @@ export class FileTransport extends LogurTransport implements IFileTransport {
   private stat(fn: { (active: string, rotate: boolean) }) {
 
     const options = this.options;
-    const parsed = this.parsed;
+    const parsed = this._parsed;
 
     // Set the orig filename
     // passed in transport options.
@@ -217,68 +231,26 @@ export class FileTransport extends LogurTransport implements IFileTransport {
 
     // Don't allow creation if stream already exists
     // to recreate stream close old stream first.
-    if (this.writer)
-      return this.writer;
+    if (this._writer)
+      return this._writer;
 
     // Create the stream.
-    this.writer =
+    this._writer =
       fs.createWriteStream(filename, this.options.options);
 
-    this.writer.on('error', (err) => {
+    this._writer.on('error', (err) => {
       this.log.error(err);
     });
 
     // Set the running file.
-    this.running = filename;
+    this._running = filename;
 
     // Start the timer.
     this.startTimer();
 
     // Return the writer.
-    return this.writer;
+    return this._writer;
 
-  }
-
-  /**
-   * Parse Line
-   * Parses a logged line from file.
-   *
-   * @param line the line to parse.
-   */
-  private parseLine(line: string) {
-
-    if (this.options.json)
-      return JSON.parse(line);
-
-    const obj: any = {};
-    const split = line.split(this.options.delimiter);
-
-    // map line to object.
-    this.options.map.forEach((prop, i) => {
-      obj[prop] = split[i];
-    });
-
-    return obj;
-
-  }
-
-  /**
-   * Map Fields
-   * Takes a parsed log line/object then maps
-   * to requested fields in query.
-   *
-   * @param fields the fields to be returned in object.
-   * @param obj the source object to map from.
-   */
-  private mapFields(fields: any, obj?: any) {
-    if (!fields.length)
-      return obj;
-    const tmp: any = {};
-    fields.forEach((f) => {
-      if (obj[f])
-        tmp[f] = obj[f];
-    });
-    return tmp;
   }
 
   /**
@@ -419,7 +391,7 @@ export class FileTransport extends LogurTransport implements IFileTransport {
 
       let lineCtr = 0;
 
-      const rl = _readline.createInterface({
+      const rl = readline.createInterface({
         input: fs.createReadStream(r.filename, { encoding: fileOpts.encoding })
       });
 
@@ -428,8 +400,6 @@ export class FileTransport extends LogurTransport implements IFileTransport {
         // Parse the current line.
         const parsed = u.parseLine(line, this.options);
         const ts = (new Date(parsed.timestamp)).getTime();
-        const skip = lineCtr < q.skip;
-        const take = !q.take ? true : result.length < q.take ? true : false;
 
         // If timestamp is greater than
         // the to date close reader.
@@ -440,7 +410,7 @@ export class FileTransport extends LogurTransport implements IFileTransport {
         // check if within range.
         else if (ts >= from && (to === 0 || ts <= to)) {
 
-          const mapped = this.mapFields(q.fields, parsed);
+          const mapped = u.mapParsed(q.fields, parsed);
           result.push(mapped);
 
         }
@@ -474,7 +444,7 @@ export class FileTransport extends LogurTransport implements IFileTransport {
     // If 0 watching for log rolling disabled.
     if (this.options.interval === 0)
       return;
-    this.interval = setInterval(() => {
+    this._interval = setInterval(() => {
       this.stat((active) => {
 
       });
@@ -486,8 +456,8 @@ export class FileTransport extends LogurTransport implements IFileTransport {
    * Clears the roll change timer.
    */
   stopTimer() {
-    if (this.interval)
-      clearInterval(this.interval);
+    if (this._interval)
+      clearInterval(this._interval);
   }
 
   /**
@@ -535,10 +505,10 @@ export class FileTransport extends LogurTransport implements IFileTransport {
    */
   close(fn?: Function) {
     fn = fn || u.noop;
-    this.running = undefined;
+    this._running = undefined;
     this.stopTimer();
-    if (this.writer)
-      return this.writer.end(null, null, fn);
+    if (this._writer)
+      return this._writer.end(null, null, fn);
     fn();
   }
 
@@ -547,8 +517,9 @@ export class FileTransport extends LogurTransport implements IFileTransport {
    * The transport action to be called when messages are logged.
    *
    * @param output the Logur output object for the actively logged message.
+   * @param fn callback function on action completed.
    */
-  action(output: ILogurOutput) {
+  action(output: ILogurOutput, fn: TransportActionCallback) {
 
     // Get colorized mapped array.
     let mapped = this.toMapped(this.options, output);
@@ -558,18 +529,22 @@ export class FileTransport extends LogurTransport implements IFileTransport {
     // Write out the log message.
     const write = (stream?: NodeJS.WritableStream) => {
 
-      stream = stream || this.writer;
+      stream = stream || this._writer;
 
       const term = '\n';
 
-      if (options.json)
-        stream.write(mapped.json + term);
-      else
-        stream.write(mapped.array.join(this.options.delimiter) + term);
+      const result = mapped[this.options.strategy];
+
+      if (options.strategy === 'json')
+        stream.write(result + term);
+      else if (options.strategy === 'array')
+        stream.write((result as any[]).join(this.options.delimiter) + term);
+
+      fn();
 
     };
 
-    if (!this.writer) {
+    if (!this._writer) {
       this.open(write);
     }
 
@@ -588,6 +563,12 @@ export class FileTransport extends LogurTransport implements IFileTransport {
    */
   query(q: IQuery, fn: QueryResult) {
 
+    // Cannot query without timestamps ensure in map.
+    if (!u.contains(this.options.map, 'timestamp')) {
+      this.log.warn('cannot query logs, map missing "timestamp" property.');
+      return;
+    }
+
     q = u.normalizeQuery(q);
 
     // Get list of avail log files.
@@ -600,7 +581,7 @@ export class FileTransport extends LogurTransport implements IFileTransport {
       this.findRange(files, <Date>q.from, <Date>q.to, (range) => {
 
         if (!range || !range.length)
-          return this.log.warn('query provided returned 0 results.');
+          return this.log.warn('query provided returned 0 files in selected range.');
 
         this.queryRange(q, range, fn);
 

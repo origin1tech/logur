@@ -1,4 +1,6 @@
 
+import { Agent, IncomingMessage, RequestOptions } from 'http';
+
 ////////////////////////
 // TYPES
 ////////////////////////
@@ -13,56 +15,64 @@ export type Constructor<T> = new (...args: any[]) => T;
  * Transport Constructor
  * Generic constructor for Transports.
  */
-export type TransportConstructor<T> = { new (base: ILogurInstanceOptions, options: ILogurTransportOptions, logur: ILogur): T };
+export type TransportConstructor<T> = new (base: ILogurInstanceOptions, options: ILogurTransportOptions, logur: ILogur) => T;
+
+export type ExecCallback = (output: ILogurOutput) => void;
 
 /**
  * Timestamp Callback
  * Type constraint for Timestamp callback.
  */
-export type TimestampCallback = { (timestamps?: ITimestamps): string; };
+export type TimestampCallback = (timestamps?: ITimestamps) => string;
 
 /**
  * StackTrace Callback
  * Callback used after generating stacktrace frames.
  */
-export type StackTraceCallback = { (stacktrace: IStacktrace[]) };
+export type StackTraceCallback = (stacktrace: IStacktrace[]) => void;
+
+/**
+ * Http Transport Callback
+ * Callback called upon Http transport request.
+ */
+export type HttpTransportCallback = (err: Error, res: IncomingMessage, body: any) => void;
 
 /**
  * Transport Action Callback
  * Callback for Transport actions.
  */
-export type TransportActionCallback = { (ordered: any, output?: ILogurOutput): void };
+export type TransportActionCallback = () => void;
 
 /**
  * Level Method
  * Constraint for levels interface.
  */
-export type LevelMethod = { (...args: any[]) };
+export type LevelMethod = (...args: any[]) => void;
 
 /**
  * UUID Callback
  * Callback for user defined uuid.
  */
-export type UUIDCallback = { (): string };
+export type UUIDCallback = () => string;
 
 /**
  * Serializer
  * Callback method called when mapped to
  * object name in LogurOutput.
  */
-export type Serializer = { <T>(value: T, output?: ILogurOutput, options?: any): T };
+export type Serializer = <T>(value: T, output?: ILogurOutput, options?: any) => T;
 
 /**
  * Query Result
  * Callback type returning the queried result.
  */
-export type QueryResult = { <T>(result: T[]) };
+export type QueryResult = <T>(result: T[]) => void;
 
 /**
  * Query Range
  * Callback type returning array of found IQueryRange.
  */
-export type QueryRange = { (range: IQueryRange[]) };
+export type QueryRange = (range: IQueryRange[]) => void;
 
 /**
  * Timestamp Strategy
@@ -109,7 +119,7 @@ export type ColorizationStrategy = 'yes' | 'no' | 'strip';
  * Indicates how normalized log event should be output
  * when handed off to Transport actions.
  */
-export type OutputStrategy = 'array' | 'object' | 'json';
+export type OutputStrategy = 'array' | 'object' | 'json' | 'raw';
 
 // export type CacheMap = Map<string, any>;
 
@@ -125,22 +135,6 @@ export type OutputStrategy = 'array' | 'object' | 'json';
  * @see https://github.com/chalk/chalk
  */
 export const STYLES = 'red, green, yellow, blue, magenta, cyan, white, gray, black, bgRed,bgGreen, bgYellow, bgBlue, bgMagenta, bgCyan, bgWhite, bold, dim, italic, underline, inverse, strikethrough';
-
-// export const COLOR_TYPE_MAP: IColorTypeMap = {
-
-//   // Types
-
-//   special: 'cyan',
-//   number: 'yellow',
-//   boolean: 'yellow',
-//   undefined: 'grey',
-//   null: 'bold',
-//   string: 'green',
-//   symbol: 'green',
-//   date: 'magenta',
-//   regexp: 'red'
-
-// };
 
 ////////////////////////
 // MISC INTERFACES
@@ -184,26 +178,26 @@ export interface INotify {
 
   events: { [key: string]: any };
 
-  emit(event: string, ...args: any[]): INotify;
+  emit?(event: string, ...args: any[]): INotify;
 
-  once(event: string, fn: any): INotify;
-  once(event: string, fn: any, ref: string): INotify;
-  once(event: string, fn: any, ref: string, cancel: any): INotify;
-  once(event: string, fn: any, ref: string, context: any): INotify;
-  once(event: string, fn: any, ref?: string, cancel?: any, context?: any): INotify;
+  once?(event: string, fn: any): INotify;
+  once?(event: string, fn: any, ref: string): INotify;
+  once?(event: string, fn: any, ref: string, cancel: any): INotify;
+  once?(event: string, fn: any, ref: string, context: any): INotify;
+  once?(event: string, fn: any, ref?: string, cancel?: any, context?: any): INotify;
 
-  on(event: string, fn: any): INotify;
-  on(event: string, fn: any, ref: string): INotify;
-  on(event: string, fn: any, ref: string, cancel: any): INotify;
-  on(event: string, fn: any, ref: string, context: any): INotify;
-  on(event: string, fn: any, ref?: string, cancel?: any, context?: any): INotify;
+  on?(event: string, fn: any): INotify;
+  on?(event: string, fn: any, ref: string): INotify;
+  on?(event: string, fn: any, ref: string, cancel: any): INotify;
+  on?(event: string, fn: any, ref: string, context: any): INotify;
+  on?(event: string, fn: any, ref?: string, cancel?: any, context?: any): INotify;
 
-  off(event: string, fn: Function): INotify;
-  off(event: string, fn?: Function, context?: any): INotify;
+  off?(event: string, fn: Function): INotify;
+  off?(event: string, fn?: Function, context?: any): INotify;
 
-  listeners(event: string): any[];
-  hasListeners(event: string): boolean;
-  removeListeners(event: string): INotify;
+  listeners?(event: string): any[];
+  hasListeners?(event: string): boolean;
+  removeListeners?(event: string): INotify;
 
 }
 
@@ -464,6 +458,11 @@ export interface ILevel {
   color?: string;               // the level color.
 }
 
+export interface IAuth {
+  username: string;
+  password: string;
+}
+
 export interface ILevels {
   error: ILevel | number;
   warn: ILevel | number;
@@ -472,16 +471,33 @@ export interface ILevels {
   debug: ILevel | number;
 }
 
+export interface IInstanceMethodsExit {
+  exit(code?: number): void;
+}
+
+export interface IInstanceMethodsExtended extends IInstanceMethodsExit {
+  write(...args: any[]): IInstanceMethodsExit;
+}
+
+export interface IInstanceMethodsWrap<T> {
+  using(transport: string): T;
+}
+
+export interface IInstanceMethodsWrite<T> extends IInstanceMethodsExit {
+  using(transport: string): T;
+  wrap(value: any): T;
+}
+
 export interface ILevelMethodsBase {
-  [key: string]: (...args: any[]) => void;
+  [key: string]: (...args: any[]) => IInstanceMethodsExtended;
 }
 
 export interface ILevelMethods extends ILevelMethodsBase {
-  error(...args: any[]): void;
-  warn(...args: any[]): void;
-  info(...args: any[]): void;
-  verbose(...args: any[]): void;
-  debug(...args: any[]): void;
+  error(...args: any[]): IInstanceMethodsExtended;
+  warn(...args: any[]): IInstanceMethodsExtended;
+  info(...args: any[]): IInstanceMethodsExtended;
+  verbose(...args: any[]): IInstanceMethodsExtended;
+  debug(...args: any[]): IInstanceMethodsExtended;
 }
 
 export interface ILogurOutput {
@@ -524,6 +540,7 @@ export interface ILogurOutputMapped<T> {
   array: any[];
   object: T;
   json: string;
+  raw: ILogurOutput;
 }
 
 /////////////////////////////////
@@ -540,13 +557,13 @@ export interface ILogurBaseOptions {
   colormap?: IMetadata;         // mimics util.inspect.styles for mapping type to color.
   catcherr?: boolean;           // whether to handle uncaught exceptions/errors.
   exiterr?: boolean;            // whether to exit on uncaught errors.
+  emiterr?: boolean;            // whether to emit errors or not.
 
 }
 
 export interface ILogurInstanceOptions extends ILogurBaseOptions {
 
   cascade?: boolean;      // when NOT false cascade settings down to transports.
-  sync?: boolean;         // when True transports are called synchronously.
 
   // An array of transports to
   // be bound to Instance.
@@ -561,6 +578,7 @@ export interface ILogurTransportOptions extends ILogurBaseOptions {
   ministack?: boolean;          // When NOT false log append msgs w/ (file:line:col)
   prettystack?: boolean;        // when true error stack trace is pretty printed.
   exceptions?: boolean;         // whether the transport is fired on exceptions.
+  queryable?: boolean;          // whether or not the transport supports queries.
 
 }
 
@@ -580,23 +598,38 @@ export interface IFileTransportOptions extends ILogurTransportOptions {
   max: number;                  // maximum number of backup files.
   interval: number;             // 0 to disable or milliseconds to check log roll at.
   delimiter: '\t' | ';';        // delimiter to be used when json is set to false.
-  json?: boolean;               // when true logged output is JSON.
+  strategy: OutputStrategy;     // storage strategy array, json, object or raw.
 }
 
 export interface IMemoryTransportOptions extends ILogurTransportOptions {
-  padding?: PadStrategy;        // the strategy for pading levels.
   max?: number;                 // maximum number of logs.
+  strategy: OutputStrategy;     // storage strategy array, json, object or raw.
 }
 
 export interface IHttpTransportOptions extends ILogurTransportOptions {
-  url?: string;
+  path?: string;
   host?: string;
   port?: number;
   ssl?: boolean;
+  encoding: string;
+  headers?: IMetadata;
+  method?: 'POST' | 'PUT';
+  auth?: IAuth;
   params?: IMetadata;
+  agent?: boolean | Agent;
+  strategy?: OutputStrategy;       // storage strategy array, json, object or raw.
 }
 
 export interface IStreamTransportOptions extends ILogurTransportOptions {
+  stream: NodeJS.WritableStream;  // A writeable stream
+  strategy: OutputStrategy;       // storage strategy array, json, object or raw.
+  options?: {
+    encoding?: string;          // defaults to 'utf8'.
+    mode?: number;              // defaults to undefined.
+    flags?: string;             // defaults to undefined.
+  };
+  padding?: PadStrategy;          // the strategy for pading levels.
+  colorize?: boolean;             // when NOT false colorization is applied.
 }
 
 ////////////////////////
@@ -615,10 +648,6 @@ export interface IConsoleTransport extends ILogurTransport {
 
 
 export interface IFileTransport extends ILogurTransport {
-  parsed: IParsedPath;            // the parsed filename that was supplied.
-  running: string;                // the active running filename/path.
-  interval: NodeJS.Timer;               // interval id.
-  writer: any;                    // the write stream.
   options: IFileTransportOptions;
   startTimer(): void;
   stopTimer(): void;
@@ -632,6 +661,7 @@ export interface IFileTransport extends ILogurTransport {
 
 export interface IHttpTransport extends ILogurTransport {
   options: IHttpTransportOptions;
+  request(options: RequestOptions, data: string | IMetadata | HttpTransportCallback, fn: HttpTransportCallback): void;
 }
 
 /* Memory
@@ -662,6 +692,7 @@ export interface ILogurTransports {
 
 export interface ILogurTransport {
 
+  name: string;
   options: ILogurTransportOptions;
   setOption<T extends ILogurTransportOptions>(key: string | T, value?: any): void;
   active(state?: boolean): boolean;
@@ -679,7 +710,7 @@ export interface ILogurTransport {
 
   // Must Override Methods
 
-  action(output: ILogurOutput): void;
+  action(output: ILogurOutput, fn: TransportActionCallback): void;
 
 }
 
@@ -694,7 +725,7 @@ export interface ISerializers {
 export interface ISerializerMethods {
   get(name: string): Serializer;
   getAll(): ISerializers;
-  add(name: string, transports: string | string[] | Serializer, serializer: Serializer): ISerializerMethods;
+  add(name: string, serializer: Serializer): ISerializerMethods;
   remove(name: string): ISerializerMethods;
 }
 
@@ -704,7 +735,7 @@ export interface ITransportMethods {
   getAll(): ILogurTransports;
   getList(): string[];
   add<T extends ILogurTransport>(name: string, Transport?: TransportConstructor<T>): ITransportMethods;
-  add<T extends ILogurTransport>(name: string, options?: IMetadata | TransportConstructor<T>, Transport?: TransportConstructor<T>): ITransportMethods;
+  add<T extends ILogurTransport>(name: string, options?: IMetadata | TransportConstructor<T>, Transport?: TransportConstructor<T>): T;
   extend(name: string): ITransportMethods;
   remove(name: string): ITransportMethods;
   active(name: string, state?: boolean): ITransportMethods;
@@ -716,18 +747,23 @@ export interface ILogurInstances {
   [key: string]: any;
 }
 
-export interface ILogurInstance extends INotify {
+export interface ILogurInstance<T> extends INotify {
 
   env: IEnv;
   options: ILogurInstanceOptions;
   transports: ITransportMethods;
   serializers: ISerializerMethods;
-  logger(type: any, ...args: any[]): ILogurOutput;
-  logger(transports: string | string[], type: any, ...args: any[]): ILogurOutput;
+
+  exec(level: string, ...args: any[]): void;
+  exec(transports: string | string[], level: string, ...args: any[]): void;
+  exec(done: ExecCallback | string | string[], transports: string | string[], level: any, ...args: any[]): void;
+
   setOption<T extends ILogurInstanceOptions>(options: T): void;
   setOption<T extends ILogurInstanceOptions>(key: string | T, value?: any): void;
   active(state?: boolean): boolean;
-  write(...args: any[]): void;
+  using(transports: string | string[], exclude?: boolean): T;
+  wrap(value: any): IInstanceMethodsWrap<T> & T;
+  write(...args: any[]): IInstanceMethodsWrite<T> & T;
   exit(code?: number): void;
   query(transport: string, q: IQuery, fn: QueryResult): void;
   dispose(fn: Function): void;
@@ -761,12 +797,12 @@ export interface ILogur {
   instances: ILogurInstances;
   transports: ILogurTransports;
   serializers: ISerializers;
-  log: ILogurInstance & ILevelMethods;
+  log: ILogurInstance<ILevelMethods> & ILevelMethods;
   options: ILogurOptions;
   setOption(options: ILogurOptions): void;
   setOption(key: string | ILogurOptions, value?: any): void;
-  get<T extends ILevelMethodsBase>(name?: string): ILogurInstance & T;
-  create<T extends ILevelMethodsBase>(name: string, options: ILogurInstanceOptions): ILogurInstance & T;
+  get<T extends ILevelMethodsBase>(name?: string): ILogurInstance<T> & T;
+  create<T extends ILevelMethodsBase>(name: string, options?: ILogurInstanceOptions): ILogurInstance<T> & T;
   remove(name: string): void;
   dispose(exit: boolean | Function, fn?: Function): void;
 }

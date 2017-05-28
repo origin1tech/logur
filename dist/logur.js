@@ -3,12 +3,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var u = require("./utils");
 var instance_1 = require("./instance");
 var transports_1 = require("./transports");
-var pkg, readline;
+var pkg;
 // If NodeJS get package info.
 if (u.isNode()) {
     var resolve = require('path').resolve;
     pkg = require(resolve(process.cwd(), 'package.json'));
-    readline = require('readline');
 }
 var defaults = {
     // Keys to grab from package.json when using Node.
@@ -134,6 +133,7 @@ var Logur = (function () {
     };
     return Logur;
 }());
+exports.Logur = Logur;
 /**
  * Init
  * Initializes Logur.
@@ -147,7 +147,7 @@ function init(options) {
     if (!logur) {
         logur = new Logur(options);
         var instance = logur.create('default', { transports: logur.options.transports });
-        // store the default logger.
+        // save the default logger.
         logur.log = instance;
     }
     return logur;
@@ -159,17 +159,24 @@ exports.init = init;
  *
  * @param name the name of the Logur Instance to get.
  */
-function get(name) {
+function get(name, options) {
+    // Ensure Logur instance.
     var logur = init();
-    return logur.get(name);
+    var transport = logur.get(name);
+    if (options)
+        transport.setOption(options);
+    return transport;
 }
 exports.get = get;
 /**
  * Get
  * Gets the default Logur Instance.
  */
-function getDefault() {
-    return get('default');
+function getDefault(options) {
+    var transport = get('default');
+    if (options)
+        transport.setOption(options);
+    return transport;
 }
 exports.getDefault = getDefault;
 //# sourceMappingURL=logur.js.map

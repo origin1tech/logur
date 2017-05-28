@@ -1,11 +1,21 @@
 /// <reference types="node" />
-import { ILogur, IFileTransportOptions, IFileTransport, ILogurOutput, ILogurInstanceOptions, IParsedPath, ITimer, IQuery, QueryResult } from '../interfaces';
+/**
+ * FILE TRANSPORT
+ *
+ * File Transport handles basic log rotation and is provided as
+ * proof of concept. It should work fine in most cases however you
+ * may wish to extend the base "LogurTransport" and uses something
+ * like "StreamRoller" for better control/rotations of logs.
+ * @see https://www.npmjs.com/package/streamroller
+ *
+ */
+import { ILogur, IFileTransportOptions, IFileTransport, ILogurOutput, ILogurInstanceOptions, IQuery, QueryResult, TransportActionCallback } from '../interfaces';
 import { LogurTransport } from './base';
 export declare class FileTransport extends LogurTransport implements IFileTransport {
-    parsed: IParsedPath;
-    running: string;
-    interval: ITimer;
-    writer: NodeJS.WritableStream;
+    private _parsed;
+    private _running;
+    private _interval;
+    private _writer;
     options: IFileTransportOptions;
     /**
      * File Transport Constructor
@@ -55,22 +65,6 @@ export declare class FileTransport extends LogurTransport implements IFileTransp
      */
     private create(filename);
     /**
-     * Parse Line
-     * Parses a logged line from file.
-     *
-     * @param line the line to parse.
-     */
-    private parseLine(line);
-    /**
-     * Map Fields
-     * Takes a parsed log line/object then maps
-     * to requested fields in query.
-     *
-     * @param fields the fields to be returned in object.
-     * @param obj the source object to map from.
-     */
-    private mapFields(fields, obj?);
-    /**
      * Find Range
      * Using date range finds relevant files
      * that should be queried.
@@ -117,8 +111,9 @@ export declare class FileTransport extends LogurTransport implements IFileTransp
      * The transport action to be called when messages are logged.
      *
      * @param output the Logur output object for the actively logged message.
+     * @param fn callback function on action completed.
      */
-    action(output: ILogurOutput): void;
+    action(output: ILogurOutput, fn: TransportActionCallback): void;
     /**
      * Query
      * Queries the logs.

@@ -373,6 +373,14 @@ export declare function intersect<T, U>(first: T, second: U): T & U;
  */
 export declare function activate<T>(Type: Constructor<T>, ...args: any[]): T;
 /**
+ * Mixin
+ * Mixin implemented objects.
+ *
+ * @param derivedCtor the derived ctor.
+ * @param baseCtors the base ctor.
+ */
+export declare function mixin(derivedCtor: any, baseCtors: any[]): void;
+/**
  * Async Each
  * Itearate functions with callbacks asynchronously.
  *
@@ -397,6 +405,15 @@ export declare function normalizeQuery(q: IQuery): IQuery;
  * @param options the transport options object.
  */
 export declare function parseLine(line: string, options: any): any;
+/**
+ * Map Parsed
+ * Generates object using parsed line result
+ * mapping using requested fields in query.
+ *
+ * @param fields the fields to be returned.
+ * @param obj the object from par
+ */
+export declare function mapParsed(fields: string[], obj: any): any;
 /**
  * Ministack
  * Generates a mini stacktrace of the calling

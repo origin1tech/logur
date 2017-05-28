@@ -2,7 +2,7 @@ import { INotify } from './interfaces';
 /**
  * Notify
  */
-export declare class Notify {
+export declare class Notify implements INotify {
     events: {
         [key: string]: any;
     };

@@ -1,10 +1,11 @@
-import { ILogurTransport, ILogur, ILogurTransportOptions, ILogurOutput, PadStrategy, ILogurInstance, ILevelMethods, ILogurOutputMapped } from '../interfaces';
+import { ILogurTransport, ILogur, ILogurTransportOptions, ILogurOutput, TransportActionCallback, PadStrategy, ILogurInstance, ILevelMethods, ILogurOutputMapped } from '../interfaces';
 /**
  * Logur Base Transport
  */
 export declare class LogurTransport implements ILogurTransport {
     protected _active: boolean;
     protected _logur: ILogur;
+    name: string;
     options: any;
     /**
      * Logur Transport Constructor
@@ -18,7 +19,7 @@ export declare class LogurTransport implements ILogurTransport {
      * Log
      * Expose the default logger.
      */
-    readonly log: ILogurInstance & ILevelMethods;
+    readonly log: ILogurInstance<ILevelMethods> & ILevelMethods;
     /**
      * Set Option(s)
      * Sets options for the Transport.
@@ -65,15 +66,14 @@ export declare class LogurTransport implements ILogurTransport {
      * @param output the generated Logur Output object.
      */
     toMapped<T>(options: ILogurTransportOptions | ILogurOutput, output?: ILogurOutput): ILogurOutputMapped<T>;
-    normalizeQuery(): void;
     /**
      * Action
      * The transport action to be called when messages are logged.
      *
      * @param output the Logur output object for the actively logged message.
-     * @param done an optional callback on Transport done.
+     * @param fn callback function on action completed.
      */
-    action(output: ILogurOutput): void;
+    action(output: ILogurOutput, fn: TransportActionCallback): void;
     /**
      * Dispose
      * Use the dispose method to close streams any any clean up.

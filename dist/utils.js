@@ -969,6 +969,23 @@ function activate(Type) {
 }
 exports.activate = activate;
 /**
+ * Mixin
+ * Mixin implemented objects.
+ *
+ * @param derivedCtor the derived ctor.
+ * @param baseCtors the base ctor.
+ */
+function mixin(derivedCtor, baseCtors) {
+    baseCtors.forEach(function (baseCtor) {
+        Object.getOwnPropertyNames(baseCtor.prototype).forEach(function (name) {
+            if (name !== 'constructor') {
+                derivedCtor.prototype[name] = baseCtor.prototype[name];
+            }
+        });
+    });
+}
+exports.mixin = mixin;
+/**
  * Async Each
  * Itearate functions with callbacks asynchronously.
  *
@@ -977,7 +994,7 @@ exports.activate = activate;
  */
 function asyncEach(funcs, fn) {
     var ctr = 0;
-    funcs.forEach(function (el, i, arr) {
+    funcs.forEach(function (el) {
         el(function () {
             ctr++;
             if (ctr === funcs.length)
@@ -1032,6 +1049,26 @@ function parseLine(line, options) {
     }
 }
 exports.parseLine = parseLine;
+/**
+ * Map Parsed
+ * Generates object using parsed line result
+ * mapping using requested fields in query.
+ *
+ * @param fields the fields to be returned.
+ * @param obj the object from par
+ */
+function mapParsed(fields, obj) {
+    if (!fields.length)
+        return obj;
+    var tmp = {};
+    fields.forEach(function (f) {
+        var val = get(obj, f);
+        if (!isUndefined(val))
+            set(obj, f, val);
+    });
+    return tmp;
+}
+exports.mapParsed = mapParsed;
 ///////////////////////////////
 // OUTPUT MAPPING
 ///////////////////////////////
@@ -1264,14 +1301,14 @@ function toMapped(options, output) {
     // Add untyped to message now
     // that it has been formatted.
     var msgIdx = options.map.indexOf('message');
-    arr[msgIdx] = arr[msgIdx] + ' ' + untyped.join(' ');
-    // Add untyped to obj.message.
-    obj['message'] = obj['message'] + ' ' + untyped.join(' ');
+    if (untyped && untyped.length)
+        arr[msgIdx] += ' ' + untyped.join(' ');
     arr = arr.concat(appended);
     return {
         array: arr,
         object: obj,
-        json: JSON.stringify(obj)
+        json: JSON.stringify(obj),
+        raw: output
     };
 }
 exports.toMapped = toMapped;

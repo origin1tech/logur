@@ -1,3 +1,13 @@
+/**
+ * FILE TRANSPORT
+ *
+ * File Transport handles basic log rotation and is provided as
+ * proof of concept. It should work fine in most cases however you
+ * may wish to extend the base "LogurTransport" and uses something
+ * like "StreamRoller" for better control/rotations of logs.
+ * @see https://www.npmjs.com/package/streamroller
+ *
+ */
 "use strict";
 var __extends = (this && this.__extends) || (function () {
     var extendStatics = Object.setPrototypeOf ||
@@ -12,7 +22,6 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var base_1 = require("./base");
 var u = require("../utils");
-var _readline = require("readline");
 var fs, createWriteStream, path, glob, readline;
 if (!process.env.BROWSER) {
     fs = require('fs');
@@ -22,7 +31,8 @@ if (!process.env.BROWSER) {
 }
 var defaults = {
     map: ['timestamp', 'level', 'message', 'metadata'],
-    filename: 'logs/app.log',
+    strategy: 'json',
+    filename: undefined,
     options: {
         mode: '0666',
         encoding: 'utf8',
@@ -32,7 +42,7 @@ var defaults = {
     max: 21,
     interval: 0,
     delimiter: '\t',
-    json: true // logs messages in JSON format.
+    queryable: true
 };
 var FileTransport = (function (_super) {
     __extends(FileTransport, _super);
@@ -46,21 +56,26 @@ var FileTransport = (function (_super) {
     function FileTransport(base, options, logur) {
         var _this = _super.call(this, base, u.extend({}, defaults, options), logur) || this;
         if (!u.isNode())
-            return _this;
+            throw new Error('File Transport is not supported in Browser mode.');
+        // Generate filename if not provided.
+        if (!_this.options.filename) {
+            var name_1 = _this._logur.pkg && _this._logur.pkg.name ? _this._logur.pkg.name : 'app';
+            _this.options.filename = "logs/" + name_1 + ".log";
+        }
         // Don't allow comma for delimiter.
         if (_this.options.delimiter !== ';' && _this.options.delimiter !== '\t')
             _this.options.delimiter = ';';
         // Parse the filename path.
-        _this.parsed = path.parse(path.normalize(_this.options.filename));
+        _this._parsed = path.parse(path.normalize(_this.options.filename));
         // We can use sync here as this will
         // only be used when fired up and constructed.
         // We'll use async methods for other methods
         // in case user wants to roll logs while
         // process is running.
-        if (!fs.existsSync(_this.parsed.dir)) {
-            fs.mkdirSync(_this.parsed.dir);
-        }
+        if (!fs.existsSync(_this._parsed.dir))
+            fs.mkdirSync(_this._parsed.dir);
         // Ensure pretty print and stack are disabled.
+        // File transport works best as a simple array or json.
         _this.options.pretty = false;
         _this.options.prettystack = false;
         return _this;
@@ -86,7 +101,7 @@ var FileTransport = (function (_super) {
      * @param fn callback on globbed.
      */
     FileTransport.prototype.glob = function (fn) {
-        var parsed = this.parsed;
+        var parsed = this._parsed;
         // Create path using glob to lookup
         // all log files.
         var globPath = path.join(parsed.dir, parsed.name + '*' + parsed.ext);
@@ -100,7 +115,7 @@ var FileTransport = (function (_super) {
      */
     FileTransport.prototype.stat = function (fn) {
         var options = this.options;
-        var parsed = this.parsed;
+        var parsed = this._parsed;
         // Set the orig filename
         // passed in transport options.
         var orig = path.join(parsed.dir, parsed.base);
@@ -170,55 +185,20 @@ var FileTransport = (function (_super) {
         var _this = this;
         // Don't allow creation if stream already exists
         // to recreate stream close old stream first.
-        if (this.writer)
-            return this.writer;
+        if (this._writer)
+            return this._writer;
         // Create the stream.
-        this.writer =
+        this._writer =
             fs.createWriteStream(filename, this.options.options);
-        this.writer.on('error', function (err) {
+        this._writer.on('error', function (err) {
             _this.log.error(err);
         });
         // Set the running file.
-        this.running = filename;
+        this._running = filename;
         // Start the timer.
         this.startTimer();
         // Return the writer.
-        return this.writer;
-    };
-    /**
-     * Parse Line
-     * Parses a logged line from file.
-     *
-     * @param line the line to parse.
-     */
-    FileTransport.prototype.parseLine = function (line) {
-        if (this.options.json)
-            return JSON.parse(line);
-        var obj = {};
-        var split = line.split(this.options.delimiter);
-        // map line to object.
-        this.options.map.forEach(function (prop, i) {
-            obj[prop] = split[i];
-        });
-        return obj;
-    };
-    /**
-     * Map Fields
-     * Takes a parsed log line/object then maps
-     * to requested fields in query.
-     *
-     * @param fields the fields to be returned in object.
-     * @param obj the source object to map from.
-     */
-    FileTransport.prototype.mapFields = function (fields, obj) {
-        if (!fields.length)
-            return obj;
-        var tmp = {};
-        fields.forEach(function (f) {
-            if (obj[f])
-                tmp[f] = obj[f];
-        });
-        return tmp;
+        return this._writer;
     };
     /**
      * Find Range
@@ -326,22 +306,20 @@ var FileTransport = (function (_super) {
         var result = [];
         range.forEach(function (r) {
             var lineCtr = 0;
-            var rl = _readline.createInterface({
+            var rl = readline.createInterface({
                 input: fs.createReadStream(r.filename, { encoding: fileOpts.encoding })
             });
             rl.on('line', function (line) {
                 // Parse the current line.
                 var parsed = u.parseLine(line, _this.options);
                 var ts = (new Date(parsed.timestamp)).getTime();
-                var skip = lineCtr < q.skip;
-                var take = !q.take ? true : result.length < q.take ? true : false;
                 // If timestamp is greater than
                 // the to date close reader.
                 if (ts > to && to !== 0) {
                     rl.close();
                 }
                 else if (ts >= from && (to === 0 || ts <= to)) {
-                    var mapped = _this.mapFields(q.fields, parsed);
+                    var mapped = u.mapParsed(q.fields, parsed);
                     result.push(mapped);
                 }
                 lineCtr++;
@@ -368,7 +346,7 @@ var FileTransport = (function (_super) {
         // If 0 watching for log rolling disabled.
         if (this.options.interval === 0)
             return;
-        this.interval = setInterval(function () {
+        this._interval = setInterval(function () {
             _this.stat(function (active) {
             });
         }, this.options.interval);
@@ -378,8 +356,8 @@ var FileTransport = (function (_super) {
      * Clears the roll change timer.
      */
     FileTransport.prototype.stopTimer = function () {
-        if (this.interval)
-            clearInterval(this.interval);
+        if (this._interval)
+            clearInterval(this._interval);
     };
     /**
      * Open
@@ -412,10 +390,10 @@ var FileTransport = (function (_super) {
      */
     FileTransport.prototype.close = function (fn) {
         fn = fn || u.noop;
-        this.running = undefined;
+        this._running = undefined;
         this.stopTimer();
-        if (this.writer)
-            return this.writer.end(null, null, fn);
+        if (this._writer)
+            return this._writer.end(null, null, fn);
         fn();
     };
     /**
@@ -423,22 +401,25 @@ var FileTransport = (function (_super) {
      * The transport action to be called when messages are logged.
      *
      * @param output the Logur output object for the actively logged message.
+     * @param fn callback function on action completed.
      */
-    FileTransport.prototype.action = function (output) {
+    FileTransport.prototype.action = function (output, fn) {
         var _this = this;
         // Get colorized mapped array.
         var mapped = this.toMapped(this.options, output);
         var options = this.options;
         // Write out the log message.
         var write = function (stream) {
-            stream = stream || _this.writer;
+            stream = stream || _this._writer;
             var term = '\n';
-            if (options.json)
-                stream.write(mapped.json + term);
-            else
-                stream.write(mapped.array.join(_this.options.delimiter) + term);
+            var result = mapped[_this.options.strategy];
+            if (options.strategy === 'json')
+                stream.write(result + term);
+            else if (options.strategy === 'array')
+                stream.write(result.join(_this.options.delimiter) + term);
+            fn();
         };
-        if (!this.writer) {
+        if (!this._writer) {
             this.open(write);
         }
         else {
@@ -454,6 +435,11 @@ var FileTransport = (function (_super) {
      */
     FileTransport.prototype.query = function (q, fn) {
         var _this = this;
+        // Cannot query without timestamps ensure in map.
+        if (!u.contains(this.options.map, 'timestamp')) {
+            this.log.warn('cannot query logs, map missing "timestamp" property.');
+            return;
+        }
         q = u.normalizeQuery(q);
         // Get list of avail log files.
         this.glob(function (err, files) {
@@ -462,7 +448,7 @@ var FileTransport = (function (_super) {
             // Find range of files to be queried.
             _this.findRange(files, q.from, q.to, function (range) {
                 if (!range || !range.length)
-                    return _this.log.warn('query provided returned 0 results.');
+                    return _this.log.warn('query provided returned 0 files in selected range.');
                 _this.queryRange(q, range, fn);
             });
         });

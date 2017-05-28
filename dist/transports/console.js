@@ -18,7 +18,8 @@ var defaults = {
     colorize: true,
     ministack: true,
     pretty: false,
-    prettystack: false
+    prettystack: false,
+    queryable: false
 };
 var ConsoleTransport = (function (_super) {
     __extends(ConsoleTransport, _super);
@@ -43,8 +44,9 @@ var ConsoleTransport = (function (_super) {
      * The transport action to be called when messages are logged.
      *
      * @param output the Logur output object for the actively logged message.
+     * @param fn callback function on action completed.
      */
-    ConsoleTransport.prototype.action = function (output) {
+    ConsoleTransport.prototype.action = function (output, fn) {
         // If the log level matches a console type use it.
         var _console = console[output.level] ? console[output.level] : console.log;
         // Get mapped array.
@@ -53,6 +55,7 @@ var ConsoleTransport = (function (_super) {
         // name use it for good measure.
         // Really only makes difference in Browser.
         _console.apply(console, mapped.array);
+        fn();
     };
     /**
      * Dispose

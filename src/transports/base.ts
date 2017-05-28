@@ -20,6 +20,7 @@ export class LogurTransport implements ILogurTransport {
   protected _active: boolean;
   protected _logur: ILogur;
 
+  name: string;
   options: any;
 
   /**
@@ -42,7 +43,7 @@ export class LogurTransport implements ILogurTransport {
    * Log
    * Expose the default logger.
    */
-  get log(): ILogurInstance & ILevelMethods {
+  get log(): ILogurInstance<ILevelMethods> & ILevelMethods {
     return this._logur.log;
   }
 
@@ -61,8 +62,8 @@ export class LogurTransport implements ILogurTransport {
     if (!u.isPlainObject(key)) {
 
       // If not value log error.
-      if (!value)
-        console.log('error', `cannot set option for key ${key} using value of undefined.`);
+      if (u.isUndefined(value))
+        throw new Error(`Cannot set option for key ${key} using value of undefined.`);
 
       else
         this.options[key] = value;
@@ -151,10 +152,6 @@ export class LogurTransport implements ILogurTransport {
 
   }
 
-  normalizeQuery() {
-
-  }
-
   // MUST & OPTIONAL OVERRIDE METHODS
 
   /**
@@ -162,9 +159,9 @@ export class LogurTransport implements ILogurTransport {
    * The transport action to be called when messages are logged.
    *
    * @param output the Logur output object for the actively logged message.
-   * @param done an optional callback on Transport done.
+   * @param fn callback function on action completed.
    */
-  action(output: ILogurOutput): void {
+  action(output: ILogurOutput, fn: TransportActionCallback): void {
     throw new Error('Logur Transport action method must be overriden.');
   }
 

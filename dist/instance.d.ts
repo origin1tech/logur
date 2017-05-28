@@ -1,10 +1,10 @@
-import { ILogurInstance, ILogur, ILogurInstanceOptions, ITransportMethods, ILogurOutput, IEnv, ISerializerMethods, IQuery, QueryResult } from './interfaces';
+import { ILogurInstance, ILogur, ILogurInstanceOptions, ITransportMethods, IEnv, ISerializerMethods, IQuery, QueryResult, ExecCallback, IInstanceMethodsWrap, IInstanceMethodsWrite } from './interfaces';
 import { Notify } from './notify';
 import { UAParser } from 'ua-parser-js';
 /**
  * Logur Instance
  */
-export declare class LogurInstance extends Notify implements ILogurInstance {
+export declare class LogurInstance<T> extends Notify implements ILogurInstance<T> {
     private _browserEnv;
     private _nodeEnv;
     private _exceptionsInit;
@@ -14,6 +14,7 @@ export declare class LogurInstance extends Notify implements ILogurInstance {
     protected _transports: string[];
     protected _exceptions: string[];
     protected _active: boolean;
+    private _buffer;
     ua: UAParser;
     options: ILogurInstanceOptions;
     /**
@@ -25,10 +26,31 @@ export declare class LogurInstance extends Notify implements ILogurInstance {
     constructor(name: string, options: ILogurInstanceOptions, logur: ILogur);
     private initLevels(levels);
     /**
+     * Bind Levels
+     * Creates a bound object of instance levels for chaining.
+     *
+     * @param extended the string or string array of extended methods.
+     * @param suppressLevels when true no levels are bound to object.
+     * @param fn a callback to be injected on logged via .exec().
+     */
+    private bindLevels(extended?, suppressLevels?, fn?);
+    /**
      * Handle Exceptions
      * Enables handling uncaught NodeJS exceptions.
      */
     private handleExceptions();
+    /**
+     * Find Level
+     * Finds the level value index in log params array.
+     *
+     * @param params the exec params to be logged.
+     */
+    private findLevel(params);
+    /**
+     * Has Buffer
+     * Tests if buffer contains any LogurOutput objects.
+     */
+    private hasBuffer();
     /**
      * Log
      * Gets the internal logger.
@@ -55,10 +77,12 @@ export declare class LogurInstance extends Notify implements ILogurInstance {
      * Log
      * Iterates transports then calls base Logur.log method.
      *
+     * @param done callback when all transports logged.
+     * @param transports list of transports to be called '*' for all.
      * @param type the type of log message.
      * @param args array of arguments.
      */
-    logger(transports: string | string[], type: any, ...args: any[]): ILogurOutput;
+    exec(done: ExecCallback | string | string[], transports: string | string[], level?: any, ...args: any[]): void;
     /**
      * Set Option
      * Sets/updates options.
@@ -76,20 +100,37 @@ export declare class LogurInstance extends Notify implements ILogurInstance {
      */
     active(state?: boolean): boolean;
     /**
+     * With
+     * Logs using a specific transport.
+     *
+     * @param transport the transport to log with.
+     * @param exclude when true fire all transports except those provided.
+     */
+    using(transports: string | string[], exclude?: boolean): T;
+    /**
      * Write
      * The equivalent of calling console.log without
      * any intervention from Logur.
      *
      * @param args arguments to pass to console.log.
      */
-    write(...args: any[]): void;
+    write(...args: any[]): IInstanceMethodsWrite<T> & T;
+    /**
+     * Wrap
+     * Wraps a log before and after with the provided value.
+     * Valid only for console transport.
+     *
+     * @param value the value to wrap logged line with.
+     */
+    wrap(value: any): IInstanceMethodsWrap<T> & T;
     /**
      * Exit
      * When env is node process.exit() is called.
      *
      * @param code optional node error code.
+     * @param panic when true exit immediately don't wait on buffer.
      */
-    exit(code?: number): void;
+    exit(code?: number | boolean, panic?: boolean): void;
     /**
      * Query
      * Queries a transport.

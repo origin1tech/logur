@@ -4,7 +4,7 @@ import * as u from './utils';
 /**
  * Notify
  */
-export class Notify {
+export class Notify implements INotify {
 
   // Events collection.
   events: { [key: string]: any } = {};

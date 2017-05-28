@@ -51,8 +51,8 @@ var LogurTransport = (function () {
         // If not object of options just set key/value.
         if (!u.isPlainObject(key)) {
             // If not value log error.
-            if (!value)
-                console.log('error', "cannot set option for key " + key + " using value of undefined.");
+            if (u.isUndefined(value))
+                throw new Error("Cannot set option for key " + key + " using value of undefined.");
             else
                 this.options[key] = value;
         }
@@ -125,17 +125,15 @@ var LogurTransport = (function () {
         options = options || this.options;
         return u.toMapped(options, output);
     };
-    LogurTransport.prototype.normalizeQuery = function () {
-    };
     // MUST & OPTIONAL OVERRIDE METHODS
     /**
      * Action
      * The transport action to be called when messages are logged.
      *
      * @param output the Logur output object for the actively logged message.
-     * @param done an optional callback on Transport done.
+     * @param fn callback function on action completed.
      */
-    LogurTransport.prototype.action = function (output) {
+    LogurTransport.prototype.action = function (output, fn) {
         throw new Error('Logur Transport action method must be overriden.');
     };
     /**

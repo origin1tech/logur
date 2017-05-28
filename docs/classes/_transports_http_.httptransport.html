@@ -1,0 +1,928 @@
+<!doctype html>
+<html class="default no-js">
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>HttpTransport | Logur</title>
+	<meta name="description" content="">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<link rel="stylesheet" href="../assets/css/main.css">
+</head>
+<body>
+<header>
+	<div class="tsd-page-toolbar">
+		<div class="container">
+			<div class="table-wrap">
+				<div class="table-cell" id="tsd-search" data-index="../assets/js/search.js" data-base="..">
+					<div class="field">
+						<label for="tsd-search-field" class="tsd-widget search no-caption">Search</label>
+						<input id="tsd-search-field" type="text" />
+					</div>
+					<ul class="results">
+						<li class="state loading">Preparing search index...</li>
+						<li class="state failure">The search index is not available</li>
+					</ul>
+					<a href="../index.html" class="title">Logur</a>
+				</div>
+				<div class="table-cell" id="tsd-widgets">
+					<div id="tsd-filter">
+						<a href="#" class="tsd-widget options no-caption" data-toggle="options">Options</a>
+						<div class="tsd-filter-group">
+							<div class="tsd-select" id="tsd-filter-visibility">
+								<span class="tsd-select-label">All</span>
+								<ul class="tsd-select-list">
+									<li data-value="public">Public</li>
+									<li data-value="protected">Public/Protected</li>
+									<li data-value="private" class="selected">All</li>
+								</ul>
+							</div>
+							<input type="checkbox" id="tsd-filter-inherited" checked />
+							<label class="tsd-widget" for="tsd-filter-inherited">Inherited</label>
+							<input type="checkbox" id="tsd-filter-externals" checked />
+							<label class="tsd-widget" for="tsd-filter-externals">Externals</label>
+							<input type="checkbox" id="tsd-filter-only-exported" />
+							<label class="tsd-widget" for="tsd-filter-only-exported">Only exported</label>
+						</div>
+					</div>
+					<a href="#" class="tsd-widget menu no-caption" data-toggle="menu">Menu</a>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="tsd-page-title">
+		<div class="container">
+			<ul class="tsd-breadcrumb">
+				<li>
+					<a href="../globals.html">Globals</a>
+				</li>
+				<li>
+					<a href="../modules/_transports_http_.html">&quot;transports/http&quot;</a>
+				</li>
+				<li>
+					<a href="_transports_http_.httptransport.html">HttpTransport</a>
+				</li>
+			</ul>
+			<h1>Class HttpTransport</h1>
+		</div>
+	</div>
+</header>
+<div class="container container-main">
+	<div class="row">
+		<div class="col-8 col-content">
+			<section class="tsd-panel tsd-hierarchy">
+				<h3>Hierarchy</h3>
+				<ul class="tsd-hierarchy">
+					<li>
+						<a href="_transports_base_.logurtransport.html" class="tsd-signature-type">LogurTransport</a>
+						<ul class="tsd-hierarchy">
+							<li>
+								<span class="target">HttpTransport</span>
+							</li>
+						</ul>
+					</li>
+				</ul>
+			</section>
+			<section class="tsd-panel">
+				<h3>Implements</h3>
+				<ul class="tsd-hierarchy">
+					<li><a href="../interfaces/_interfaces_.ilogurtransport.html" class="tsd-signature-type">ILogurTransport</a></li>
+					<li><a href="../interfaces/_interfaces_.ihttptransport.html" class="tsd-signature-type">IHttpTransport</a></li>
+				</ul>
+			</section>
+			<section class="tsd-panel-group tsd-index-group">
+				<h2>Index</h2>
+				<section class="tsd-panel tsd-index-panel">
+					<div class="tsd-index-content">
+						<section class="tsd-index-section ">
+							<h3>Constructors</h3>
+							<ul class="tsd-index-list">
+								<li class="tsd-kind-constructor tsd-parent-kind-class tsd-is-overwrite"><a href="_transports_http_.httptransport.html#constructor" class="tsd-kind-icon">constructor</a></li>
+							</ul>
+						</section>
+						<section class="tsd-index-section ">
+							<h3>Properties</h3>
+							<ul class="tsd-index-list">
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-inherited tsd-is-protected"><a href="_transports_http_.httptransport.html#_active" class="tsd-kind-icon">_active</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-inherited tsd-is-protected"><a href="_transports_http_.httptransport.html#_logur" class="tsd-kind-icon">_logur</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><a href="_transports_http_.httptransport.html#_requestoptions" class="tsd-kind-icon">_request<wbr>Options</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-inherited"><a href="_transports_http_.httptransport.html#name" class="tsd-kind-icon">name</a></li>
+								<li class="tsd-kind-property tsd-parent-kind-class tsd-is-overwrite"><a href="_transports_http_.httptransport.html#options" class="tsd-kind-icon">options</a></li>
+							</ul>
+						</section>
+						<section class="tsd-index-section tsd-is-inherited">
+							<h3>Accessors</h3>
+							<ul class="tsd-index-list">
+								<li class="tsd-kind-get-signature tsd-parent-kind-class tsd-is-inherited"><a href="_transports_http_.httptransport.html#log" class="tsd-kind-icon">log</a></li>
+							</ul>
+						</section>
+						<section class="tsd-index-section ">
+							<h3>Methods</h3>
+							<ul class="tsd-index-list">
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-overwrite"><a href="_transports_http_.httptransport.html#action" class="tsd-kind-icon">action</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><a href="_transports_http_.httptransport.html#active" class="tsd-kind-icon">active</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><a href="_transports_http_.httptransport.html#colorize" class="tsd-kind-icon">colorize</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-overwrite"><a href="_transports_http_.httptransport.html#dispose" class="tsd-kind-icon">dispose</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-private"><a href="_transports_http_.httptransport.html#handleerror" class="tsd-kind-icon">handle<wbr>Error</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-private"><a href="_transports_http_.httptransport.html#hanldestatus" class="tsd-kind-icon">hanlde<wbr>Status</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><a href="_transports_http_.httptransport.html#padlevel" class="tsd-kind-icon">pad<wbr>Level</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_transports_http_.httptransport.html#query" class="tsd-kind-icon">query</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class"><a href="_transports_http_.httptransport.html#request" class="tsd-kind-icon">request</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-has-type-parameter tsd-is-inherited"><a href="_transports_http_.httptransport.html#setoption" class="tsd-kind-icon">set<wbr>Option</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><a href="_transports_http_.httptransport.html#stripcolors" class="tsd-kind-icon">strip<wbr>Colors</a></li>
+								<li class="tsd-kind-method tsd-parent-kind-class tsd-has-type-parameter tsd-is-inherited"><a href="_transports_http_.httptransport.html#tomapped" class="tsd-kind-icon">to<wbr>Mapped</a></li>
+							</ul>
+						</section>
+					</div>
+				</section>
+			</section>
+			<section class="tsd-panel-group tsd-member-group ">
+				<h2>Constructors</h2>
+				<section class="tsd-panel tsd-member tsd-kind-constructor tsd-parent-kind-class tsd-is-overwrite">
+					<a name="constructor" class="tsd-anchor"></a>
+					<h3>constructor</h3>
+					<ul class="tsd-signatures tsd-kind-constructor tsd-parent-kind-class tsd-is-overwrite">
+						<li class="tsd-signature tsd-kind-icon">new <wbr>Http<wbr>Transport<span class="tsd-signature-symbol">(</span>base<span class="tsd-signature-symbol">: </span><a href="../interfaces/_interfaces_.ilogurinstanceoptions.html" class="tsd-signature-type">ILogurInstanceOptions</a>, options<span class="tsd-signature-symbol">: </span><a href="../interfaces/_interfaces_.ihttptransportoptions.html" class="tsd-signature-type">IHttpTransportOptions</a>, logur<span class="tsd-signature-symbol">: </span><a href="../interfaces/_interfaces_.ilogur.html" class="tsd-signature-type">ILogur</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="_transports_http_.httptransport.html" class="tsd-signature-type">HttpTransport</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Overrides <a href="_transports_base_.logurtransport.html">LogurTransport</a>.<a href="_transports_base_.logurtransport.html#constructor">constructor</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/transports/http.ts#L42">transports/http.ts:42</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Http Transport Constructor</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>base: <a href="../interfaces/_interfaces_.ilogurinstanceoptions.html" class="tsd-signature-type">ILogurInstanceOptions</a></h5>
+									<div class="tsd-comment tsd-typography">
+										<div class="lead">
+											<p>the base options/defaults instantiated by Logur Instance.</p>
+										</div>
+									</div>
+								</li>
+								<li>
+									<h5>options: <a href="../interfaces/_interfaces_.ihttptransportoptions.html" class="tsd-signature-type">IHttpTransportOptions</a></h5>
+									<div class="tsd-comment tsd-typography">
+										<div class="lead">
+											<p>the Transport options.</p>
+										</div>
+									</div>
+								</li>
+								<li>
+									<h5>logur: <a href="../interfaces/_interfaces_.ilogur.html" class="tsd-signature-type">ILogur</a></h5>
+									<div class="tsd-comment tsd-typography">
+										<div class="lead">
+											<p>the common Logur instance.</p>
+										</div>
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <a href="_transports_http_.httptransport.html" class="tsd-signature-type">HttpTransport</a></h4>
+						</li>
+					</ul>
+				</section>
+			</section>
+			<section class="tsd-panel-group tsd-member-group ">
+				<h2>Properties</h2>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-inherited tsd-is-protected">
+					<a name="_active" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagProtected">Protected</span> _active</h3>
+					<div class="tsd-signature tsd-kind-icon">_active<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">boolean</span></div>
+					<aside class="tsd-sources">
+						<p>Inherited from <a href="_transports_base_.logurtransport.html">LogurTransport</a>.<a href="_transports_base_.logurtransport.html#_active">_active</a></p>
+						<ul>
+							<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/transports/base.ts#L20">transports/base.ts:20</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-inherited tsd-is-protected">
+					<a name="_logur" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagProtected">Protected</span> _logur</h3>
+					<div class="tsd-signature tsd-kind-icon">_logur<span class="tsd-signature-symbol">:</span> <a href="../interfaces/_interfaces_.ilogur.html" class="tsd-signature-type">ILogur</a></div>
+					<aside class="tsd-sources">
+						<p>Inherited from <a href="_transports_base_.logurtransport.html">LogurTransport</a>.<a href="_transports_base_.logurtransport.html#_logur">_logur</a></p>
+						<ul>
+							<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/transports/base.ts#L21">transports/base.ts:21</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-private">
+					<a name="_requestoptions" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagPrivate">Private</span> _request<wbr>Options</h3>
+					<div class="tsd-signature tsd-kind-icon">_request<wbr>Options<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">RequestOptions</span></div>
+					<aside class="tsd-sources">
+						<ul>
+							<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/transports/http.ts#L40">transports/http.ts:40</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-inherited">
+					<a name="name" class="tsd-anchor"></a>
+					<h3>name</h3>
+					<div class="tsd-signature tsd-kind-icon">name<span class="tsd-signature-symbol">:</span> <span class="tsd-signature-type">string</span></div>
+					<aside class="tsd-sources">
+						<p>Implementation of <a href="../interfaces/_interfaces_.ihttptransport.html">IHttpTransport</a>.<a href="../interfaces/_interfaces_.ihttptransport.html#name">name</a></p>
+						<p>Inherited from <a href="_transports_base_.logurtransport.html">LogurTransport</a>.<a href="_transports_base_.logurtransport.html#name">name</a></p>
+						<ul>
+							<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/transports/base.ts#L23">transports/base.ts:23</a></li>
+						</ul>
+					</aside>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-property tsd-parent-kind-class tsd-is-overwrite">
+					<a name="options" class="tsd-anchor"></a>
+					<h3>options</h3>
+					<div class="tsd-signature tsd-kind-icon">options<span class="tsd-signature-symbol">:</span> <a href="../interfaces/_interfaces_.ihttptransportoptions.html" class="tsd-signature-type">IHttpTransportOptions</a></div>
+					<aside class="tsd-sources">
+						<p>Implementation of <a href="../interfaces/_interfaces_.ihttptransport.html">IHttpTransport</a>.<a href="../interfaces/_interfaces_.ihttptransport.html#options">options</a></p>
+						<p>Overrides <a href="_transports_base_.logurtransport.html">LogurTransport</a>.<a href="_transports_base_.logurtransport.html#options">options</a></p>
+						<ul>
+							<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/transports/http.ts#L42">transports/http.ts:42</a></li>
+						</ul>
+					</aside>
+				</section>
+			</section>
+			<section class="tsd-panel-group tsd-member-group tsd-is-inherited">
+				<h2>Accessors</h2>
+				<section class="tsd-panel tsd-member tsd-kind-get-signature tsd-parent-kind-class tsd-is-inherited">
+					<a name="log" class="tsd-anchor"></a>
+					<h3>log</h3>
+					<ul class="tsd-signatures tsd-kind-get-signature tsd-parent-kind-class tsd-is-inherited">
+						<li class="tsd-signature tsd-kind-icon"><span class="tsd-signature-symbol">get</span> log<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="../interfaces/_interfaces_.ilogurinstance.html" class="tsd-signature-type">ILogurInstance</a><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/_interfaces_.ilevelmethods.html" class="tsd-signature-type">ILevelMethods</a><span class="tsd-signature-symbol">&gt;</span><span class="tsd-signature-symbol"> &amp; </span><a href="../interfaces/_interfaces_.ilevelmethods.html" class="tsd-signature-type">ILevelMethods</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Inherited from <a href="_transports_base_.logurtransport.html">LogurTransport</a>.<a href="_transports_base_.logurtransport.html#log">log</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/transports/base.ts#L46">transports/base.ts:46</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Log
+									Expose the default logger.</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <a href="../interfaces/_interfaces_.ilogurinstance.html" class="tsd-signature-type">ILogurInstance</a><span class="tsd-signature-symbol">&lt;</span><a href="../interfaces/_interfaces_.ilevelmethods.html" class="tsd-signature-type">ILevelMethods</a><span class="tsd-signature-symbol">&gt;</span>
+								<span class="tsd-signature-symbol"> &amp; </span>
+								<a href="../interfaces/_interfaces_.ilevelmethods.html" class="tsd-signature-type">ILevelMethods</a>
+							</h4>
+						</li>
+					</ul>
+				</section>
+			</section>
+			<section class="tsd-panel-group tsd-member-group ">
+				<h2>Methods</h2>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-overwrite">
+					<a name="action" class="tsd-anchor"></a>
+					<h3>action</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-overwrite">
+						<li class="tsd-signature tsd-kind-icon">action<span class="tsd-signature-symbol">(</span>output<span class="tsd-signature-symbol">: </span><a href="../interfaces/_interfaces_.iloguroutput.html" class="tsd-signature-type">ILogurOutput</a>, fn<span class="tsd-signature-symbol">?: </span><a href="../modules/_interfaces_.html#transportactioncallback" class="tsd-signature-type">TransportActionCallback</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Implementation of <a href="../interfaces/_interfaces_.ihttptransport.html">IHttpTransport</a>.<a href="../interfaces/_interfaces_.ihttptransport.html#action">action</a></p>
+								<p>Overrides <a href="_transports_base_.logurtransport.html">LogurTransport</a>.<a href="_transports_base_.logurtransport.html#action">action</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/transports/http.ts#L157">transports/http.ts:157</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Action
+									The transport action to be called when messages are logged.</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>output: <a href="../interfaces/_interfaces_.iloguroutput.html" class="tsd-signature-type">ILogurOutput</a></h5>
+									<div class="tsd-comment tsd-typography">
+										<p>the Logur output object for the actively logged message.</p>
+									</div>
+								</li>
+								<li>
+									<h5><span class="tsd-flag ts-flagOptional">Optional</span> fn: <a href="../modules/_interfaces_.html#transportactioncallback" class="tsd-signature-type">TransportActionCallback</a></h5>
+									<div class="tsd-comment tsd-typography">
+										<p>callback function on action completed.</p>
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+					<a name="active" class="tsd-anchor"></a>
+					<h3>active</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+						<li class="tsd-signature tsd-kind-icon">active<span class="tsd-signature-symbol">(</span>state<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">boolean</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Implementation of <a href="../interfaces/_interfaces_.ihttptransport.html">IHttpTransport</a>.<a href="../interfaces/_interfaces_.ihttptransport.html#active">active</a></p>
+								<p>Inherited from <a href="_transports_base_.logurtransport.html">LogurTransport</a>.<a href="_transports_base_.logurtransport.html#active">active</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/transports/base.ts#L86">transports/base.ts:86</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Active
+										Toggles the active state of the transport.
+									If not new state is passed the current state is returned.</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5><span class="tsd-flag ts-flagOptional">Optional</span> state: <span class="tsd-signature-type">boolean</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">boolean</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+					<a name="colorize" class="tsd-anchor"></a>
+					<h3>colorize</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+						<li class="tsd-signature tsd-kind-icon">colorize<span class="tsd-signature-symbol">(</span>str<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span>, style<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Implementation of <a href="../interfaces/_interfaces_.ihttptransport.html">IHttpTransport</a>.<a href="../interfaces/_interfaces_.ihttptransport.html#colorize">colorize</a></p>
+								<p>Inherited from <a href="_transports_base_.logurtransport.html">LogurTransport</a>.<a href="_transports_base_.logurtransport.html#colorize">colorize</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/transports/base.ts#L103">transports/base.ts:103</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Colorize
+									Convenience wrapper to utils.colorize.</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>str: <span class="tsd-signature-type">any</span></h5>
+									<div class="tsd-comment tsd-typography">
+										<p>the value to colorize.</p>
+									</div>
+								</li>
+								<li>
+									<h5>style: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></h5>
+									<div class="tsd-comment tsd-typography">
+										<p>the style or array of styles to be applied.</p>
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">any</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-overwrite">
+					<a name="dispose" class="tsd-anchor"></a>
+					<h3>dispose</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-overwrite">
+						<li class="tsd-signature tsd-kind-icon">dispose<span class="tsd-signature-symbol">(</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Overrides <a href="_transports_base_.logurtransport.html">LogurTransport</a>.<a href="_transports_base_.logurtransport.html#dispose">dispose</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/transports/http.ts#L244">transports/http.ts:244</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Dispose
+										Use the dispose method to close streams and any clean up.
+									Dispose is called after uncaught exceptions and SIGINT.</p>
+								</div>
+							</div>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-private">
+					<a name="handleerror" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagPrivate">Private</span> handle<wbr>Error</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-private">
+						<li class="tsd-signature tsd-kind-icon">handle<wbr>Error<span class="tsd-signature-symbol">(</span>err<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">Error</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/transports/http.ts#L82">transports/http.ts:82</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>err: <span class="tsd-signature-type">Error</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-private">
+					<a name="hanldestatus" class="tsd-anchor"></a>
+					<h3><span class="tsd-flag ts-flagPrivate">Private</span> hanlde<wbr>Status</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-private">
+						<li class="tsd-signature tsd-kind-icon">hanlde<wbr>Status<span class="tsd-signature-symbol">(</span>res<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">IncomingMessage</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<ul>
+									<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/transports/http.ts#L86">transports/http.ts:86</a></li>
+								</ul>
+							</aside>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>res: <span class="tsd-signature-type">IncomingMessage</span></h5>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+					<a name="padlevel" class="tsd-anchor"></a>
+					<h3>pad<wbr>Level</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+						<li class="tsd-signature tsd-kind-icon">pad<wbr>Level<span class="tsd-signature-symbol">(</span>level<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span>, strategy<span class="tsd-signature-symbol">: </span><a href="../modules/_interfaces_.html#padstrategy" class="tsd-signature-type">PadStrategy</a>, levels<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Implementation of <a href="../interfaces/_interfaces_.ihttptransport.html">IHttpTransport</a>.<a href="../interfaces/_interfaces_.ihttptransport.html#padlevel">padLevel</a></p>
+								<p>Inherited from <a href="_transports_base_.logurtransport.html">LogurTransport</a>.<a href="_transports_base_.logurtransport.html#padlevel">padLevel</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/transports/base.ts#L125">transports/base.ts:125</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Pad Level
+									Pads the level after calculating pad from possible levels.</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>level: <span class="tsd-signature-type">string</span></h5>
+									<div class="tsd-comment tsd-typography">
+										<p>the level to be padded.</p>
+									</div>
+								</li>
+								<li>
+									<h5>strategy: <a href="../modules/_interfaces_.html#padstrategy" class="tsd-signature-type">PadStrategy</a></h5>
+									<div class="tsd-comment tsd-typography">
+										<p>the strategy to pad with left, right or none.</p>
+									</div>
+								</li>
+								<li>
+									<h5><span class="tsd-flag ts-flagOptional">Optional</span> levels: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol">[]</span></h5>
+									<div class="tsd-comment tsd-typography">
+										<p>array of levels for calculating padding.</p>
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">string</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="query" class="tsd-anchor"></a>
+					<h3>query</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">query<span class="tsd-signature-symbol">(</span>q<span class="tsd-signature-symbol">: </span><a href="../interfaces/_interfaces_.iquery.html" class="tsd-signature-type">IQuery</a>, fn<span class="tsd-signature-symbol">: </span><a href="../modules/_interfaces_.html#queryresult" class="tsd-signature-type">QueryResult</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="../interfaces/_interfaces_.iinstancemethodsextended.html" class="tsd-signature-type">IInstanceMethodsExtended</a></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Implementation of <a href="../interfaces/_interfaces_.ihttptransport.html">IHttpTransport</a>.<a href="../interfaces/_interfaces_.ihttptransport.html#query">query</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/transports/http.ts#L196">transports/http.ts:196</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Query
+									Queries the logs.</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>q: <a href="../interfaces/_interfaces_.iquery.html" class="tsd-signature-type">IQuery</a></h5>
+									<div class="tsd-comment tsd-typography">
+										<p>the query options.</p>
+									</div>
+								</li>
+								<li>
+									<h5>fn: <a href="../modules/_interfaces_.html#queryresult" class="tsd-signature-type">QueryResult</a></h5>
+									<div class="tsd-comment tsd-typography">
+										<p>the query result callback.</p>
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <a href="../interfaces/_interfaces_.iinstancemethodsextended.html" class="tsd-signature-type">IInstanceMethodsExtended</a></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class">
+					<a name="request" class="tsd-anchor"></a>
+					<h3>request</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class">
+						<li class="tsd-signature tsd-kind-icon">request<span class="tsd-signature-symbol">(</span>options<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">RequestOptions</span>, data<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><a href="../interfaces/_interfaces_.imetadata.html" class="tsd-signature-type">IMetadata</a><span class="tsd-signature-symbol"> | </span><a href="../modules/_interfaces_.html#httptransportcallback" class="tsd-signature-type">HttpTransportCallback</a>, fn<span class="tsd-signature-symbol">?: </span><a href="../modules/_interfaces_.html#httptransportcallback" class="tsd-signature-type">HttpTransportCallback</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Implementation of <a href="../interfaces/_interfaces_.ihttptransport.html">IHttpTransport</a>.<a href="../interfaces/_interfaces_.ihttptransport.html#request">request</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/transports/http.ts#L97">transports/http.ts:97</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Request
+									Makes an Http(s) request.</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>options: <span class="tsd-signature-type">RequestOptions</span></h5>
+									<div class="tsd-comment tsd-typography">
+										<p>the http(s) request options.</p>
+									</div>
+								</li>
+								<li>
+									<h5>data: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><a href="../interfaces/_interfaces_.imetadata.html" class="tsd-signature-type">IMetadata</a><span class="tsd-signature-symbol"> | </span><a href="../modules/_interfaces_.html#httptransportcallback" class="tsd-signature-type">HttpTransportCallback</a></h5>
+								</li>
+								<li>
+									<h5><span class="tsd-flag ts-flagOptional">Optional</span> fn: <a href="../modules/_interfaces_.html#httptransportcallback" class="tsd-signature-type">HttpTransportCallback</a></h5>
+									<div class="tsd-comment tsd-typography">
+										<p>callback upon http response.</p>
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-has-type-parameter tsd-is-inherited">
+					<a name="setoption" class="tsd-anchor"></a>
+					<h3>set<wbr>Option</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-has-type-parameter tsd-is-inherited">
+						<li class="tsd-signature tsd-kind-icon">set<wbr>Option&lt;T&gt;<span class="tsd-signature-symbol">(</span>key<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">T</span>, value<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Implementation of <a href="../interfaces/_interfaces_.ihttptransport.html">IHttpTransport</a>.<a href="../interfaces/_interfaces_.ihttptransport.html#setoption">setOption</a></p>
+								<p>Inherited from <a href="_transports_base_.logurtransport.html">LogurTransport</a>.<a href="_transports_base_.logurtransport.html#setoption">setOption</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/transports/base.ts#L59">transports/base.ts:59</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Set Option(s)
+									Sets options for the Transport.</p>
+								</div>
+							</div>
+							<h4 class="tsd-type-parameters-title">Type parameters</h4>
+							<ul class="tsd-type-parameters">
+								<li>
+									<h4>T<span class="tsd-signature-symbol">: </span><a href="../interfaces/_interfaces_.ilogurtransportoptions.html" class="tsd-signature-type">ILogurTransportOptions</a></h4>
+								</li>
+							</ul>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>key: <span class="tsd-signature-type">string</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">T</span></h5>
+									<div class="tsd-comment tsd-typography">
+										<p>the key or options object.</p>
+									</div>
+								</li>
+								<li>
+									<h5><span class="tsd-flag ts-flagOptional">Optional</span> value: <span class="tsd-signature-type">any</span></h5>
+									<div class="tsd-comment tsd-typography">
+										<p>the corresponding value for the specified key.</p>
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+					<a name="stripcolors" class="tsd-anchor"></a>
+					<h3>strip<wbr>Colors</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+						<li class="tsd-signature tsd-kind-icon">strip<wbr>Colors<span class="tsd-signature-symbol">(</span>str<span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">any</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Implementation of <a href="../interfaces/_interfaces_.ihttptransport.html">IHttpTransport</a>.<a href="../interfaces/_interfaces_.ihttptransport.html#stripcolors">stripColors</a></p>
+								<p>Inherited from <a href="_transports_base_.logurtransport.html">LogurTransport</a>.<a href="_transports_base_.logurtransport.html#stripcolors">stripColors</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/transports/base.ts#L113">transports/base.ts:113</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>Strip Color
+									Strips ansi colors from strings.</p>
+								</div>
+							</div>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>str: <span class="tsd-signature-type">any</span></h5>
+									<div class="tsd-comment tsd-typography">
+										<p>a string or array of strings to strip color from.</p>
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">any</span></h4>
+						</li>
+					</ul>
+				</section>
+				<section class="tsd-panel tsd-member tsd-kind-method tsd-parent-kind-class tsd-has-type-parameter tsd-is-inherited">
+					<a name="tomapped" class="tsd-anchor"></a>
+					<h3>to<wbr>Mapped</h3>
+					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-class tsd-has-type-parameter tsd-is-inherited">
+						<li class="tsd-signature tsd-kind-icon">to<wbr>Mapped&lt;T&gt;<span class="tsd-signature-symbol">(</span>options<span class="tsd-signature-symbol">: </span><a href="../interfaces/_interfaces_.ilogurtransportoptions.html" class="tsd-signature-type">ILogurTransportOptions</a><span class="tsd-signature-symbol"> | </span><a href="../interfaces/_interfaces_.iloguroutput.html" class="tsd-signature-type">ILogurOutput</a>, output<span class="tsd-signature-symbol">?: </span><a href="../interfaces/_interfaces_.iloguroutput.html" class="tsd-signature-type">ILogurOutput</a><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><a href="../interfaces/_interfaces_.iloguroutputmapped.html" class="tsd-signature-type">ILogurOutputMapped</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">&gt;</span></li>
+					</ul>
+					<ul class="tsd-descriptions">
+						<li class="tsd-description">
+							<aside class="tsd-sources">
+								<p>Implementation of <a href="../interfaces/_interfaces_.ihttptransport.html">IHttpTransport</a>.<a href="../interfaces/_interfaces_.ihttptransport.html#tomapped">toMapped</a></p>
+								<p>Inherited from <a href="_transports_base_.logurtransport.html">LogurTransport</a>.<a href="_transports_base_.logurtransport.html#tomapped">toMapped</a></p>
+								<ul>
+									<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/transports/base.ts#L142">transports/base.ts:142</a></li>
+								</ul>
+							</aside>
+							<div class="tsd-comment tsd-typography">
+								<div class="lead">
+									<p>To Mapped
+										Takes the generated Logur Output converting
+									to mapped values in array, object or json.</p>
+								</div>
+							</div>
+							<h4 class="tsd-type-parameters-title">Type parameters</h4>
+							<ul class="tsd-type-parameters">
+								<li>
+									<h4>T</h4>
+								</li>
+							</ul>
+							<h4 class="tsd-parameters-title">Parameters</h4>
+							<ul class="tsd-parameters">
+								<li>
+									<h5>options: <a href="../interfaces/_interfaces_.ilogurtransportoptions.html" class="tsd-signature-type">ILogurTransportOptions</a><span class="tsd-signature-symbol"> | </span><a href="../interfaces/_interfaces_.iloguroutput.html" class="tsd-signature-type">ILogurOutput</a></h5>
+									<div class="tsd-comment tsd-typography">
+										<p>the Logur Tranport Options or Logur Output object.</p>
+									</div>
+								</li>
+								<li>
+									<h5><span class="tsd-flag ts-flagOptional">Optional</span> output: <a href="../interfaces/_interfaces_.iloguroutput.html" class="tsd-signature-type">ILogurOutput</a></h5>
+									<div class="tsd-comment tsd-typography">
+										<p>the generated Logur Output object.</p>
+									</div>
+								</li>
+							</ul>
+							<h4 class="tsd-returns-title">Returns <a href="../interfaces/_interfaces_.iloguroutputmapped.html" class="tsd-signature-type">ILogurOutputMapped</a><span class="tsd-signature-symbol">&lt;</span><span class="tsd-signature-type">T</span><span class="tsd-signature-symbol">&gt;</span></h4>
+						</li>
+					</ul>
+				</section>
+			</section>
+		</div>
+		<div class="col-4 col-menu menu-sticky-wrap menu-highlight">
+			<nav class="tsd-navigation primary">
+				<ul>
+					<li class="globals  ">
+						<a href="../globals.html"><em>Globals</em></a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="../modules/_colorize_.html">"colorize"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="../modules/_env_.html">"env"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="../modules/_index_.html">"index"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="../modules/_instance_.html">"instance"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="../modules/_interfaces_.html">"interfaces"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="../modules/_logur_.html">"logur"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="../modules/_notify_.html">"notify"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="../modules/_server_.html">"server"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="../modules/_transports_base_.html">"transports/base"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="../modules/_transports_console_.html">"transports/console"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="../modules/_transports_file_.html">"transports/file"</a>
+					</li>
+					<li class="current tsd-kind-external-module">
+						<a href="../modules/_transports_http_.html">"transports/http"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="../modules/_transports_index_.html">"transports/index"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="../modules/_transports_memory_.html">"transports/memory"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="../modules/_transports_stream_.html">"transports/stream"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="../modules/_utils_.html">"utils"</a>
+					</li>
+				</ul>
+			</nav>
+			<nav class="tsd-navigation secondary menu-sticky">
+				<ul class="before-current">
+				</ul>
+				<ul class="current">
+					<li class="current tsd-kind-class tsd-parent-kind-external-module">
+						<a href="_transports_http_.httptransport.html" class="tsd-kind-icon">Http<wbr>Transport</a>
+						<ul>
+							<li class=" tsd-kind-constructor tsd-parent-kind-class tsd-is-overwrite">
+								<a href="_transports_http_.httptransport.html#constructor" class="tsd-kind-icon">constructor</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-inherited tsd-is-protected">
+								<a href="_transports_http_.httptransport.html#_active" class="tsd-kind-icon">_active</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-inherited tsd-is-protected">
+								<a href="_transports_http_.httptransport.html#_logur" class="tsd-kind-icon">_logur</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-private">
+								<a href="_transports_http_.httptransport.html#_requestoptions" class="tsd-kind-icon">_request<wbr>Options</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-inherited">
+								<a href="_transports_http_.httptransport.html#name" class="tsd-kind-icon">name</a>
+							</li>
+							<li class=" tsd-kind-property tsd-parent-kind-class tsd-is-overwrite">
+								<a href="_transports_http_.httptransport.html#options" class="tsd-kind-icon">options</a>
+							</li>
+							<li class=" tsd-kind-get-signature tsd-parent-kind-class tsd-is-inherited">
+								<a href="_transports_http_.httptransport.html#log" class="tsd-kind-icon">log</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-overwrite">
+								<a href="_transports_http_.httptransport.html#action" class="tsd-kind-icon">action</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+								<a href="_transports_http_.httptransport.html#active" class="tsd-kind-icon">active</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+								<a href="_transports_http_.httptransport.html#colorize" class="tsd-kind-icon">colorize</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-overwrite">
+								<a href="_transports_http_.httptransport.html#dispose" class="tsd-kind-icon">dispose</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-private">
+								<a href="_transports_http_.httptransport.html#handleerror" class="tsd-kind-icon">handle<wbr>Error</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-private">
+								<a href="_transports_http_.httptransport.html#hanldestatus" class="tsd-kind-icon">hanlde<wbr>Status</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+								<a href="_transports_http_.httptransport.html#padlevel" class="tsd-kind-icon">pad<wbr>Level</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_transports_http_.httptransport.html#query" class="tsd-kind-icon">query</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class">
+								<a href="_transports_http_.httptransport.html#request" class="tsd-kind-icon">request</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-has-type-parameter tsd-is-inherited">
+								<a href="_transports_http_.httptransport.html#setoption" class="tsd-kind-icon">set<wbr>Option</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-is-inherited">
+								<a href="_transports_http_.httptransport.html#stripcolors" class="tsd-kind-icon">strip<wbr>Colors</a>
+							</li>
+							<li class=" tsd-kind-method tsd-parent-kind-class tsd-has-type-parameter tsd-is-inherited">
+								<a href="_transports_http_.httptransport.html#tomapped" class="tsd-kind-icon">to<wbr>Mapped</a>
+							</li>
+						</ul>
+					</li>
+				</ul>
+				<ul class="after-current">
+					<li class=" tsd-kind-variable tsd-parent-kind-external-module tsd-is-not-exported">
+						<a href="../modules/_transports_http_.html#http" class="tsd-kind-icon">http</a>
+					</li>
+					<li class=" tsd-kind-variable tsd-parent-kind-external-module tsd-is-not-exported">
+						<a href="../modules/_transports_http_.html#https" class="tsd-kind-icon">https</a>
+					</li>
+					<li class=" tsd-kind-variable tsd-parent-kind-external-module tsd-is-not-exported">
+						<a href="../modules/_transports_http_.html#qs" class="tsd-kind-icon">qs</a>
+					</li>
+					<li class=" tsd-kind-object-literal tsd-parent-kind-external-module tsd-is-not-exported">
+						<a href="../modules/_transports_http_.html#defaults" class="tsd-kind-icon">defaults</a>
+					</li>
+				</ul>
+			</nav>
+		</div>
+	</div>
+</div>
+<footer class="with-border-bottom">
+	<div class="container">
+		<h2>Legend</h2>
+		<div class="tsd-legend-group">
+			<ul class="tsd-legend">
+				<li class="tsd-kind-module"><span class="tsd-kind-icon">Module</span></li>
+				<li class="tsd-kind-object-literal"><span class="tsd-kind-icon">Object literal</span></li>
+				<li class="tsd-kind-variable"><span class="tsd-kind-icon">Variable</span></li>
+				<li class="tsd-kind-function"><span class="tsd-kind-icon">Function</span></li>
+				<li class="tsd-kind-function tsd-has-type-parameter"><span class="tsd-kind-icon">Function with type parameter</span></li>
+				<li class="tsd-kind-index-signature"><span class="tsd-kind-icon">Index signature</span></li>
+				<li class="tsd-kind-type-alias"><span class="tsd-kind-icon">Type alias</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-enum"><span class="tsd-kind-icon">Enumeration</span></li>
+				<li class="tsd-kind-enum-member"><span class="tsd-kind-icon">Enumeration member</span></li>
+				<li class="tsd-kind-property tsd-parent-kind-enum"><span class="tsd-kind-icon">Property</span></li>
+				<li class="tsd-kind-method tsd-parent-kind-enum"><span class="tsd-kind-icon">Method</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-interface"><span class="tsd-kind-icon">Interface</span></li>
+				<li class="tsd-kind-interface tsd-has-type-parameter"><span class="tsd-kind-icon">Interface with type parameter</span></li>
+				<li class="tsd-kind-constructor tsd-parent-kind-interface"><span class="tsd-kind-icon">Constructor</span></li>
+				<li class="tsd-kind-property tsd-parent-kind-interface"><span class="tsd-kind-icon">Property</span></li>
+				<li class="tsd-kind-method tsd-parent-kind-interface"><span class="tsd-kind-icon">Method</span></li>
+				<li class="tsd-kind-index-signature tsd-parent-kind-interface"><span class="tsd-kind-icon">Index signature</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-class"><span class="tsd-kind-icon">Class</span></li>
+				<li class="tsd-kind-class tsd-has-type-parameter"><span class="tsd-kind-icon">Class with type parameter</span></li>
+				<li class="tsd-kind-constructor tsd-parent-kind-class"><span class="tsd-kind-icon">Constructor</span></li>
+				<li class="tsd-kind-property tsd-parent-kind-class"><span class="tsd-kind-icon">Property</span></li>
+				<li class="tsd-kind-method tsd-parent-kind-class"><span class="tsd-kind-icon">Method</span></li>
+				<li class="tsd-kind-accessor tsd-parent-kind-class"><span class="tsd-kind-icon">Accessor</span></li>
+				<li class="tsd-kind-index-signature tsd-parent-kind-class"><span class="tsd-kind-icon">Index signature</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-constructor tsd-parent-kind-class tsd-is-inherited"><span class="tsd-kind-icon">Inherited constructor</span></li>
+				<li class="tsd-kind-property tsd-parent-kind-class tsd-is-inherited"><span class="tsd-kind-icon">Inherited property</span></li>
+				<li class="tsd-kind-method tsd-parent-kind-class tsd-is-inherited"><span class="tsd-kind-icon">Inherited method</span></li>
+				<li class="tsd-kind-accessor tsd-parent-kind-class tsd-is-inherited"><span class="tsd-kind-icon">Inherited accessor</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-property tsd-parent-kind-class tsd-is-protected"><span class="tsd-kind-icon">Protected property</span></li>
+				<li class="tsd-kind-method tsd-parent-kind-class tsd-is-protected"><span class="tsd-kind-icon">Protected method</span></li>
+				<li class="tsd-kind-accessor tsd-parent-kind-class tsd-is-protected"><span class="tsd-kind-icon">Protected accessor</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-property tsd-parent-kind-class tsd-is-private"><span class="tsd-kind-icon">Private property</span></li>
+				<li class="tsd-kind-method tsd-parent-kind-class tsd-is-private"><span class="tsd-kind-icon">Private method</span></li>
+				<li class="tsd-kind-accessor tsd-parent-kind-class tsd-is-private"><span class="tsd-kind-icon">Private accessor</span></li>
+			</ul>
+			<ul class="tsd-legend">
+				<li class="tsd-kind-property tsd-parent-kind-class tsd-is-static"><span class="tsd-kind-icon">Static property</span></li>
+				<li class="tsd-kind-call-signature tsd-parent-kind-class tsd-is-static"><span class="tsd-kind-icon">Static method</span></li>
+			</ul>
+		</div>
+	</div>
+</footer>
+<div class="container tsd-generator">
+	<p>Generated using <a href="http://typedoc.org/" target="_blank">TypeDoc</a></p>
+</div>
+<div class="overlay"></div>
+<script src="../assets/js/main.js"></script>
+<script>if (location.protocol == 'file:') document.write('<script src="../assets/js/search.js"><' + '/script>');</script>
+</body>
+</html>

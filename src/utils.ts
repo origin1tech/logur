@@ -1097,6 +1097,23 @@ export function activate<T>(Type: Constructor<T>, ...args: any[]): T {
 }
 
 /**
+ * Mixin
+ * Mixin implemented objects.
+ *
+ * @param derivedCtor the derived ctor.
+ * @param baseCtors the base ctor.
+ */
+export function mixin(derivedCtor: any, baseCtors: any[]) {
+  baseCtors.forEach(baseCtor => {
+    Object.getOwnPropertyNames(baseCtor.prototype).forEach(name => {
+      if (name !== 'constructor') {
+        derivedCtor.prototype[name] = baseCtor.prototype[name];
+      }
+    });
+  });
+}
+
+/**
  * Async Each
  * Itearate functions with callbacks asynchronously.
  *
@@ -1107,17 +1124,12 @@ export function asyncEach(funcs: { (fn: Function) }[], fn: Function): void {
 
   let ctr = 0;
 
-  funcs.forEach((el, i, arr) => {
-
+  funcs.forEach((el) => {
     el(() => {
-
       ctr++;
-
       if (ctr === funcs.length)
         fn();
-
     });
-
   });
 
 }
@@ -1175,6 +1187,26 @@ export function parseLine(line: string, options: any): any {
     return line;
   }
 
+}
+
+/**
+ * Map Parsed
+ * Generates object using parsed line result
+ * mapping using requested fields in query.
+ *
+ * @param fields the fields to be returned.
+ * @param obj the object from par
+ */
+export function mapParsed(fields: string[], obj: any) {
+  if (!fields.length)
+    return obj;
+  const tmp: any = {};
+  fields.forEach((f) => {
+    const val = get(obj, f);
+    if (!isUndefined(val))
+      set(obj, f, val);
+  });
+  return tmp;
 }
 
 ///////////////////////////////
@@ -1402,7 +1434,7 @@ export function toMapped<T>(options: any, output: ILogurOutput): ILogurOutputMap
   }
 
   // Var for resulting output array, object or json.
-  let arr = [], obj = {}, appended = [], untyped = [];
+  let arr = [], obj: any = {}, appended = [], untyped = [];
 
   // Reference the logged level.
   let level = output.level;
@@ -1515,17 +1547,16 @@ export function toMapped<T>(options: any, output: ILogurOutput): ILogurOutputMap
   // Add untyped to message now
   // that it has been formatted.
   const msgIdx = options.map.indexOf('message');
-  arr[msgIdx] = arr[msgIdx] + ' ' + untyped.join(' ');
-
-  // Add untyped to obj.message.
-  obj['message'] = obj['message'] + ' ' + untyped.join(' ');
+  if (untyped && untyped.length)
+    arr[msgIdx] += ' ' + untyped.join(' ');
 
   arr = arr.concat(appended);
 
   return {
     array: arr,
     object: obj as T,
-    json: JSON.stringify(obj)
+    json: JSON.stringify(obj),
+    raw: output
   };
 
 }

@@ -1,4 +1,4 @@
-import { ILogurTransport, ILogur, IConsoleTransportOptions, IConsoleTransport, ILogurOutput, TransportActionCallback, ILogurInstanceOptions } from '../interfaces';
+import { ILogurTransport, ILogur, IConsoleTransportOptions, IConsoleTransport, ILogurOutput, ILogurInstanceOptions, TransportActionCallback, IInstanceMethodsExtended } from '../interfaces';
 import { LogurTransport } from './base';
 import * as u from '../utils';
 
@@ -9,7 +9,8 @@ const defaults: IConsoleTransportOptions = {
   colorize: true,
   ministack: true,
   pretty: false,
-  prettystack: false
+  prettystack: false,
+  queryable: false
 
 };
 
@@ -40,8 +41,9 @@ export class ConsoleTransport extends LogurTransport implements IConsoleTranspor
    * The transport action to be called when messages are logged.
    *
    * @param output the Logur output object for the actively logged message.
+   * @param fn callback function on action completed.
    */
-  action(output: ILogurOutput): void {
+  action(output: ILogurOutput, fn: TransportActionCallback): void {
 
     // If the log level matches a console type use it.
     const _console = console[output.level] ? console[output.level] : console.log;
@@ -53,6 +55,8 @@ export class ConsoleTransport extends LogurTransport implements IConsoleTranspor
     // name use it for good measure.
     // Really only makes difference in Browser.
     _console.apply(console, mapped.array);
+
+    fn();
 
   }
 

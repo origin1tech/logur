@@ -13,8 +13,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var base_1 = require("./base");
 var u = require("../utils");
 var defaults = {
+    map: ['timestamp', 'level', 'message', 'metadata'],
     pretty: true,
-    max: 100
+    max: 500,
+    strategy: 'array',
+    queryable: true
 };
 var MemoryTransport = (function (_super) {
     __extends(MemoryTransport, _super);
@@ -28,6 +31,9 @@ var MemoryTransport = (function (_super) {
     function MemoryTransport(base, options, logur) {
         var _this = _super.call(this, base, u.extend({}, defaults, options), logur) || this;
         _this.logs = [];
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].forEach(function (i) {
+            // this.log.info('temp memory log message.');
+        });
         return _this;
     }
     /**
@@ -35,13 +41,17 @@ var MemoryTransport = (function (_super) {
      * The transport action to be called when messages are logged.
      *
      * @param output the Logur output object for the actively logged message.
+     * @param fn callback function on action completed.
      */
-    MemoryTransport.prototype.action = function (output) {
+    MemoryTransport.prototype.action = function (output, fn) {
         // Get colorized ordered array.
         var mapped = this.toMapped(this.options, output);
+        // Get the mapped result by strategy.
+        var result = mapped[this.options.strategy];
         // Add mapped to collection.
-        if (this.options.max < this.logs.length)
-            this.logs.push(mapped.array);
+        if ((this.logs.length < this.options.max) && result)
+            this.logs.push(result);
+        fn();
     };
     /**
      * Query
@@ -51,7 +61,49 @@ var MemoryTransport = (function (_super) {
      * @param fn the query result callback.
      */
     MemoryTransport.prototype.query = function (q, fn) {
+        var _this = this;
+        // Cannot query without timestamps ensure in map.
+        if (!u.contains(this.options.map, 'timestamp'))
+            return this.log.warn('cannot query logs, map missing "timestamp" property.');
         q = u.normalizeQuery(q);
+        var from = q.from ? q.from.getTime() : 0;
+        var to = q.to ? q.to.getTime() : 0;
+        // const skip = ctr < q.skip;
+        // const take = !q.take ? true : found < q.take ? true : false;
+        // Converts the stored item in memory to an object.
+        var toObject = function (item) {
+            var tmp = {};
+            if (_this.options.strategy === 'array') {
+                _this.options.map.forEach(function (prop, i) {
+                    if (item[i]) {
+                        tmp[prop] = item[i];
+                    }
+                });
+                return tmp;
+            }
+            if (_this.options.strategy === 'json')
+                return JSON.parse(item);
+            return item;
+        };
+        var filtered = this.logs.map(function (item) {
+            // Convert to an object.
+            item = toObject(item);
+            // Get the item's timestamp.
+            var ts = item.timestamp;
+            // If is a string convert to Date.
+            if (u.isString(ts))
+                ts = new Date(ts);
+            // Can't process if not a Date.
+            if (u.isDate(ts)) {
+                // Convert to epoch.
+                ts = ts.getTime();
+                if (ts >= from && (to === 0 || ts <= to))
+                    return u.mapParsed(q.fields, item);
+            }
+        });
+        if (q.order === 'desc')
+            filtered.reverse();
+        fn(filtered.slice(q.skip, q.take + 1));
     };
     /**
      * Dispose
