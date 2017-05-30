@@ -136,8 +136,8 @@ log.using('file').info('some message only logged to file transport.');
 
 
 ```
-
-## <a name="output"></a>Logur Output
+<a name="output"></a>
+## Logur Output
 
 The output object contains a comprehensive group of properties
 that are useful to logging. The object is consumed by the "toMapped"
