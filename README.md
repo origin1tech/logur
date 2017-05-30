@@ -136,7 +136,7 @@ log.using('file').info('some message only logged to file transport.');
 
 
 ```
-<a name="output">asdf</a>
+<a id="output">asdf</a>
 ## Logur Output
 
 The output object contains a comprehensive group of properties
