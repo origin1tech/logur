@@ -994,12 +994,13 @@ exports.mixin = mixin;
  */
 function asyncEach(funcs, fn) {
     var ctr = 0;
-    funcs.forEach(function (el) {
-        el(function () {
-            ctr++;
-            if (ctr === funcs.length)
-                fn();
-        });
+    function exit() {
+        ctr++;
+        if (ctr === funcs.length)
+            fn();
+    }
+    funcs.forEach(function (el, i) {
+        el(exit);
     });
 }
 exports.asyncEach = asyncEach;
@@ -1319,21 +1320,33 @@ exports.toMapped = toMapped;
  * Colorize
  * Applies color styles to value.
  *
- * @param str the value to be colorized.
+ * @param obj the value to be colorized.
  * @param style the ansi style or styles to be applied.
  */
-function colorize(str, style) {
-    return colors.style(str, style);
+function colorize(obj, style) {
+    try {
+        return colors.style(obj, style);
+    }
+    catch (ex) {
+        console.log(ex);
+        return obj;
+    }
 }
 exports.colorize = colorize;
 /**
  * Strip Colors
  * Strips ansi colors from value.
  *
- * @param str the value to be stripped of color.
+ * @param obj the value to be stripped of color.
  */
-function stripColors(str) {
-    return colors.strip(str);
+function stripColors(obj) {
+    try {
+        return colors.strip(obj);
+    }
+    catch (ex) {
+        console.log(ex);
+        return obj;
+    }
 }
 exports.stripColors = stripColors;
 //# sourceMappingURL=utils.js.map

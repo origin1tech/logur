@@ -444,14 +444,14 @@ export declare function toMapped<T>(options: any, output: ILogurOutput): ILogurO
  * Colorize
  * Applies color styles to value.
  *
- * @param str the value to be colorized.
+ * @param obj the value to be colorized.
  * @param style the ansi style or styles to be applied.
  */
-export declare function colorize(str: any, style: string | string[]): any;
+export declare function colorize(obj: any, style: string | string[]): any;
 /**
  * Strip Colors
  * Strips ansi colors from value.
  *
- * @param str the value to be stripped of color.
+ * @param obj the value to be stripped of color.
  */
-export declare function stripColors(str: any): any;
+export declare function stripColors(obj: any): any;

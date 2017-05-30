@@ -165,14 +165,5 @@ export class LogurTransport implements ILogurTransport {
     throw new Error('Logur Transport action method must be overriden.');
   }
 
-  /**
-   * Dispose
-   * Use the dispose method to close streams any any clean up.
-   * Dispose is called after uncaught exceptions and SIGINT.
-   */
-  dispose(fn: Function) {
-    throw new Error('Logur Transport dispose method must be overriden.');
-  }
-
 }
 

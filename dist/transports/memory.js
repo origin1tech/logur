@@ -31,9 +31,6 @@ var MemoryTransport = (function (_super) {
     function MemoryTransport(base, options, logur) {
         var _this = _super.call(this, base, u.extend({}, defaults, options), logur) || this;
         _this.logs = [];
-        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].forEach(function (i) {
-            // this.log.info('temp memory log message.');
-        });
         return _this;
     }
     /**
@@ -110,8 +107,9 @@ var MemoryTransport = (function (_super) {
      * Use the dispose method to close streams and any clean up.
      * Dispose is called after uncaught exceptions and SIGINT.
      */
-    MemoryTransport.prototype.dispose = function () {
+    MemoryTransport.prototype.dispose = function (fn) {
         delete this.logs;
+        fn();
     };
     return MemoryTransport;
 }(base_1.LogurTransport));

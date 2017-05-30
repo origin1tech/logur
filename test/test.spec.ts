@@ -5,12 +5,12 @@ const expect = chai.expect;
 const should = chai.should;
 const assert = chai.assert;
 
-import { getDefault, Logur, ILogur, LogurInstance, ILevelMethods, ConsoleTransport, ILogurTransport, MemoryTransport, ILevelMethodsBase } from '../src';
+import { get, Logur, ILogur, LogurInstance, ILevelMethods, ConsoleTransport, ILogurTransport, MemoryTransport, ILevelMethodsBase } from '../src';
 
 // Instantiate Logur manually.
 
 // Default Logur.
-let log = getDefault();
+let log = get();
 log.transports.add('memory', MemoryTransport);
 
 describe('Logur:Main', () => {

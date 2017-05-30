@@ -71,14 +71,6 @@ var StreamTransport = (function (_super) {
             this.stream.write(result + term);
         fn();
     };
-    /**
-     * Dispose
-     * Use the dispose method to close streams and any clean up.
-     * Dispose is called after uncaught exceptions and SIGINT.
-     */
-    StreamTransport.prototype.dispose = function () {
-        // Nothing to dispose.
-    };
     return StreamTransport;
 }(base_1.LogurTransport));
 exports.StreamTransport = StreamTransport;

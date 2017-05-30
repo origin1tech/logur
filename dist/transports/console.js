@@ -57,14 +57,6 @@ var ConsoleTransport = (function (_super) {
         _console.apply(console, mapped.array);
         fn();
     };
-    /**
-     * Dispose
-     * Use the dispose method to close streams and any clean up.
-     * Dispose is called after uncaught exceptions and SIGINT.
-     */
-    ConsoleTransport.prototype.dispose = function () {
-        // Nothing to dispose.
-    };
     return ConsoleTransport;
 }(base_1.LogurTransport));
 exports.ConsoleTransport = ConsoleTransport;

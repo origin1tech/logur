@@ -15,10 +15,7 @@ if (u.isNode()) {
 const defaults = {
 
   // Keys to grab from package.json when using Node.
-  package: ['name', 'description', 'version', 'main', 'repository', 'author', 'license'],
-
-  // Array of transports to load.
-  transports: []
+  package: ['name', 'description', 'version', 'main', 'repository', 'author', 'license']
 
 };
 
@@ -29,7 +26,6 @@ export class Logur implements ILogur {
   pkg: IMetadata = {};
   instances: ILogurInstances = {};
   transports: ILogurTransports = {};
-  serializers: ISerializers = {};
   log: ILogurInstance<ILevelMethods> & ILevelMethods;
   options: ILogurOptions;
 
@@ -44,23 +40,6 @@ export class Logur implements ILogur {
 
     // Init options with defaults.
     this.options = u.extend({}, defaults, options);
-
-    // Options for default Console transport.
-    const consoleOpts: IConsoleTransportOptions = {
-      // placeholder
-    };
-
-    const hasConsole = this.options.transports.filter((t) => {
-      return t.name === 'console' || u.isInstance(t.transport, ConsoleTransport);
-    })[0];
-
-    // Add console transport if doesn't exist.
-    if (!hasConsole)
-      this.options.transports.push({
-        name: 'console',
-        options: consoleOpts,
-        transport: ConsoleTransport
-      });
 
     if (pkg && this.options.package && this.options.package.length) {
       this.options.package.forEach((k) => {
@@ -128,6 +107,10 @@ export class Logur implements ILogur {
 
     this.instances[name] = new LogurInstance<T>(name, options, this);
 
+    // If no default logger set it.
+    if (u.isUndefined(this.log))
+      this.log = this.instances[name];
+
     return this.instances[name];
 
   }
@@ -183,56 +166,47 @@ export class Logur implements ILogur {
 }
 
 /**
- * Init
- * Initializes Logur.
- *
- * @param options Logur options to initialize with.
- */
-function init(options?: ILogurOptions): ILogur {
-
-  let logur = Logur.instance;
-
-  // If not Logur initialize and create
-  // default instance.
-  if (!logur) {
-    logur = new Logur(options);
-    const instance = logur.create<ILevelMethods>('default', { transports: logur.options.transports });
-    // save the default logger.
-    logur.log = instance;
-  }
-
-  return logur;
-
-}
-
-/**
- * Get Instance
- * Gets an existing Logur Instance by name.
- *
- * @param name the name of the Logur Instance to get.
- */
-function get<T extends ILevelMethodsBase>(name: string, options?: ILogurInstanceOptions): ILogurInstance<T> & T {
-  // Ensure Logur instance.
-  const logur = init();
-  const transport = <ILogurInstance<T> & T>logur.get<T>(name);
-  if (options)
-    transport.setOption(options);
-  return transport;
-}
-
-/**
  * Get
  * Gets the default Logur Instance.
+ *
+ * @param options the Logur Instance options.
  */
-function getDefault(options?: ILogurInstanceOptions): ILogurInstance<ILevelMethods> & ILevelMethods {
-  const transport = get<ILevelMethods>('default');
-  if (options)
-    transport.setOption(options);
-  return transport;
-}
+export function get(options?: ILogurInstanceOptions): ILogurInstance<ILevelMethods> & ILevelMethods {
 
-export {
-  init,
-  get,
-  getDefault
-};
+  // Get Logur.
+  const logur = new Logur();
+
+  // Get the default instance if exists.
+  let instance = <ILogurInstance<ILevelMethods> & ILevelMethods>logur.get<ILevelMethods>('default');
+
+  // If no instance create it.
+  if (!instance) {
+
+    const consoleTransport = {
+      name: 'console',
+      transport: ConsoleTransport
+    };
+
+    // Ensure options.
+    options = options || {
+      transports: [consoleTransport]
+    };
+    options.transports = options.transports || [];
+
+    // Check if Console Transport exists.
+    const hasConsole = options.transports.filter((t) => {
+      return t.name === 'console' || u.isInstance(t.transport, ConsoleTransport);
+    })[0];
+
+    // If no Console Transport push config and create instance.
+    if (!hasConsole)
+      options.transports.push(consoleTransport);
+
+    // Create the instance.
+    instance = logur.create<ILevelMethods>('default', options);
+
+  }
+
+  return instance;
+
+}

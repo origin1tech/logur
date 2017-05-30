@@ -26,9 +26,6 @@ export class MemoryTransport extends LogurTransport implements IMemoryTransport 
    */
   constructor(base: ILogurInstanceOptions, options: IMemoryTransportOptions, logur: ILogur) {
     super(base, u.extend({}, defaults, options), logur);
-    [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].forEach((i) => {
-      // this.log.info('temp memory log message.');
-    });
   }
 
   /**
@@ -132,8 +129,9 @@ export class MemoryTransport extends LogurTransport implements IMemoryTransport 
    * Use the dispose method to close streams and any clean up.
    * Dispose is called after uncaught exceptions and SIGINT.
    */
-  dispose() {
+  dispose(fn: Function) {
     delete this.logs;
+    fn();
   }
 
 }

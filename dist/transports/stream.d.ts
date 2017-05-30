@@ -31,10 +31,4 @@ export declare class StreamTransport extends LogurTransport implements IStreamTr
      * @param fn callback function on action completed.
      */
     action(output: ILogurOutput, fn: TransportActionCallback): void;
-    /**
-     * Dispose
-     * Use the dispose method to close streams and any clean up.
-     * Dispose is called after uncaught exceptions and SIGINT.
-     */
-    dispose(): void;
 }

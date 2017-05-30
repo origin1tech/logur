@@ -32,7 +32,8 @@ const defaults: IHttpTransportOptions = {
   ssl: false,
   encoding: 'utf8',
   strategy: 'json',
-  queryable: true
+  queryable: true,
+  stripcolors: true
 };
 
 export class HttpTransport extends LogurTransport implements IHttpTransport {
@@ -160,7 +161,11 @@ export class HttpTransport extends LogurTransport implements IHttpTransport {
     let mapped = this.toMapped(this.options, output);
 
     // Get result by strategy.
-    const result = mapped[this.options.strategy];
+    let result = mapped[this.options.strategy];
+
+    // Strip colors.
+    if (this.options.stripcolors)
+      result = u.stripColors(result);
 
     // Handles the response from server.
     const handleResponse = (err: Error, res: IncomingMessage, body: any) => {
@@ -234,15 +239,6 @@ export class HttpTransport extends LogurTransport implements IHttpTransport {
 
     this.request(reqOpts, handleResponse);
 
-  }
-
-  /**
-   * Dispose
-   * Use the dispose method to close streams and any clean up.
-   * Dispose is called after uncaught exceptions and SIGINT.
-   */
-  dispose() {
-    // Nothing to dispose.
   }
 
 }

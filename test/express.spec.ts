@@ -6,7 +6,10 @@ const should = chai.should;
 const assert = chai.assert;
 
 import * as supertest from 'supertest';
-import '../src/server';
+import { app } from '../src/server';
+
+// Init supertest
+const req = supertest(app);
 
 describe('Logur:Express', () => {
 
@@ -14,9 +17,15 @@ describe('Logur:Express', () => {
     done();
   });
 
-  it('should be an instance of Logur', () => {
-
+  it('should get home from server.', (done) => {
+    req.get('/').expect('home', done);
   });
+
+  // it('should catch throw error.', (done) => {
+  //   req.get('/error').then((res) => {
+  //     done();
+  //   });
+  // });
 
 
 });

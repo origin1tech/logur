@@ -136,14 +136,6 @@ var LogurTransport = (function () {
     LogurTransport.prototype.action = function (output, fn) {
         throw new Error('Logur Transport action method must be overriden.');
     };
-    /**
-     * Dispose
-     * Use the dispose method to close streams any any clean up.
-     * Dispose is called after uncaught exceptions and SIGINT.
-     */
-    LogurTransport.prototype.dispose = function (fn) {
-        throw new Error('Logur Transport dispose method must be overriden.');
-    };
     return LogurTransport;
 }());
 exports.LogurTransport = LogurTransport;

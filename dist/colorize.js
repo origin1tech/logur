@@ -74,10 +74,10 @@ exports.end = end;
  * Style
  * Applies color and styles to string.
  *
- * @param str the string to be styled.
+ * @param obj the string to be styled.
  * @param style the style or array of styles to apply.
  */
-function style(str, style) {
+function style(obj, style) {
     // Ensure style is an array.
     if (!u.isArray(style)) {
         if (dotExp.test(style))
@@ -87,9 +87,9 @@ function style(str, style) {
     }
     // Iterate and apply styles.
     style.forEach(function (s) {
-        str = "" + start(s) + str + end(s);
+        obj = "" + start(s) + obj + end(s);
     });
-    return str;
+    return obj;
 }
 exports.style = style;
 /**
@@ -98,10 +98,33 @@ exports.style = style;
  *
  * @param obj the object to strip color from.
  */
-function strip(str) {
+function strip(obj) {
     // Expression for stripping colors.
     var exp = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
-    return str.replace(exp, '');
+    if (u.isString(obj))
+        return obj.replace(exp, '');
+    if (u.isArray(obj)) {
+        var i = obj.length;
+        while (i--) {
+            if (u.isFunction(obj[i].replace))
+                obj[i] = obj[i].replace(exp, '');
+        }
+        return obj;
+    }
+    if (u.isPlainObject(obj)) {
+        for (var prop in obj) {
+            if (obj.hasOwnProperty(prop)) {
+                if (u.isPlainObject(obj[prop])) {
+                    obj[prop] = strip(obj[prop]);
+                }
+                else {
+                    if (u.isFunction(obj[prop].replace))
+                        obj[prop] = obj[prop].replace(exp, '');
+                }
+            }
+        }
+    }
+    return obj;
 }
 exports.strip = strip;
 //# sourceMappingURL=colorize.js.map

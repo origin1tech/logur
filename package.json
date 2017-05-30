@@ -36,6 +36,8 @@
     "error-stack-parser": "^2.0.1",
     "glob": "^7.1.2",
     "lodash.clonedeep": "^4.5.0",
+    "on-finished": "^2.3.0",
+    "on-headers": "^1.0.1",
     "sprintf-js": "^1.0.3",
     "stack-trace": "0.0.9",
     "ua-parser-js": "^0.7.12"

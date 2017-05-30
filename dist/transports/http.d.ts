@@ -49,10 +49,4 @@ export declare class HttpTransport extends LogurTransport implements IHttpTransp
      * @param fn the query result callback.
      */
     query(q: IQuery, fn: QueryResult): IInstanceMethodsExtended;
-    /**
-     * Dispose
-     * Use the dispose method to close streams and any clean up.
-     * Dispose is called after uncaught exceptions and SIGINT.
-     */
-    dispose(): void;
 }

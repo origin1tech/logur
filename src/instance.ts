@@ -1,11 +1,20 @@
 
-import { ILogurInstance, ILogur, ILogurInstanceOptions, ILogurTransportOptions, ILogurTransport, ITransportMethods, ILogurTransports, ILogurInstances, IMetadata, ILevel, TimestampCallback, ILogurOutput, ILoad, MemoryUsage, IProcess, IOS, IEnvBrowser, IEnvNode, IEnv, IStacktrace, TransportConstructor, ILogurOptionsTransport, ILevels, ILevelMethods, ISerializers, ISerializerMethods, Serializer, IError, ILogurOutputMapped, IQuery, QueryResult, IInstanceMethodsExtended, ExecCallback, IInstanceMethodsExit, IInstanceMethodsWrap, IInstanceMethodsWrite } from './interfaces';
+import { ILogurInstance, ILogur, ILogurInstanceOptions, ILogurTransportOptions, ILogurTransport, ITransportMethods, ILogurTransports, ILogurInstances, IMetadata, ILevel, TimestampCallback, ILogurOutput, ILoad, MemoryUsage, IProcess, IOS, IEnvBrowser, IEnvNode, IEnv, IStacktrace, TransportConstructor, ILogurOptionsTransport, ILevels, ILevelMethods, ISerializers, ISerializerMethods, Serializer, IError, ILogurOutputMapped, IQuery, QueryResult, IInstanceMethodsExtended, ExecCallback, IInstanceMethodsExit, IInstanceMethodsWrap, IInstanceMethodsWrite, IMiddlewareOptions, IMiddleware, IFilterMethods, Filter, IFilter, IFilters } from './interfaces';
 import { Notify } from './notify';
+import * as middleware from './middleware';
 
 import * as env from './env';
 import * as u from './utils';
 import * as sprintf from 'sprintf-js';
 import { UAParser } from 'ua-parser-js';
+import { Request, Response, NextFunction } from 'express';
+
+let onHeaders, onFinished;
+
+if (!process.env.BROWSER) {
+  onHeaders = require('on-headers');
+  onFinished = require('on-finished');
+}
 
 const defaults: ILogurInstanceOptions = {
 
@@ -61,8 +70,15 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
   protected _logur: ILogur;
   protected _transports: string[] = [];
   protected _exceptions: string[] = [];
-  protected _active: boolean = true;
+  protected _filters: IFilters = {};
+  protected _serializers: ISerializers = {};
   private _buffer: { [key: string]: ILogurOutput } = {};
+
+  // Filter cache.
+  private _transportFilters: { [transport: string]: Filter[] } = {};
+  private _filtersCount: number = 0;
+
+  protected _active: boolean = true;
 
   ua: UAParser;
   options: ILogurInstanceOptions;
@@ -86,8 +102,8 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
     this.options.levels = this.options.levels || {
       error: { level: 0, color: 'red' },
       warn: { level: 1, color: 'yellow' },
-      info: { level: 2, color: 'green' },
-      verbose: { level: 3, color: 'blue' },
+      info: { level: 2, color: 'blue' },
+      verbose: { level: 3, color: 'green' },
       debug: { level: 4, color: 'magenta' }
     };
 
@@ -119,7 +135,7 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
     // Extend class with log method handlers.
     u.keys(levels).forEach((k) => {
       this[k] = (...args: any[]) => {
-        this.exec(k, args);
+        this.exec(null, '*', k, ...args);
         return {
           exit: this.exit.bind(this),
           write: this.write.bind(this)
@@ -146,6 +162,8 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
       using: false
     };
 
+    let keys = u.keys(obj);
+
     if (u.isFunction(extended)) {
       fn = <ExecCallback>extended;
       extended = undefined;
@@ -159,6 +177,8 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
     const genMethod = (k) => {
       if (!fn)
         return this[k].bind(this);
+      else if (fn && u.contains(keys, k))
+        return this[k].bind(this, fn);
       return (...args: any[]) => {
         this.exec(fn, '*', k, ...args);
         return this.bindLevels(['exit', 'write'], true);
@@ -169,10 +189,10 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
       extended = <string[]>[extended];
 
     // Iterate extended props set to true if match.
-    u.keys(obj).forEach((k) => {
+    keys.forEach((k) => {
       // If no ext passed or matching prop set method.
       if (!extended || !extended.length || u.contains(<string[]>extended, k)) {
-        obj[k] = genMethod(k); // this[k].bind(this);
+        obj[k] = genMethod(k);
       }
       // Otherwise delete method/prop.
       else {
@@ -182,7 +202,7 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
 
     if (suppressLevels !== true)
       u.keys(this.options.levels).forEach((k) => {
-        obj[k] = genMethod(k); // this[k].bind(this);
+        obj[k] = genMethod(k);
       });
 
     return obj;
@@ -195,6 +215,8 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
    */
   private handleExceptions(): void {
 
+    this._exceptionsInit = true;
+
     const EOL = this.env.node && this.env.node.os ? this.env.node.os.EOL : '\n';
     const isNode = u.isNode();
 
@@ -206,12 +228,12 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
           return setTimeout(() => { gracefulExit(); }, 10);
         if (this.options.exiterr) {
           this.dispose(() => {
-            if (u.isNode())
-              process.exit(1);
-          });
+            process.exit(1);
+          }, true);
         }
         else {
-          // nothing to do.
+          // re-register exception handler.
+          process.on('uncaughtException', this._exceptionHandler);
         }
       };
 
@@ -406,16 +428,13 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
 
       // If transport handles exception add
       // to list of transport exceptions.
-      if (transport.options.catcherr) {
+      if (transport.options.exceptions && this.options.catcherr) {
 
         this._exceptions.push(name);
 
         // Add uncaught/window exception handler listeners.
-        if (!this._exceptionsInit) {
+        if (!this._exceptionsInit)
           this.handleExceptions();
-          this._exceptionsInit = true;
-        }
-
       }
 
       // Add the transport to local collection.
@@ -550,7 +569,7 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
      * @param name the name of the serializer
      */
     const get = (name: string): Serializer => {
-      return this._logur.serializers[name];
+      return this._serializers[name];
     };
 
     /**
@@ -558,7 +577,7 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
      * Gets all loaded serializers.
      */
     const getAll = (): ISerializers => {
-      return this._logur.serializers;
+      return this._serializers;
     };
 
     /**
@@ -568,7 +587,7 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
      * @param serializer the serializer function.
      */
     const add = (name: string, serializer: Serializer): ISerializerMethods => {
-      this._logur.serializers[name] = serializer;
+      this._serializers[name] = serializer;
       return methods;
     };
 
@@ -579,12 +598,137 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
      * @param name the name of the serializer.
      */
     const remove = (name: string): ISerializerMethods => {
-      delete this._logur.serializers[name];
+      delete this._serializers[name];
       return methods;
     };
 
     methods = {
       get,
+      getAll,
+      add,
+      remove
+    };
+
+    return methods;
+
+  }
+
+  /**
+   * Filters
+   * Allows filter of log events preventing
+   * transport actions from firing.
+   */
+  get filters(): IFilterMethods {
+
+    let methods: IFilterMethods;
+
+    /**
+     * Get
+     * Gets an existing filter.
+     *
+     * @param name the name of the filter to get.
+     */
+    const get = (name: string): IFilter => {
+      return this._filters[name];
+    };
+
+    /**
+     * Get By Transport
+     * Gets all filters for a given transport.
+     *
+     * @param transport the transport name to filter by.
+     * @param nocache when true do NOT use cached values.
+     */
+    const getByTransport = (transport: string, nocache?: boolean): Filter[] => {
+
+      const filterKeys = u.keys(this._filters);
+      const changed = filterKeys.length !== this._filtersCount;
+
+      if (changed || nocache || !this._transportFilters) {
+
+        // Iterate transports and build cache.
+        this._transports.forEach((t) => {
+
+          // Ensure is array.
+          this._transportFilters[t] = this._transportFilters[t] || [];
+
+          filterKeys.forEach((k) => {
+
+            const obj = this._filters[k];
+
+            // If contains '*' or transport name add to cache.
+            if (u.contains(<string[]>obj.transports, t) || u.contains(<string[]>obj.transports, '*')) {
+              this._transportFilters[t].push(obj.filter);
+            }
+
+          });
+
+        });
+
+        // Update the filter count. We'll use this
+        // later to inspect if we need to update our
+        // cache or not.
+        this._filtersCount = filterKeys.length;
+
+      }
+
+      return this._transportFilters[transport] || [];
+
+    };
+
+    /**
+     * Get All
+     * Returns all filters.
+     */
+    const getAll = (): IFilters => {
+      return this._filters;
+    };
+
+    /**
+     * Add
+     * Adds a filter for filtering out log events.
+     *
+     * @param name the name of the filter to add.
+     * @param transports the applicable transports or '*' for all.
+     * @param filter the filter that will be applied.
+     */
+    const add = (name: string, transports: string | string[] | Filter, filter?: Filter): IFilterMethods => {
+
+      if (u.isFunction(transports)) {
+        filter = <Filter>transports;
+        transports = '*';
+      }
+
+      transports = transports || '*';
+
+      if (!u.isArray(transports))
+        transports = <string[]>[transports];
+
+      this._filters[name] = {
+        transports: <string[]>transports,
+        filter: filter
+      };
+
+      return methods;
+
+    };
+
+    /**
+     * Remove
+     * Removes a filter.
+     * @param name the name of the filter to be removed.
+     */
+    const remove = (name: string): IFilterMethods => {
+
+      delete this._filters[name];
+
+      return methods;
+
+    };
+
+    methods = {
+      get,
+      getByTransport,
       getAll,
       add,
       remove
@@ -623,7 +767,7 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
       return;
 
     // Get and flatten params.
-    let params = u.flatten([].slice.call(arguments, 0));
+    let params = [].slice.call(arguments, 0);
 
     // Find the log type index in params.
     const levelIdx = this.findLevel(params);
@@ -831,7 +975,7 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
       metadata: meta,
       args: params,
       transports: <string[]>transports,
-      serializers: this._logur.serializers,
+      serializers: this._serializers,
 
       // Error & Stack
       stacktrace: stack,
@@ -908,7 +1052,19 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
 
     // Call each Transport's "action" method.
     (transports as string[]).forEach((t) => {
+
+      // Before calling transports check filters.
+      const filters = this.filters.getByTransport(t);
+      const shouldFilter = filters.some((fn, i) => {
+        return fn(output);
+      });
+
+      // Exit if should filter.
+      if (shouldFilter)
+        return;
+
       execTrans(t);
+
     });
 
   }
@@ -1021,10 +1177,17 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
    */
   write(...args: any[]): IInstanceMethodsWrite<T> & T {
 
-    let wait;
+    let wait, fn;
 
+    // Last arg enforces wait until buffer
+    // is clear before writing.
     if (u.last(args) === true)
       wait = args.pop();
+
+    // First arg is callback function to
+    // be called after writing.
+    if (u.isFunction(u.first(args)))
+      fn = args.shift();
 
     // if buffer clear before exit.
     if (wait && this.hasBuffer()) {
@@ -1032,9 +1195,11 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
     }
     else {
       console.log.apply(console, args);
+      // Call done callback if exists.
+      if (fn) fn();
     }
 
-    return this.bindLevels(['exit', 'using', 'wrap']);
+    return this.bindLevels(['exit', 'using', 'wrap', 'write']);
 
   }
 
@@ -1044,19 +1209,23 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
    * Valid only for console transport.
    *
    * @param value the value to wrap logged line with.
+   * @param args any additional values to pass to console.log.
    */
-  wrap(value: any): IInstanceMethodsWrap<T> & T {
+  wrap(value: any, ...args: any[]): IInstanceMethodsWrap<T> & T {
+
+    const done = () => {
+      this.write(value);
+    };
 
     value = value || '';
 
-    const done = () => {
-      console.log(value);
-    };
+    // add the value to the args.
+    args.unshift(value);
 
     // Write the value.
-    console.log(value);
+    this.write(...args);
 
-    return this.bindLevels(['using'], done);
+    return this.bindLevels(['write'], done);
 
   }
 
@@ -1118,22 +1287,42 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
   }
 
   /**
+   * Middleware
+   * Returns both request and error handlers for
+   * Express/Connect middleware.
+   *
+   * @param options the middleware options.
+   */
+  middleware(options?: IMiddlewareOptions): IMiddleware {
+    return middleware.init.call(this, options);
+  }
+
+  /**
    * Dispose
    * Calls dispose on transports on
    * teardown of instance.
    *
    * @param fn callback on done disposing transports.
    */
-  dispose(fn: Function) {
+  dispose(fn: Function, isErr?: boolean) {
 
-    const funcs = this._transports.map((t) => {
+    const funcs = [];
+    this._transports.forEach((t) => {
       const transport = this.transports.get<ILogurTransport>(t);
-      if (transport.dispose) return transport.dispose;
+      if (transport && u.isFunction(transport.dispose))
+        funcs.push(transport.dispose.bind(transport));
     });
 
     u.asyncEach(funcs, () => {
-      // clear buffer not needed if exiting but...
-      this._buffer = {};
+      let msg = '\n Logur disposed exiting....';
+      msg = isErr ? msg + 'with exception. \n' : 'normally. \n';
+      if (u.isNode()) {
+        if (isErr)
+          msg = u.colorize(msg, 'bgRedBright.white');
+        else
+          msg = u.colorize(msg, 'bgBlueBright.white');
+      }
+      console.log(msg);
       fn();
     });
 

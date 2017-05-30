@@ -1,10 +1,9 @@
-import { ILogur, ILogurInstanceOptions, ILogurInstance, ILogurOptions, ILogurInstances, ILogurTransports, ILevelMethodsBase, ILevelMethods, ISerializers, IMetadata } from './interfaces';
+import { ILogur, ILogurInstanceOptions, ILogurInstance, ILogurOptions, ILogurInstances, ILogurTransports, ILevelMethodsBase, ILevelMethods, IMetadata } from './interfaces';
 export declare class Logur implements ILogur {
     static instance: Logur;
     pkg: IMetadata;
     instances: ILogurInstances;
     transports: ILogurTransports;
-    serializers: ISerializers;
     log: ILogurInstance<ILevelMethods> & ILevelMethods;
     options: ILogurOptions;
     /**
@@ -52,22 +51,9 @@ export declare class Logur implements ILogur {
     dispose(exit: boolean | Function, fn?: Function): void;
 }
 /**
- * Init
- * Initializes Logur.
- *
- * @param options Logur options to initialize with.
- */
-declare function init(options?: ILogurOptions): ILogur;
-/**
- * Get Instance
- * Gets an existing Logur Instance by name.
- *
- * @param name the name of the Logur Instance to get.
- */
-declare function get<T extends ILevelMethodsBase>(name: string, options?: ILogurInstanceOptions): ILogurInstance<T> & T;
-/**
  * Get
  * Gets the default Logur Instance.
+ *
+ * @param options the Logur Instance options.
  */
-declare function getDefault(options?: ILogurInstanceOptions): ILogurInstance<ILevelMethods> & ILevelMethods;
-export { init, get, getDefault };
+export declare function get(options?: ILogurInstanceOptions): ILogurInstance<ILevelMethods> & ILevelMethods;

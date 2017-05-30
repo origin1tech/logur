@@ -60,13 +60,4 @@ export class ConsoleTransport extends LogurTransport implements IConsoleTranspor
 
   }
 
-  /**
-   * Dispose
-   * Use the dispose method to close streams and any clean up.
-   * Dispose is called after uncaught exceptions and SIGINT.
-   */
-  dispose() {
-    // Nothing to dispose.
-  }
-
 }

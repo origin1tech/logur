@@ -88,10 +88,10 @@ export function end(style: string): string {
  * Style
  * Applies color and styles to string.
  *
- * @param str the string to be styled.
+ * @param obj the string to be styled.
  * @param style the style or array of styles to apply.
  */
-export function style(str: any, style: string | string[]) {
+export function style(obj: any, style: string | string[]) {
 
   // Ensure style is an array.
   if (!u.isArray(style)) {
@@ -105,10 +105,10 @@ export function style(str: any, style: string | string[]) {
 
   // Iterate and apply styles.
   (style as string[]).forEach((s) => {
-    str = `${start(s)}${str}${end(s)}`;
+    obj = `${start(s)}${obj}${end(s)}`;
   });
 
-  return str;
+  return obj;
 
 }
 
@@ -118,11 +118,37 @@ export function style(str: any, style: string | string[]) {
  *
  * @param obj the object to strip color from.
  */
-export function strip(str: any) {
+export function strip(obj: any) {
 
   // Expression for stripping colors.
   const exp = /[\u001b\u009b][[()#;?]*(?:[0-9]{1,4}(?:;[0-9]{0,4})*)?[0-9A-ORZcf-nqry=><]/g;
 
-  return str.replace(exp, '');
+  if (u.isString(obj))
+    return obj.replace(exp, '');
+
+  if (u.isArray(obj)) {
+    let i = obj.length;
+    while (i--) {
+      if (u.isFunction(obj[i].replace))
+        obj[i] = obj[i].replace(exp, '');
+    }
+    return obj;
+  }
+
+  if (u.isPlainObject(obj)) {
+    for (let prop in obj) {
+      if (obj.hasOwnProperty(prop)) {
+        if (u.isPlainObject(obj[prop])) {
+          obj[prop] = strip(obj[prop]);
+        }
+        else {
+          if (u.isFunction(obj[prop].replace))
+            obj[prop] = obj[prop].replace(exp, '');
+        }
+      }
+    }
+  }
+
+  return obj;
 
 }

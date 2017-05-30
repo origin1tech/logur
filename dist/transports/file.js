@@ -42,7 +42,8 @@ var defaults = {
     max: 21,
     interval: 0,
     delimiter: '\t',
-    queryable: true
+    queryable: true,
+    stripcolors: true
 };
 var FileTransport = (function (_super) {
     __extends(FileTransport, _super);
@@ -413,6 +414,9 @@ var FileTransport = (function (_super) {
             stream = stream || _this._writer;
             var term = '\n';
             var result = mapped[_this.options.strategy];
+            // Strip colors.
+            if (_this.options.stripcolors)
+                result = u.stripColors(result);
             if (options.strategy === 'json')
                 stream.write(result + term);
             else if (options.strategy === 'array')
@@ -458,8 +462,8 @@ var FileTransport = (function (_super) {
      * Use the dispose method to close streams and any clean up.
      * Dispose is called after uncaught exceptions and SIGINT.
      */
-    FileTransport.prototype.dispose = function () {
-        this.close();
+    FileTransport.prototype.dispose = function (fn) {
+        this.close(fn);
     };
     return FileTransport;
 }(base_1.LogurTransport));

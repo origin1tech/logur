@@ -35,7 +35,8 @@ const defaults = {
   max: 21,          // max number of backup before rotating.
   interval: 0,      // set to milliseconds to watch for rotations.
   delimiter: '\t',  // used when array is used.
-  queryable: true
+  queryable: true,
+  stripcolors: true
 };
 
 export class FileTransport extends LogurTransport implements IFileTransport {
@@ -533,7 +534,11 @@ export class FileTransport extends LogurTransport implements IFileTransport {
 
       const term = '\n';
 
-      const result = mapped[this.options.strategy];
+      let result = mapped[this.options.strategy];
+
+      // Strip colors.
+      if (this.options.stripcolors)
+        result = u.stripColors(result);
 
       if (options.strategy === 'json')
         stream.write(result + term);
@@ -596,8 +601,8 @@ export class FileTransport extends LogurTransport implements IFileTransport {
    * Use the dispose method to close streams and any clean up.
    * Dispose is called after uncaught exceptions and SIGINT.
    */
-  dispose() {
-    this.close();
+  dispose(fn: Function) {
+    this.close(fn);
   }
 
 }

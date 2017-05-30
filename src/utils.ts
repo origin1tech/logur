@@ -1124,12 +1124,14 @@ export function asyncEach(funcs: { (fn: Function) }[], fn: Function): void {
 
   let ctr = 0;
 
-  funcs.forEach((el) => {
-    el(() => {
-      ctr++;
-      if (ctr === funcs.length)
-        fn();
-    });
+  function exit() {
+    ctr++;
+    if (ctr === funcs.length)
+      fn();
+  }
+
+  funcs.forEach((el, i) => {
+    el(exit);
   });
 
 }
@@ -1569,19 +1571,31 @@ export function toMapped<T>(options: any, output: ILogurOutput): ILogurOutputMap
  * Colorize
  * Applies color styles to value.
  *
- * @param str the value to be colorized.
+ * @param obj the value to be colorized.
  * @param style the ansi style or styles to be applied.
  */
-export function colorize(str: any, style: string | string[]) {
-  return colors.style(str, style);
+export function colorize(obj: any, style: string | string[]) {
+  try {
+    return colors.style(obj, style);
+  }
+  catch (ex) {
+    console.log(ex);
+    return obj;
+  }
 }
 
 /**
  * Strip Colors
  * Strips ansi colors from value.
  *
- * @param str the value to be stripped of color.
+ * @param obj the value to be stripped of color.
  */
-export function stripColors(str: any) {
-  return colors.strip(str);
+export function stripColors(obj: any) {
+  try {
+    return colors.strip(obj);
+  }
+  catch (ex) {
+    console.log(ex);
+    return obj;
+  }
 }

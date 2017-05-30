@@ -11,9 +11,7 @@ if (u.isNode()) {
 }
 var defaults = {
     // Keys to grab from package.json when using Node.
-    package: ['name', 'description', 'version', 'main', 'repository', 'author', 'license'],
-    // Array of transports to load.
-    transports: []
+    package: ['name', 'description', 'version', 'main', 'repository', 'author', 'license']
 };
 var Logur = (function () {
     /**
@@ -25,23 +23,10 @@ var Logur = (function () {
         this.pkg = {};
         this.instances = {};
         this.transports = {};
-        this.serializers = {};
         if (Logur.instance)
             return Logur.instance;
         // Init options with defaults.
         this.options = u.extend({}, defaults, options);
-        // Options for default Console transport.
-        var consoleOpts = {};
-        var hasConsole = this.options.transports.filter(function (t) {
-            return t.name === 'console' || u.isInstance(t.transport, transports_1.ConsoleTransport);
-        })[0];
-        // Add console transport if doesn't exist.
-        if (!hasConsole)
-            this.options.transports.push({
-                name: 'console',
-                options: consoleOpts,
-                transport: transports_1.ConsoleTransport
-            });
         if (pkg && this.options.package && this.options.package.length) {
             this.options.package.forEach(function (k) {
                 var found = u.get(pkg, k);
@@ -92,6 +77,9 @@ var Logur = (function () {
         if (!name)
             throw new Error('Failed to create Logur Instance using name of undefined.');
         this.instances[name] = new instance_1.LogurInstance(name, options, this);
+        // If no default logger set it.
+        if (u.isUndefined(this.log))
+            this.log = this.instances[name];
         return this.instances[name];
     };
     /**
@@ -135,48 +123,38 @@ var Logur = (function () {
 }());
 exports.Logur = Logur;
 /**
- * Init
- * Initializes Logur.
- *
- * @param options Logur options to initialize with.
- */
-function init(options) {
-    var logur = Logur.instance;
-    // If not Logur initialize and create
-    // default instance.
-    if (!logur) {
-        logur = new Logur(options);
-        var instance = logur.create('default', { transports: logur.options.transports });
-        // save the default logger.
-        logur.log = instance;
-    }
-    return logur;
-}
-exports.init = init;
-/**
- * Get Instance
- * Gets an existing Logur Instance by name.
- *
- * @param name the name of the Logur Instance to get.
- */
-function get(name, options) {
-    // Ensure Logur instance.
-    var logur = init();
-    var transport = logur.get(name);
-    if (options)
-        transport.setOption(options);
-    return transport;
-}
-exports.get = get;
-/**
  * Get
  * Gets the default Logur Instance.
+ *
+ * @param options the Logur Instance options.
  */
-function getDefault(options) {
-    var transport = get('default');
-    if (options)
-        transport.setOption(options);
-    return transport;
+function get(options) {
+    // Get Logur.
+    var logur = new Logur();
+    // Get the default instance if exists.
+    var instance = logur.get('default');
+    // If no instance create it.
+    if (!instance) {
+        var consoleTransport = {
+            name: 'console',
+            transport: transports_1.ConsoleTransport
+        };
+        // Ensure options.
+        options = options || {
+            transports: [consoleTransport]
+        };
+        options.transports = options.transports || [];
+        // Check if Console Transport exists.
+        var hasConsole = options.transports.filter(function (t) {
+            return t.name === 'console' || u.isInstance(t.transport, transports_1.ConsoleTransport);
+        })[0];
+        // If no Console Transport push config and create instance.
+        if (!hasConsole)
+            options.transports.push(consoleTransport);
+        // Create the instance.
+        instance = logur.create('default', options);
+    }
+    return instance;
 }
-exports.getDefault = getDefault;
+exports.get = get;
 //# sourceMappingURL=logur.js.map

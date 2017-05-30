@@ -1,5 +1,6 @@
 
 import { Agent, IncomingMessage, RequestOptions } from 'http';
+import { Request, Response, NextFunction } from 'express';
 
 ////////////////////////
 // TYPES
@@ -44,6 +45,30 @@ export type HttpTransportCallback = (err: Error, res: IncomingMessage, body: any
 export type TransportActionCallback = () => void;
 
 /**
+ * Middleware Token Callback
+ * Handles token generation callback.
+ */
+export type MiddlewareTokenCallback = (req: Request, res: Response) => any;
+
+/**
+ * Middlware Filter
+ * Enables filtering requests to be logged in middleware.
+ */
+export type MiddlewareFilter = (parsed: IMetadata, req: Request, res: Response) => boolean;
+
+/**
+ * Middleware Logger Handler
+ * Callback handler for Express/Connect middleware requests.
+ */
+export type MiddlewareRequestHandler = (req: Request, res: Response, next: NextFunction) => void;
+
+/**
+ * Middleware Error Handler
+ * Callback handler for Express/Connect middleware errors.
+ */
+export type MiddlewareErrorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => void;
+
+/**
  * Level Method
  * Constraint for levels interface.
  */
@@ -61,6 +86,12 @@ export type UUIDCallback = () => string;
  * object name in LogurOutput.
  */
 export type Serializer = <T>(value: T, output?: ILogurOutput, options?: any) => T;
+
+/**
+ * Filter
+ * Filters out a log event by returning true.
+ */
+export type Filter = (output: ILogurOutput) => boolean;
 
 /**
  * Query Result
@@ -432,6 +463,28 @@ export interface IEnv {
 // LOGUR COMMON
 ////////////////////////
 
+export interface IMiddlewareTokens {
+  [key: string]: string | MiddlewareTokenCallback;
+}
+
+export interface IMiddlewareOptions {
+  map?: string[];                         // array of props for mapping from parsed obj.
+  transports?: string | string[];
+  levelmap?: {                            // maps status code to Logur levels.
+    [code: number]: string;
+    default: string;                      // the default level to use if no match.
+  };
+  tokens?: IMiddlewareTokens;             // path or token callbacks.
+  filters?: MiddlewareFilter[];
+  metadata?: boolean;                     // when true all tokens are logged as metadata.
+}
+
+export interface IMiddleware {
+  handler: MiddlewareRequestHandler;
+  findLevelBySeverity: (levels: ILevels, severity: number) => string;
+  parseTokens: (tokens: IMiddlewareTokens, req: Request, res: Response) => IMetadata;
+}
+
 export interface IQuery {
   from: Date | string;
   to: Date | string;
@@ -472,7 +525,7 @@ export interface ILevels {
 }
 
 export interface IInstanceMethodsExit {
-  exit(code?: number): void;
+  exit(code?: number | boolean, panic?: boolean): void;
 }
 
 export interface IInstanceMethodsExtended extends IInstanceMethodsExit {
@@ -480,12 +533,13 @@ export interface IInstanceMethodsExtended extends IInstanceMethodsExit {
 }
 
 export interface IInstanceMethodsWrap<T> {
-  using(transport: string): T;
+  write(...args: any[]): IInstanceMethodsExit;
 }
 
 export interface IInstanceMethodsWrite<T> extends IInstanceMethodsExit {
-  using(transport: string): T;
-  wrap(value: any): T;
+  using(transports: string | string[], exclude?: boolean): T;
+  wrap(value: any, ...args: any[]): T;
+  write(...args: any[]): IInstanceMethodsExit;
 }
 
 export interface ILevelMethodsBase {
@@ -579,7 +633,8 @@ export interface ILogurTransportOptions extends ILogurBaseOptions {
   prettystack?: boolean;        // when true error stack trace is pretty printed.
   exceptions?: boolean;         // whether the transport is fired on exceptions.
   queryable?: boolean;          // whether or not the transport supports queries.
-
+  stripcolors?: boolean;         // when true strips any colors before output.
+  strategy?: OutputStrategy;    // storage strategy array, json, object or raw.
 }
 
 export interface IConsoleTransportOptions extends ILogurTransportOptions {
@@ -598,12 +653,10 @@ export interface IFileTransportOptions extends ILogurTransportOptions {
   max: number;                  // maximum number of backup files.
   interval: number;             // 0 to disable or milliseconds to check log roll at.
   delimiter: '\t' | ';';        // delimiter to be used when json is set to false.
-  strategy: OutputStrategy;     // storage strategy array, json, object or raw.
 }
 
 export interface IMemoryTransportOptions extends ILogurTransportOptions {
   max?: number;                 // maximum number of logs.
-  strategy: OutputStrategy;     // storage strategy array, json, object or raw.
 }
 
 export interface IHttpTransportOptions extends ILogurTransportOptions {
@@ -617,12 +670,10 @@ export interface IHttpTransportOptions extends ILogurTransportOptions {
   auth?: IAuth;
   params?: IMetadata;
   agent?: boolean | Agent;
-  strategy?: OutputStrategy;       // storage strategy array, json, object or raw.
 }
 
 export interface IStreamTransportOptions extends ILogurTransportOptions {
   stream: NodeJS.WritableStream;  // A writeable stream
-  strategy: OutputStrategy;       // storage strategy array, json, object or raw.
   options?: {
     encoding?: string;          // defaults to 'utf8'.
     mode?: number;              // defaults to undefined.
@@ -646,7 +697,6 @@ export interface IConsoleTransport extends ILogurTransport {
 /* File
 *******************/
 
-
 export interface IFileTransport extends ILogurTransport {
   options: IFileTransportOptions;
   startTimer(): void;
@@ -657,7 +707,6 @@ export interface IFileTransport extends ILogurTransport {
 
 /* Http
 *******************/
-
 
 export interface IHttpTransport extends ILogurTransport {
   options: IHttpTransportOptions;
@@ -718,6 +767,23 @@ export interface ILogurTransport {
 // INSTANCE
 ////////////////////////
 
+export interface IFilter {
+  transports: string | string[];
+  filter: Filter;
+}
+
+export interface IFilters {
+  [key: string]: IFilter;
+}
+
+export interface IFilterMethods {
+  get(name: string): IFilter;
+  getByTransport(transport: string, nocache?: boolean): Filter[];
+  getAll(): IFilters;
+  add(name: string, transports: string | string[] | Filter, filter?: Filter): IFilterMethods;
+  remove(name: string): IFilterMethods;
+}
+
 export interface ISerializers {
   [key: string]: Serializer;
 }
@@ -753,6 +819,7 @@ export interface ILogurInstance<T> extends INotify {
   options: ILogurInstanceOptions;
   transports: ITransportMethods;
   serializers: ISerializerMethods;
+  filters: IFilterMethods;
 
   exec(level: string, ...args: any[]): void;
   exec(transports: string | string[], level: string, ...args: any[]): void;
@@ -762,11 +829,12 @@ export interface ILogurInstance<T> extends INotify {
   setOption<T extends ILogurInstanceOptions>(key: string | T, value?: any): void;
   active(state?: boolean): boolean;
   using(transports: string | string[], exclude?: boolean): T;
-  wrap(value: any): IInstanceMethodsWrap<T> & T;
+  wrap(value: any, ...args: any[]): IInstanceMethodsWrap<T> & T;
   write(...args: any[]): IInstanceMethodsWrite<T> & T;
-  exit(code?: number): void;
+  exit(code?: number | boolean, panic?: boolean): void;
   query(transport: string, q: IQuery, fn: QueryResult): void;
-  dispose(fn: Function): void;
+  middleware(options?: IMiddlewareOptions): IMiddleware;
+  dispose(fn: Function, isErr?: boolean): void;
 
 }
 
@@ -796,7 +864,6 @@ export interface ILogur {
   pkg: IMetadata;
   instances: ILogurInstances;
   transports: ILogurTransports;
-  serializers: ISerializers;
   log: ILogurInstance<ILevelMethods> & ILevelMethods;
   options: ILogurOptions;
   setOption(options: ILogurOptions): void;

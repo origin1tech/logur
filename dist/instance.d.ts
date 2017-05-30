@@ -1,4 +1,4 @@
-import { ILogurInstance, ILogur, ILogurInstanceOptions, ITransportMethods, IEnv, ISerializerMethods, IQuery, QueryResult, ExecCallback, IInstanceMethodsWrap, IInstanceMethodsWrite } from './interfaces';
+import { ILogurInstance, ILogur, ILogurInstanceOptions, ITransportMethods, IEnv, ISerializers, ISerializerMethods, IQuery, QueryResult, ExecCallback, IInstanceMethodsWrap, IInstanceMethodsWrite, IMiddlewareOptions, IMiddleware, IFilterMethods, IFilters } from './interfaces';
 import { Notify } from './notify';
 import { UAParser } from 'ua-parser-js';
 /**
@@ -13,8 +13,12 @@ export declare class LogurInstance<T> extends Notify implements ILogurInstance<T
     protected _logur: ILogur;
     protected _transports: string[];
     protected _exceptions: string[];
-    protected _active: boolean;
+    protected _filters: IFilters;
+    protected _serializers: ISerializers;
     private _buffer;
+    private _transportFilters;
+    private _filtersCount;
+    protected _active: boolean;
     ua: UAParser;
     options: ILogurInstanceOptions;
     /**
@@ -69,6 +73,12 @@ export declare class LogurInstance<T> extends Notify implements ILogurInstance<T
      */
     readonly serializers: ISerializerMethods;
     /**
+     * Filters
+     * Allows filter of log events preventing
+     * transport actions from firing.
+     */
+    readonly filters: IFilterMethods;
+    /**
      * Env
      * Returns the current environment information.
      */
@@ -121,8 +131,9 @@ export declare class LogurInstance<T> extends Notify implements ILogurInstance<T
      * Valid only for console transport.
      *
      * @param value the value to wrap logged line with.
+     * @param args any additional values to pass to console.log.
      */
-    wrap(value: any): IInstanceMethodsWrap<T> & T;
+    wrap(value: any, ...args: any[]): IInstanceMethodsWrap<T> & T;
     /**
      * Exit
      * When env is node process.exit() is called.
@@ -141,11 +152,19 @@ export declare class LogurInstance<T> extends Notify implements ILogurInstance<T
      */
     query(transport: string, q: IQuery, fn: QueryResult): void;
     /**
+     * Middleware
+     * Returns both request and error handlers for
+     * Express/Connect middleware.
+     *
+     * @param options the middleware options.
+     */
+    middleware(options?: IMiddlewareOptions): IMiddleware;
+    /**
      * Dispose
      * Calls dispose on transports on
      * teardown of instance.
      *
      * @param fn callback on done disposing transports.
      */
-    dispose(fn: Function): void;
+    dispose(fn: Function, isErr?: boolean): void;
 }

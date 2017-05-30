@@ -127,5 +127,5 @@ export declare class FileTransport extends LogurTransport implements IFileTransp
      * Use the dispose method to close streams and any clean up.
      * Dispose is called after uncaught exceptions and SIGINT.
      */
-    dispose(): void;
+    dispose(fn: Function): void;
 }

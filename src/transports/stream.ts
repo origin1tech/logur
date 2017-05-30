@@ -79,13 +79,4 @@ export class StreamTransport extends LogurTransport implements IStreamTransport 
 
   }
 
-  /**
-   * Dispose
-   * Use the dispose method to close streams and any clean up.
-   * Dispose is called after uncaught exceptions and SIGINT.
-   */
-  dispose() {
-    // Nothing to dispose.
-  }
-
 }

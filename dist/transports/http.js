@@ -36,7 +36,8 @@ var defaults = {
     ssl: false,
     encoding: 'utf8',
     strategy: 'json',
-    queryable: true
+    queryable: true,
+    stripcolors: true
 };
 var HttpTransport = (function (_super) {
     __extends(HttpTransport, _super);
@@ -134,6 +135,9 @@ var HttpTransport = (function (_super) {
         var mapped = this.toMapped(this.options, output);
         // Get result by strategy.
         var result = mapped[this.options.strategy];
+        // Strip colors.
+        if (this.options.stripcolors)
+            result = u.stripColors(result);
         // Handles the response from server.
         var handleResponse = function (err, res, body) {
             if (err)
@@ -186,14 +190,6 @@ var HttpTransport = (function (_super) {
             fn(body);
         };
         this.request(reqOpts, handleResponse);
-    };
-    /**
-     * Dispose
-     * Use the dispose method to close streams and any clean up.
-     * Dispose is called after uncaught exceptions and SIGINT.
-     */
-    HttpTransport.prototype.dispose = function () {
-        // Nothing to dispose.
     };
     return HttpTransport;
 }(base_1.LogurTransport));

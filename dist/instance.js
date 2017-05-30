@@ -11,10 +11,16 @@ var __extends = (this && this.__extends) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 var notify_1 = require("./notify");
+var middleware = require("./middleware");
 var env = require("./env");
 var u = require("./utils");
 var sprintf = require("sprintf-js");
 var ua_parser_js_1 = require("ua-parser-js");
+var onHeaders, onFinished;
+if (!process.env.BROWSER) {
+    onHeaders = require('on-headers');
+    onFinished = require('on-finished');
+}
 var defaults = {
     level: 5,
     cascade: true,
@@ -60,8 +66,13 @@ var LogurInstance = (function (_super) {
         _this._exceptionsInit = false;
         _this._transports = [];
         _this._exceptions = [];
-        _this._active = true;
+        _this._filters = {};
+        _this._serializers = {};
         _this._buffer = {};
+        // Filter cache.
+        _this._transportFilters = {};
+        _this._filtersCount = 0;
+        _this._active = true;
         _this._name = name;
         _this._logur = logur;
         _this.options = u.extend({}, defaults, options);
@@ -70,8 +81,8 @@ var LogurInstance = (function (_super) {
         _this.options.levels = _this.options.levels || {
             error: { level: 0, color: 'red' },
             warn: { level: 1, color: 'yellow' },
-            info: { level: 2, color: 'green' },
-            verbose: { level: 3, color: 'blue' },
+            info: { level: 2, color: 'blue' },
+            verbose: { level: 3, color: 'green' },
             debug: { level: 4, color: 'magenta' }
         };
         // Initialize the instance log methods.
@@ -101,7 +112,7 @@ var LogurInstance = (function (_super) {
                 for (var _i = 0; _i < arguments.length; _i++) {
                     args[_i] = arguments[_i];
                 }
-                _this.exec(k, args);
+                _this.exec.apply(_this, [null, '*', k].concat(args));
                 return {
                     exit: _this.exit.bind(_this),
                     write: _this.write.bind(_this)
@@ -125,6 +136,7 @@ var LogurInstance = (function (_super) {
             exit: false,
             using: false
         };
+        var keys = u.keys(obj);
         if (u.isFunction(extended)) {
             fn = extended;
             extended = undefined;
@@ -136,6 +148,8 @@ var LogurInstance = (function (_super) {
         var genMethod = function (k) {
             if (!fn)
                 return _this[k].bind(_this);
+            else if (fn && u.contains(keys, k))
+                return _this[k].bind(_this, fn);
             return function () {
                 var args = [];
                 for (var _i = 0; _i < arguments.length; _i++) {
@@ -148,10 +162,10 @@ var LogurInstance = (function (_super) {
         if (u.isString(extended))
             extended = [extended];
         // Iterate extended props set to true if match.
-        u.keys(obj).forEach(function (k) {
+        keys.forEach(function (k) {
             // If no ext passed or matching prop set method.
             if (!extended || !extended.length || u.contains(extended, k)) {
-                obj[k] = genMethod(k); // this[k].bind(this);
+                obj[k] = genMethod(k);
             }
             else {
                 delete obj[k];
@@ -159,7 +173,7 @@ var LogurInstance = (function (_super) {
         });
         if (suppressLevels !== true)
             u.keys(this.options.levels).forEach(function (k) {
-                obj[k] = genMethod(k); // this[k].bind(this);
+                obj[k] = genMethod(k);
             });
         return obj;
     };
@@ -169,6 +183,7 @@ var LogurInstance = (function (_super) {
      */
     LogurInstance.prototype.handleExceptions = function () {
         var _this = this;
+        this._exceptionsInit = true;
         var EOL = this.env.node && this.env.node.os ? this.env.node.os.EOL : '\n';
         var isNode = u.isNode();
         // Handle uncaught exceptions in NodeJS.
@@ -178,12 +193,12 @@ var LogurInstance = (function (_super) {
                     return setTimeout(function () { gracefulExit_1(); }, 10);
                 if (_this.options.exiterr) {
                     _this.dispose(function () {
-                        if (u.isNode())
-                            process.exit(1);
-                    });
+                        process.exit(1);
+                    }, true);
                 }
                 else {
-                    // nothing to do.
+                    // re-register exception handler.
+                    process.on('uncaughtException', _this._exceptionHandler);
                 }
             };
             this._exceptionHandler = function (err) {
@@ -339,13 +354,11 @@ var LogurInstance = (function (_super) {
                 transport.name = name;
                 // If transport handles exception add
                 // to list of transport exceptions.
-                if (transport.options.catcherr) {
+                if (transport.options.exceptions && _this.options.catcherr) {
                     _this._exceptions.push(name);
                     // Add uncaught/window exception handler listeners.
-                    if (!_this._exceptionsInit) {
+                    if (!_this._exceptionsInit)
                         _this.handleExceptions();
-                        _this._exceptionsInit = true;
-                    }
                 }
                 // Add the transport to local collection.
                 _this._transports.push(name);
@@ -450,14 +463,14 @@ var LogurInstance = (function (_super) {
              * @param name the name of the serializer
              */
             var get = function (name) {
-                return _this._logur.serializers[name];
+                return _this._serializers[name];
             };
             /**
              * Get All
              * Gets all loaded serializers.
              */
             var getAll = function () {
-                return _this._logur.serializers;
+                return _this._serializers;
             };
             /**
              * Add
@@ -466,7 +479,7 @@ var LogurInstance = (function (_super) {
              * @param serializer the serializer function.
              */
             var add = function (name, serializer) {
-                _this._logur.serializers[name] = serializer;
+                _this._serializers[name] = serializer;
                 return methods;
             };
             /**
@@ -476,11 +489,109 @@ var LogurInstance = (function (_super) {
              * @param name the name of the serializer.
              */
             var remove = function (name) {
-                delete _this._logur.serializers[name];
+                delete _this._serializers[name];
                 return methods;
             };
             methods = {
                 get: get,
+                getAll: getAll,
+                add: add,
+                remove: remove
+            };
+            return methods;
+        },
+        enumerable: true,
+        configurable: true
+    });
+    Object.defineProperty(LogurInstance.prototype, "filters", {
+        /**
+         * Filters
+         * Allows filter of log events preventing
+         * transport actions from firing.
+         */
+        get: function () {
+            var _this = this;
+            var methods;
+            /**
+             * Get
+             * Gets an existing filter.
+             *
+             * @param name the name of the filter to get.
+             */
+            var get = function (name) {
+                return _this._filters[name];
+            };
+            /**
+             * Get By Transport
+             * Gets all filters for a given transport.
+             *
+             * @param transport the transport name to filter by.
+             * @param nocache when true do NOT use cached values.
+             */
+            var getByTransport = function (transport, nocache) {
+                var filterKeys = u.keys(_this._filters);
+                var changed = filterKeys.length !== _this._filtersCount;
+                if (changed || nocache || !_this._transportFilters) {
+                    // Iterate transports and build cache.
+                    _this._transports.forEach(function (t) {
+                        // Ensure is array.
+                        _this._transportFilters[t] = _this._transportFilters[t] || [];
+                        filterKeys.forEach(function (k) {
+                            var obj = _this._filters[k];
+                            // If contains '*' or transport name add to cache.
+                            if (u.contains(obj.transports, t) || u.contains(obj.transports, '*')) {
+                                _this._transportFilters[t].push(obj.filter);
+                            }
+                        });
+                    });
+                    // Update the filter count. We'll use this
+                    // later to inspect if we need to update our
+                    // cache or not.
+                    _this._filtersCount = filterKeys.length;
+                }
+                return _this._transportFilters[transport] || [];
+            };
+            /**
+             * Get All
+             * Returns all filters.
+             */
+            var getAll = function () {
+                return _this._filters;
+            };
+            /**
+             * Add
+             * Adds a filter for filtering out log events.
+             *
+             * @param name the name of the filter to add.
+             * @param transports the applicable transports or '*' for all.
+             * @param filter the filter that will be applied.
+             */
+            var add = function (name, transports, filter) {
+                if (u.isFunction(transports)) {
+                    filter = transports;
+                    transports = '*';
+                }
+                transports = transports || '*';
+                if (!u.isArray(transports))
+                    transports = [transports];
+                _this._filters[name] = {
+                    transports: transports,
+                    filter: filter
+                };
+                return methods;
+            };
+            /**
+             * Remove
+             * Removes a filter.
+             * @param name the name of the filter to be removed.
+             */
+            var remove = function (name) {
+                delete _this._filters[name];
+                return methods;
+            };
+            methods = {
+                get: get,
+                getByTransport: getByTransport,
                 getAll: getAll,
                 add: add,
                 remove: remove
@@ -524,7 +635,7 @@ var LogurInstance = (function (_super) {
         if (!this._active)
             return;
         // Get and flatten params.
-        var params = u.flatten([].slice.call(arguments, 0));
+        var params = [].slice.call(arguments, 0);
         // Find the log type index in params.
         var levelIdx = this.findLevel(params);
         // Warn and return if can't find level/type.
@@ -679,7 +790,7 @@ var LogurInstance = (function (_super) {
             metadata: meta,
             args: params,
             transports: transports,
-            serializers: this._logur.serializers,
+            serializers: this._serializers,
             // Error & Stack
             stacktrace: stack,
             // Environment Info
@@ -735,6 +846,14 @@ var LogurInstance = (function (_super) {
         };
         // Call each Transport's "action" method.
         transports.forEach(function (t) {
+            // Before calling transports check filters.
+            var filters = _this.filters.getByTransport(t);
+            var shouldFilter = filters.some(function (fn, i) {
+                return fn(output);
+            });
+            // Exit if should filter.
+            if (shouldFilter)
+                return;
             execTrans(t);
         });
     };
@@ -835,17 +954,26 @@ var LogurInstance = (function (_super) {
         for (var _i = 0; _i < arguments.length; _i++) {
             args[_i] = arguments[_i];
         }
-        var wait;
+        var wait, fn;
+        // Last arg enforces wait until buffer
+        // is clear before writing.
         if (u.last(args) === true)
             wait = args.pop();
+        // First arg is callback function to
+        // be called after writing.
+        if (u.isFunction(u.first(args)))
+            fn = args.shift();
         // if buffer clear before exit.
         if (wait && this.hasBuffer()) {
             setTimeout(function () { _this.write.apply(_this, args); }, 10);
         }
         else {
             console.log.apply(console, args);
+            // Call done callback if exists.
+            if (fn)
+                fn();
         }
-        return this.bindLevels(['exit', 'using', 'wrap']);
+        return this.bindLevels(['exit', 'using', 'wrap', 'write']);
     };
     /**
      * Wrap
@@ -853,15 +981,23 @@ var LogurInstance = (function (_super) {
      * Valid only for console transport.
      *
      * @param value the value to wrap logged line with.
+     * @param args any additional values to pass to console.log.
      */
     LogurInstance.prototype.wrap = function (value) {
-        value = value || '';
+        var _this = this;
+        var args = [];
+        for (var _i = 1; _i < arguments.length; _i++) {
+            args[_i - 1] = arguments[_i];
+        }
         var done = function () {
-            console.log(value);
+            _this.write(value);
         };
+        value = value || '';
+        // add the value to the args.
+        args.unshift(value);
         // Write the value.
-        console.log(value);
-        return this.bindLevels(['using'], done);
+        this.write.apply(this, args);
+        return this.bindLevels(['write'], done);
     };
     /**
      * Exit
@@ -910,22 +1046,40 @@ var LogurInstance = (function (_super) {
         _transport.query(q, fn);
     };
     /**
+     * Middleware
+     * Returns both request and error handlers for
+     * Express/Connect middleware.
+     *
+     * @param options the middleware options.
+     */
+    LogurInstance.prototype.middleware = function (options) {
+        return middleware.init.call(this, options);
+    };
+    /**
      * Dispose
      * Calls dispose on transports on
      * teardown of instance.
      *
      * @param fn callback on done disposing transports.
      */
-    LogurInstance.prototype.dispose = function (fn) {
+    LogurInstance.prototype.dispose = function (fn, isErr) {
         var _this = this;
-        var funcs = this._transports.map(function (t) {
+        var funcs = [];
+        this._transports.forEach(function (t) {
             var transport = _this.transports.get(t);
-            if (transport.dispose)
-                return transport.dispose;
+            if (transport && u.isFunction(transport.dispose))
+                funcs.push(transport.dispose.bind(transport));
         });
         u.asyncEach(funcs, function () {
-            // clear buffer not needed if exiting but...
-            _this._buffer = {};
+            var msg = '\n Logur disposed exiting....';
+            msg = isErr ? msg + 'with exception. \n' : 'normally. \n';
+            if (u.isNode()) {
+                if (isErr)
+                    msg = u.colorize(msg, 'bgRedBright.white');
+                else
+                    msg = u.colorize(msg, 'bgBlueBright.white');
+            }
+            console.log(msg);
             fn();
         });
     };
