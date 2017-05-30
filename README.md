@@ -1,4 +1,7 @@
-# Logur
+<p align="center">
+  <a href="http://github.com/origin1tech/logur"><img width="150" src="https://raw.githubusercontent.com/origin1tech/logur/master/assets/logo.png"></a>
+</p>
+<br/>
 
 Extensible logging library. Logur can be a simple or as advanced as required. It takes few opinons and merely does some of the heavy before handing off the normalized data for logging.
 
