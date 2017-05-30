@@ -542,11 +542,11 @@ export interface IInstanceMethodsWrite<T> extends IInstanceMethodsExit {
   write(...args: any[]): IInstanceMethodsExit;
 }
 
-export interface ILevelMethodsBase {
+export interface ILevelMethods {
   [key: string]: (...args: any[]) => IInstanceMethodsExtended;
 }
 
-export interface ILevelMethods extends ILevelMethodsBase {
+export interface ILevelMethodsDefault extends ILevelMethods {
   error(...args: any[]): IInstanceMethodsExtended;
   warn(...args: any[]): IInstanceMethodsExtended;
   info(...args: any[]): IInstanceMethodsExtended;
@@ -615,16 +615,6 @@ export interface ILogurBaseOptions {
 
 }
 
-export interface ILogurInstanceOptions extends ILogurBaseOptions {
-
-  cascade?: boolean;      // when NOT false cascade settings down to transports.
-
-  // An array of transports to
-  // be bound to Instance.
-  transports?: ILogurOptionsTransport[];
-
-}
-
 export interface ILogurTransportOptions extends ILogurBaseOptions {
 
   active?: boolean;             // when NOT false is active.
@@ -635,6 +625,7 @@ export interface ILogurTransportOptions extends ILogurBaseOptions {
   queryable?: boolean;          // whether or not the transport supports queries.
   stripcolors?: boolean;         // when true strips any colors before output.
   strategy?: OutputStrategy;    // storage strategy array, json, object or raw.
+
 }
 
 export interface IConsoleTransportOptions extends ILogurTransportOptions {
@@ -809,6 +800,14 @@ export interface ITransportMethods {
   setOption<T extends ILogurTransportOptions>(name: string, key: string | T, value?: any): ITransportMethods;
 }
 
+export interface ILogurInstanceOptions extends ILogurBaseOptions {
+
+  cascade?: boolean;                      // when NOT false cascade to transports.
+  package?: IMetadata;                    // package.json props to parse in Node mode.
+  transports?: ILogurOptionsTransport[];  // array of transports to bind to instance.
+
+}
+
 export interface ILogurInstances {
   [key: string]: any;
 }
@@ -848,28 +847,13 @@ export interface ILogurOptionsTransport {
   transport: any;
 }
 
-export interface ILogurOptions {
-
-  // Array of properties to grab from package.json
-  // when in NodeJS mode. Dot notation is supported.
-  package?: string[];
-
-  // Will new up default Logur Instance with
-  // the following transports when provided.
-  transports?: ILogurOptionsTransport[];
-
-}
-
 export interface ILogur {
-  pkg: IMetadata;
+  instance: ILogurInstance<ILevelMethodsDefault> & ILevelMethodsDefault;
   instances: ILogurInstances;
   transports: ILogurTransports;
-  log: ILogurInstance<ILevelMethods> & ILevelMethods;
-  options: ILogurOptions;
-  setOption(options: ILogurOptions): void;
-  setOption(key: string | ILogurOptions, value?: any): void;
-  get<T extends ILevelMethodsBase>(name?: string): ILogurInstance<T> & T;
-  create<T extends ILevelMethodsBase>(name: string, options?: ILogurInstanceOptions): ILogurInstance<T> & T;
+  log: ILogurInstance<ILevelMethodsDefault> & ILevelMethodsDefault;
+  get<T extends ILevelMethods>(name?: string): ILogurInstance<T> & T;
+  create<T extends ILevelMethods>(name: string, options?: ILogurInstanceOptions): ILogurInstance<T> & T;
   remove(name: string): void;
   dispose(exit: boolean | Function, fn?: Function): void;
 }

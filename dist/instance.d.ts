@@ -1,4 +1,4 @@
-import { ILogurInstance, ILogur, ILogurInstanceOptions, ITransportMethods, IEnv, ISerializers, ISerializerMethods, IQuery, QueryResult, ExecCallback, IInstanceMethodsWrap, IInstanceMethodsWrite, IMiddlewareOptions, IMiddleware, IFilterMethods, IFilters } from './interfaces';
+import { ILogurInstance, ILogur, ILogurInstanceOptions, ITransportMethods, IMetadata, IEnv, ISerializers, ISerializerMethods, IQuery, QueryResult, ExecCallback, IInstanceMethodsWrap, IInstanceMethodsWrite, IMiddlewareOptions, IMiddleware, IFilterMethods, IFilters } from './interfaces';
 import { Notify } from './notify';
 import { UAParser } from 'ua-parser-js';
 /**
@@ -11,6 +11,7 @@ export declare class LogurInstance<T> extends Notify implements ILogurInstance<T
     private _exceptionHandler;
     protected _name: string;
     protected _logur: ILogur;
+    protected _pkg: IMetadata;
     protected _transports: string[];
     protected _exceptions: string[];
     protected _filters: IFilters;

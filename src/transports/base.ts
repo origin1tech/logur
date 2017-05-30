@@ -1,4 +1,4 @@
-import { ILogurTransport, ILogur, ILogurTransportOptions, ILogurOutput, IMetadata, TransportActionCallback, ColorizationStrategy, PadStrategy, ILevel, ILogurInstance, ILevelMethods, Serializer, ILogurOutputMapped } from '../interfaces';
+import { ILogurTransport, ILogur, ILogurTransportOptions, ILogurOutput, IMetadata, TransportActionCallback, ColorizationStrategy, PadStrategy, ILevel, ILogurInstance, ILevelMethodsDefault, Serializer, ILogurOutputMapped } from '../interfaces';
 import * as u from '../utils';
 
 let util;
@@ -43,7 +43,7 @@ export class LogurTransport implements ILogurTransport {
    * Log
    * Expose the default logger.
    */
-  get log(): ILogurInstance<ILevelMethods> & ILevelMethods {
+  get log(): ILogurInstance<ILevelMethodsDefault> & ILevelMethodsDefault {
     return this._logur.log;
   }
 

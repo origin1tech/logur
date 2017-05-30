@@ -1,4 +1,4 @@
-import { ILogurTransport, ILogur, ILogurTransportOptions, ILogurOutput, TransportActionCallback, PadStrategy, ILogurInstance, ILevelMethods, ILogurOutputMapped } from '../interfaces';
+import { ILogurTransport, ILogur, ILogurTransportOptions, ILogurOutput, TransportActionCallback, PadStrategy, ILogurInstance, ILevelMethodsDefault, ILogurOutputMapped } from '../interfaces';
 /**
  * Logur Base Transport
  */
@@ -19,7 +19,7 @@ export declare class LogurTransport implements ILogurTransport {
      * Log
      * Expose the default logger.
      */
-    readonly log: ILogurInstance<ILevelMethods> & ILevelMethods;
+    readonly log: ILogurInstance<ILevelMethodsDefault> & ILevelMethodsDefault;
     /**
      * Set Option(s)
      * Sets options for the Transport.

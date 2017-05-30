@@ -1,5 +1,5 @@
 
-import { ILogurInstance, ILogur, ILogurInstanceOptions, ILogurTransportOptions, ILogurTransport, ITransportMethods, ILogurTransports, ILogurInstances, IMetadata, ILevel, TimestampCallback, ILogurOutput, ILoad, MemoryUsage, IProcess, IOS, IEnvBrowser, IEnvNode, IEnv, IStacktrace, TransportConstructor, ILogurOptionsTransport, ILevels, ILevelMethods, ISerializers, ISerializerMethods, Serializer, IError, ILogurOutputMapped, IQuery, QueryResult, IInstanceMethodsExtended, ExecCallback, IInstanceMethodsExit, IInstanceMethodsWrap, IInstanceMethodsWrite, IMiddlewareOptions, IMiddleware, IFilterMethods, Filter, IFilter, IFilters } from './interfaces';
+import { ILogurInstance, ILogur, ILogurInstanceOptions, ILogurTransportOptions, ILogurTransport, ITransportMethods, ILogurTransports, ILogurInstances, IMetadata, ILevel, TimestampCallback, ILogurOutput, ILoad, MemoryUsage, IProcess, IOS, IEnvBrowser, IEnvNode, IEnv, IStacktrace, TransportConstructor, ILogurOptionsTransport, ILevels, ILevelMethodsDefault, ISerializers, ISerializerMethods, Serializer, IError, ILogurOutputMapped, IQuery, QueryResult, IInstanceMethodsExtended, ExecCallback, IInstanceMethodsExit, IInstanceMethodsWrap, IInstanceMethodsWrite, IMiddlewareOptions, IMiddleware, IFilterMethods, Filter, IFilter, IFilters } from './interfaces';
 import { Notify } from './notify';
 import * as middleware from './middleware';
 
@@ -9,11 +9,13 @@ import * as sprintf from 'sprintf-js';
 import { UAParser } from 'ua-parser-js';
 import { Request, Response, NextFunction } from 'express';
 
-let onHeaders, onFinished;
+let onHeaders, onFinished, pkg;
 
 if (!process.env.BROWSER) {
   onHeaders = require('on-headers');
   onFinished = require('on-finished');
+  const resolve = require('path').resolve;
+  pkg = require(resolve(process.cwd(), 'package.json'));
 }
 
 const defaults: ILogurInstanceOptions = {
@@ -68,6 +70,7 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
 
   protected _name: string;
   protected _logur: ILogur;
+  protected _pkg: IMetadata;
   protected _transports: string[] = [];
   protected _exceptions: string[] = [];
   protected _filters: IFilters = {};
@@ -109,6 +112,15 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
 
     // Initialize the instance log methods.
     this.initLevels(this.options.levels);
+
+    // Lookup package.json props.
+    if (pkg && this.options.package && this.options.package.length) {
+      this.options.package.forEach((k) => {
+        const found = u.get(pkg, k);
+        if (found)
+          this._pkg[k] = found;
+      });
+    }
 
     // Iterate Transports in options
     // and bind to the Instance.
@@ -339,7 +351,7 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
    * Log
    * Gets the internal logger.
    */
-  private get log(): ILogurInstance<ILevelMethods> & ILevelMethods {
+  private get log(): ILogurInstance<ILevelMethodsDefault> & ILevelMethodsDefault {
     return this._logur.log;
   }
 
@@ -464,8 +476,10 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
       // Check if Transport exists.
       let exists = this._logur.transports[name as string];
 
-      if (!exists)
-        throw new Error(`Cannot extend instance with undefined Transport ${name}.`);
+      if (!exists) {
+        this.log.warn(`Cannot extend instance with undefined Transport ${name}.`);
+        return;
+      }
 
       // Push the transport name to the collection.
       this._transports.push(name);
@@ -982,7 +996,7 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
 
       // Environment Info
       env: sysinfo,
-      pkg: this._logur.pkg
+      pkg: this._pkg
 
     };
 

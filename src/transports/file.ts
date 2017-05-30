@@ -13,13 +13,15 @@ import { ILogurTransport, ILogur, IFileTransportOptions, IFileTransport, ILogurO
 import { LogurTransport } from './base';
 import * as u from '../utils';
 
-let fs, createWriteStream, path, glob, readline;
+let fs, createWriteStream, path, glob, readline, pkg;
 
 if (!process.env.BROWSER) {
   fs = require('fs');
   path = require('path');
   glob = require('glob');
   readline = require('readline');
+  const resolve = require('path').resolve;
+  pkg = require(resolve(process.cwd(), 'package.json'));
 }
 
 const defaults = {
@@ -63,8 +65,13 @@ export class FileTransport extends LogurTransport implements IFileTransport {
 
     // Generate filename if not provided.
     if (!this.options.filename) {
-      const name = this._logur.pkg && this._logur.pkg.name ? this._logur.pkg.name : 'app';
-      this.options.filename = `logs/${name}.log`;
+      if (pkg) {
+        const name = pkg && pkg.name ? pkg.name : 'app';
+        this.options.filename = `logs/${name}.log`;
+      }
+      else {
+        this.options.filename = 'logs/app.log';
+      }
     }
 
     // Don't allow comma for delimiter.

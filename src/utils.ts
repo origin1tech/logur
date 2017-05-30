@@ -1451,6 +1451,7 @@ export function toMapped<T>(options: any, output: ILogurOutput): ILogurOutputMap
   map.push('untyped');
 
   // Iterate the map and build the object.
+  // TODO: too repetitive need to clean this up.
   map.forEach((k) => {
 
     // ignored prop.
@@ -1468,9 +1469,12 @@ export function toMapped<T>(options: any, output: ILogurOutput): ILogurOutputMap
     if (serializer)
       value = serializer(value, output, options);
 
+    if (isUndefined(value))
+      return;
+
     if (k === 'untyped') {
 
-      if (value && value.length) {
+      if (isArray(value)) {
 
         value.forEach((u) => {
 
@@ -1487,6 +1491,22 @@ export function toMapped<T>(options: any, output: ILogurOutput): ILogurOutputMap
           }
 
         });
+
+      }
+
+      else {
+
+        const result = formatByType(k, value, options, output);
+
+        if (result) {
+
+          if (!isUndefined(result.normalized))
+            untyped.push(result.normalized);
+
+          if (!isUndefined(result.append))
+            appended.push(result.append);
+
+        }
 
       }
 

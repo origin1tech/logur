@@ -22,12 +22,14 @@ var __extends = (this && this.__extends) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 var base_1 = require("./base");
 var u = require("../utils");
-var fs, createWriteStream, path, glob, readline;
+var fs, createWriteStream, path, glob, readline, pkg;
 if (!process.env.BROWSER) {
     fs = require('fs');
     path = require('path');
     glob = require('glob');
     readline = require('readline');
+    var resolve = require('path').resolve;
+    pkg = require(resolve(process.cwd(), 'package.json'));
 }
 var defaults = {
     map: ['timestamp', 'level', 'message', 'metadata'],
@@ -60,8 +62,13 @@ var FileTransport = (function (_super) {
             throw new Error('File Transport is not supported in Browser mode.');
         // Generate filename if not provided.
         if (!_this.options.filename) {
-            var name_1 = _this._logur.pkg && _this._logur.pkg.name ? _this._logur.pkg.name : 'app';
-            _this.options.filename = "logs/" + name_1 + ".log";
+            if (pkg) {
+                var name_1 = pkg && pkg.name ? pkg.name : 'app';
+                _this.options.filename = "logs/" + name_1 + ".log";
+            }
+            else {
+                _this.options.filename = 'logs/app.log';
+            }
         }
         // Don't allow comma for delimiter.
         if (_this.options.delimiter !== ';' && _this.options.delimiter !== '\t')

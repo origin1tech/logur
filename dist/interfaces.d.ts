@@ -434,10 +434,10 @@ export interface IInstanceMethodsWrite<T> extends IInstanceMethodsExit {
     wrap(value: any, ...args: any[]): T;
     write(...args: any[]): IInstanceMethodsExit;
 }
-export interface ILevelMethodsBase {
+export interface ILevelMethods {
     [key: string]: (...args: any[]) => IInstanceMethodsExtended;
 }
-export interface ILevelMethods extends ILevelMethodsBase {
+export interface ILevelMethodsDefault extends ILevelMethods {
     error(...args: any[]): IInstanceMethodsExtended;
     warn(...args: any[]): IInstanceMethodsExtended;
     info(...args: any[]): IInstanceMethodsExtended;
@@ -480,10 +480,6 @@ export interface ILogurBaseOptions {
     catcherr?: boolean;
     exiterr?: boolean;
     emiterr?: boolean;
-}
-export interface ILogurInstanceOptions extends ILogurBaseOptions {
-    cascade?: boolean;
-    transports?: ILogurOptionsTransport[];
 }
 export interface ILogurTransportOptions extends ILogurBaseOptions {
     active?: boolean;
@@ -615,6 +611,11 @@ export interface ITransportMethods {
     setOption<T extends ILogurTransportOptions>(name: string, options: T): ITransportMethods;
     setOption<T extends ILogurTransportOptions>(name: string, key: string | T, value?: any): ITransportMethods;
 }
+export interface ILogurInstanceOptions extends ILogurBaseOptions {
+    cascade?: boolean;
+    package?: IMetadata;
+    transports?: ILogurOptionsTransport[];
+}
 export interface ILogurInstances {
     [key: string]: any;
 }
@@ -643,20 +644,13 @@ export interface ILogurOptionsTransport {
     options?: ILogurTransportOptions;
     transport: any;
 }
-export interface ILogurOptions {
-    package?: string[];
-    transports?: ILogurOptionsTransport[];
-}
 export interface ILogur {
-    pkg: IMetadata;
+    instance: ILogurInstance<ILevelMethodsDefault> & ILevelMethodsDefault;
     instances: ILogurInstances;
     transports: ILogurTransports;
-    log: ILogurInstance<ILevelMethods> & ILevelMethods;
-    options: ILogurOptions;
-    setOption(options: ILogurOptions): void;
-    setOption(key: string | ILogurOptions, value?: any): void;
-    get<T extends ILevelMethodsBase>(name?: string): ILogurInstance<T> & T;
-    create<T extends ILevelMethodsBase>(name: string, options?: ILogurInstanceOptions): ILogurInstance<T> & T;
+    log: ILogurInstance<ILevelMethodsDefault> & ILevelMethodsDefault;
+    get<T extends ILevelMethods>(name?: string): ILogurInstance<T> & T;
+    create<T extends ILevelMethods>(name: string, options?: ILogurInstanceOptions): ILogurInstance<T> & T;
     remove(name: string): void;
     dispose(exit: boolean | Function, fn?: Function): void;
 }

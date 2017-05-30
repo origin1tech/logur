@@ -16,10 +16,12 @@ var env = require("./env");
 var u = require("./utils");
 var sprintf = require("sprintf-js");
 var ua_parser_js_1 = require("ua-parser-js");
-var onHeaders, onFinished;
+var onHeaders, onFinished, pkg;
 if (!process.env.BROWSER) {
     onHeaders = require('on-headers');
     onFinished = require('on-finished');
+    var resolve = require('path').resolve;
+    pkg = require(resolve(process.cwd(), 'package.json'));
 }
 var defaults = {
     level: 5,
@@ -87,6 +89,14 @@ var LogurInstance = (function (_super) {
         };
         // Initialize the instance log methods.
         _this.initLevels(_this.options.levels);
+        // Lookup package.json props.
+        if (pkg && _this.options.package && _this.options.package.length) {
+            _this.options.package.forEach(function (k) {
+                var found = u.get(pkg, k);
+                if (found)
+                    _this._pkg[k] = found;
+            });
+        }
         // Iterate Transports in options
         // and bind to the Instance.
         _this.options.transports.forEach(function (t) {
@@ -380,8 +390,10 @@ var LogurInstance = (function (_super) {
                 name = name.toLowerCase();
                 // Check if Transport exists.
                 var exists = _this._logur.transports[name];
-                if (!exists)
-                    throw new Error("Cannot extend instance with undefined Transport " + name + ".");
+                if (!exists) {
+                    _this.log.warn("Cannot extend instance with undefined Transport " + name + ".");
+                    return;
+                }
                 // Push the transport name to the collection.
                 _this._transports.push(name);
                 return methods;
@@ -795,7 +807,7 @@ var LogurInstance = (function (_super) {
             stacktrace: stack,
             // Environment Info
             env: sysinfo,
-            pkg: this._logur.pkg
+            pkg: this._pkg
         };
         // Helper Method
         // This only gets output to emitted events.

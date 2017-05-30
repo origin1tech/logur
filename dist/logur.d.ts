@@ -1,24 +1,18 @@
-import { ILogur, ILogurInstanceOptions, ILogurInstance, ILogurOptions, ILogurInstances, ILogurTransports, ILevelMethodsBase, ILevelMethods, IMetadata } from './interfaces';
+import { ILogur, ILogurInstanceOptions, ILogurInstance, ILogurInstances, ILogurTransports, ILevelMethods, ILevelMethodsDefault } from './interfaces';
 export declare class Logur implements ILogur {
     static instance: Logur;
-    pkg: IMetadata;
+    instance: ILogurInstance<ILevelMethodsDefault> & ILevelMethodsDefault;
     instances: ILogurInstances;
     transports: ILogurTransports;
-    log: ILogurInstance<ILevelMethods> & ILevelMethods;
-    options: ILogurOptions;
     /**
      * Constructs Logur
-     * @param options the Logur options.
      */
-    constructor(options?: ILogurOptions);
+    constructor();
     /**
-     * Set Option
-     * Sets/updates options.
-     *
-     * @param key the key or options object.
-     * @param value the associated value to set for key.
+     * Log
+     * Gets the default internal logger.
      */
-    setOption(key: string | ILogurOptions, value?: any): void;
+    readonly log: ILogurInstance<ILevelMethodsDefault> & ILevelMethodsDefault;
     /**
      * Get
      * Gets a loaded Logur instance or all instances
@@ -26,7 +20,7 @@ export declare class Logur implements ILogur {
      *
      * @param name the name of the Logur Instance to get.
      */
-    get<T extends ILevelMethodsBase>(name?: string): ILogurInstance<T> & T;
+    get<T extends ILevelMethods>(name?: string): ILogurInstance<T> & T;
     /**
      * Create
      * Creates and loads a Logur Instance in Logur.
@@ -34,7 +28,7 @@ export declare class Logur implements ILogur {
      * @param name the name of the Logur Instance to create.
      * @param options Logur Instance options.
      */
-    create<T extends ILevelMethodsBase>(name: string, options?: ILogurInstanceOptions): ILogurInstance<T> & T;
+    create<T extends ILevelMethods>(name: string, options?: ILogurInstanceOptions): ILogurInstance<T> & T;
     /**
      * Remove
      * Destroys the specified Logur Instance.
@@ -56,4 +50,4 @@ export declare class Logur implements ILogur {
  *
  * @param options the Logur Instance options.
  */
-export declare function get(options?: ILogurInstanceOptions): ILogurInstance<ILevelMethods> & ILevelMethods;
+export declare function get(options?: ILogurInstanceOptions): ILogurInstance<ILevelMethodsDefault> & ILevelMethodsDefault;

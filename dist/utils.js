@@ -1239,6 +1239,7 @@ function toMapped(options, output) {
     // add untyped to mapped.
     map.push('untyped');
     // Iterate the map and build the object.
+    // TODO: too repetitive need to clean this up.
     map.forEach(function (k) {
         // ignored prop.
         if (ignored.indexOf(k) !== -1)
@@ -1250,8 +1251,10 @@ function toMapped(options, output) {
         // If a serializer exists call and get value.
         if (serializer)
             value = serializer(value, output, options);
+        if (isUndefined(value))
+            return;
         if (k === 'untyped') {
-            if (value && value.length) {
+            if (isArray(value)) {
                 value.forEach(function (u) {
                     var result = formatByType(k, u, options, output);
                     if (result) {
@@ -1261,6 +1264,15 @@ function toMapped(options, output) {
                             appended.push(result.append);
                     }
                 });
+            }
+            else {
+                var result = formatByType(k, value, options, output);
+                if (result) {
+                    if (!isUndefined(result.normalized))
+                        untyped.push(result.normalized);
+                    if (!isUndefined(result.append))
+                        appended.push(result.append);
+                }
             }
         }
         else {
