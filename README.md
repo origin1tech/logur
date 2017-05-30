@@ -87,7 +87,7 @@ log.warn('some warning message', (output) => {
 
 ```
 
-see: [Logur Output](#output) for example Logur Output object.
+see: [Logur Output](#logur-output) for example Logur Output object.
 
 ```js
 
