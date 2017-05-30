@@ -137,9 +137,9 @@ log.using('file').info('some message only logged to file transport.');
 
 ```
 
-## Logur Output
+## Logur Output <a id="output"></a>
 
-The <a id="output">Logur Output</a> object contains a comprehensive group of properties
+The output object contains a comprehensive group of properties
 that are useful to logging. The object is consumed by the "toMapped"
 method internally by Logur Tranports. This object is output on log
 callbacks and emitted events.
