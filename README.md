@@ -1,21 +1,23 @@
 <p align="center">
-  <a href="http://github.com/origin1tech/logur"><img width="150" src="https://raw.githubusercontent.com/origin1tech/logur/master/assets/logo.png"></a>
+  <a href="http://github.com/origin1tech/logur"><img width="200" src="https://raw.githubusercontent.com/origin1tech/logur/master/assets/logo.png"></a>
 </p>
 <br/>
 
-Extensible logging library. Logur can be a simple or as advanced as required. It takes few opinons and merely does some of the heavy before handing off the normalized data for logging.
+## Description
+
+Extensible logging library. Logur can be a simple or as advanced as required. It makes few opinons and merely does some of the heavy before handing off the normalized data for logging.
 
 Logur gives you a nice object containing information not only about the logged message but also your environment as well as a handy stack trace on every logged message.
 
-See the included transports to get you going with common use cases but don't be afraid to extend the base classes to create the perfect log transport for your needs. It's far easier than you'd imagine. See <a href="#transports">Transports</a> below for examples on how you can accomplish this.
+See the included transports to get you going with common use cases. See <a href="#transports">Transports</a> below for examples on how you can accomplish this.
 
 ## TypeScript
 
-Logur is written using TypeScript. Everything is nicely typed which makes working with Logur in your typed project clear and obvious. We won't touch procjets without TypeScript these days. For anything large that needs to scale its imperative.
+Logur is written using TypeScript. Everything is nicely typed which makes working with Logur in your Typescript project clear and obvious.
 
 ## Platforms
 
-Logur will work both in NodeJS and your Browser. Currently Logur does not ship with a single file build. You will need to use a module loader like RequireJS, SystemJS, or bundle with Webpack, Gulp, Browserify or Grunt. My guess is you've got that covered.
+Logur will work both in NodeJS and your Browser. Currently Logur does not ship with a single file build. You will need to use a module loader such as Webpack to compile it. My guess is you've got that covered and are already using something similar.
 
 ## Installing
 
@@ -27,20 +29,20 @@ $ npm install logur -s
 
 There are two ways to import or use Logur. You can import the instance new it up then create your Instances and Transports and you're off. This is what you'll want to do to setup a logging environment with mutliple logging Instances and Transports.
 
-But to get started let's just create a simple Logur.
+But to get started let's just create a simple Logur using default log methods:
 
 **ES6**
 
 ```js
 import * as logur from 'logur';
-const log = logur.get();
+const log = logur.get(/* options here */);
 ```
 
 **ES5**
 
 ```js
 const logur = require('logur');
-const log = logur.get();
+const log = logur.get(/* options here */);
 ```
 
 ## Usage
@@ -55,6 +57,10 @@ below.
 - verbose   logs verbose messages.
 - debug     logs debug messages and fires when in NodeJS debug mode.
 
+**Extended Methods**
+
+- using     when called before above method uses only the supplied transport.
+- wrap      wraps the logged message with the value you provide.
 - write     skips all Logur processing and simply outputs via console.log.
 - exit      using chaining .exit() can be called to log and then exit.
 
@@ -75,44 +81,15 @@ log.info('this is a person', { name: 'Ramanujan', discipline: 'mathematics' });
 /* Logging with Callback
 ****************************/
 
-log.warn('some warning message', (output, done) => {
-
-  // Example output below.
-  output = {
-
-  };
-
-  // Handing the output back off
-  // here will continue down the chain
-  // to your transports. Don't callback
-  // and just handle your output here!
-  done(output);
+log.warn('some warning message', (output) => {
 
 });
 
-/* Logging an Error
-****************************/
+```
 
-// Logur will detect this as an error
-// and will parse out the stacktrace
-// for you automatically.
+see: [Logur Output](#output) for example Logur Output object.
 
-// The built in Transports for Logur will
-// get the "message" from the error and
-// will display it as the message property
-// as shown above in the "output" example.
-// The error message will then be merged
-// into any metadata.
-
-// Again though it is important to remember
-// this is our preference. Don't like it?
-// Just extend the desired transport and
-// change the action method and you're done.
-// We'll get into Transports and action
-// methods below.
-
-const err = new Error('some error');
-log.error(err);
+```js
 
 /* Log then Exit
 ****************************/
@@ -122,7 +99,12 @@ log.error(err);
 // a full blown error but also want to
 // exit the application.
 
-log.error('some error message').exit();
+// NOTE: the below will wait for the log
+// buffer to clear before exiting. If you
+// want to exit immediately pass "true"
+// when calling exit.
+
+log.info('some message').exit();
 
 /* Log Bypass
 ****************************/
@@ -134,6 +116,106 @@ log.error('some error message').exit();
 
 log.write('some direct to console message');
 
+/* Wrapping
+*****************************/
+
+// The below would result in
+// - blank line
+// info   : 2017-05-30T04:29:48.410Z some wrapped message.
+// - blank line
+
+log.wrap('\n').info('some wrapped message.');
+
+/* Using
+*****************************/
+
+// The below would result in the message only logging
+// to the File Transport.
+
+log.using('file').info('some message only logged to file transport.');
+
+
 ```
+
+## Logur Output
+
+The <a id="output">Logur Output</a> object contains a comprehensive group of properties
+that are useful to logging. The object is consumed by the "toMapped"
+method internally by Logur Tranports. This object is output on log
+callbacks and emitted events.
+
+```js
+
+// Example output below.
+  output = {
+
+    activeid: 2                             // the default log level id.
+    levelid: 1,                             // the log level id of this message.
+    levels: {
+      // the default log levels or
+      // levels you supplied
+      // example:
+      error: { level: 0, color: 'red' }
+    }
+    map: []                                  // ['timestamp', 'level', 'message', 'metadata']
+
+    // Primary Fields
+    timestamp: '2017-05-30T04:29:48.410Z',   // the timestamp of the message.
+    uuid: '1234-4567-8989-3456',             // the uuid of the log event.
+    level: 'warn',                           // the log level
+    instance: 'default',                     // the Logur Instance.
+    message: 'some log message',             // the message that was logged.
+    untyped: [],                             // untyped values not matching specific type.
+    metadata: {},                            // merged metadata objects from logged message.
+    args: params,                            // the original arguments loged.
+    transports: ['console'],                 // array of transports message was logged to.
+    serializers: {                           // list of serializers tht should be applied.
+      metadata: function(value, output, options) {
+
+        // value - the value for Logur Output key "metadata".
+        // output - the Logur Output object.
+        // options - the options passed for your instance.
+
+        // Do something with the value then return.
+        return value;
+
+      }
+    },
+
+    // Stack
+    stacktrace: stack,                       // stack trace of logged message.
+
+    // Environment Info
+    env: sysinfo,                            // node or browser env info.
+    pkg: this._logur.pkg                     // node packgage.json info if applicable.
+
+    // Function for normalizing the object
+    // for transport. Not avail. within
+    // Transport.
+    toMapped: function(options) {
+
+      // applies optional options to the LogurOutput object.
+      // this is what Logur uses internally within transports
+      // it is attached here for emitted events.
+
+      // A normalized object will be returned formatting
+      // the Logur Output object into the following formats.
+      // See docs for more information.
+      return {
+        array,
+        json,
+        object,
+        raw
+      }
+
+    }
+
+  };
+
+```
+
+
+
+
 
 
