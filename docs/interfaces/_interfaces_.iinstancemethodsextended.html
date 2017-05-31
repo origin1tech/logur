@@ -102,20 +102,23 @@
 					<a name="exit" class="tsd-anchor"></a>
 					<h3>exit</h3>
 					<ul class="tsd-signatures tsd-kind-method tsd-parent-kind-interface tsd-is-inherited">
-						<li class="tsd-signature tsd-kind-icon">exit<span class="tsd-signature-symbol">(</span>code<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
+						<li class="tsd-signature tsd-kind-icon">exit<span class="tsd-signature-symbol">(</span>code<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">boolean</span>, panic<span class="tsd-signature-symbol">?: </span><span class="tsd-signature-type">boolean</span><span class="tsd-signature-symbol">)</span><span class="tsd-signature-symbol">: </span><span class="tsd-signature-type">void</span></li>
 					</ul>
 					<ul class="tsd-descriptions">
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<p>Inherited from <a href="_interfaces_.iinstancemethodsexit.html">IInstanceMethodsExit</a>.<a href="_interfaces_.iinstancemethodsexit.html#exit">exit</a></p>
 								<ul>
-									<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/interfaces.ts#L475">interfaces.ts:475</a></li>
+									<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5bce7ed/src/interfaces.ts#L528">interfaces.ts:528</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
 							<ul class="tsd-parameters">
 								<li>
-									<h5><span class="tsd-flag ts-flagOptional">Optional</span> code: <span class="tsd-signature-type">number</span></h5>
+									<h5><span class="tsd-flag ts-flagOptional">Optional</span> code: <span class="tsd-signature-type">number</span><span class="tsd-signature-symbol"> | </span><span class="tsd-signature-type">boolean</span></h5>
+								</li>
+								<li>
+									<h5><span class="tsd-flag ts-flagOptional">Optional</span> panic: <span class="tsd-signature-type">boolean</span></h5>
 								</li>
 							</ul>
 							<h4 class="tsd-returns-title">Returns <span class="tsd-signature-type">void</span></h4>
@@ -132,7 +135,7 @@
 						<li class="tsd-description">
 							<aside class="tsd-sources">
 								<ul>
-									<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5950516/src/interfaces.ts#L479">interfaces.ts:479</a></li>
+									<li>Defined in <a href="https://github.com/origin1tech/logur/blob/5bce7ed/src/interfaces.ts#L532">interfaces.ts:532</a></li>
 								</ul>
 							</aside>
 							<h4 class="tsd-parameters-title">Parameters</h4>
@@ -170,6 +173,9 @@
 					</li>
 					<li class=" tsd-kind-external-module">
 						<a href="../modules/_logur_.html">"logur"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="../modules/_middleware_.html">"middleware"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
 						<a href="../modules/_notify_.html">"notify"</a>

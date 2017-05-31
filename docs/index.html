@@ -64,27 +64,34 @@
 	<div class="row">
 		<div class="col-8 col-content">
 			<div class="tsd-panel tsd-typography">
-				<h1 id="logur">Logur</h1>
-				<p>Extensible logging library. Logur can be a simple or as advanced as required. It takes few opinons and merely does some of the heavy before handing off the normalized data for logging.</p>
+				<p><p align="left">
+						<a href="http://github.com/origin1tech/logur"><img width="200" src="https://raw.githubusercontent.com/origin1tech/logur/master/assets/logo.png"></a>
+					</p>
+				<br/></p>
+				<h2 id="pre-release">Pre-Release</h2>
+				<p>This is a bit of a pre-release. Not production ready just yet. Probably safe for new projects. Need to write more
+				tests, check for leaks test in Browser more.</p>
+				<h2 id="description">Description</h2>
+				<p>Extensible logging library. Logur can be a simple or as advanced as required. It makes few opinons and merely does some of the heavy before handing off the normalized data for logging.</p>
 				<p>Logur gives you a nice object containing information not only about the logged message but also your environment as well as a handy stack trace on every logged message.</p>
-				<p>See the included transports to get you going with common use cases but don&#39;t be afraid to extend the base classes to create the perfect log transport for your needs. It&#39;s far easier than you&#39;d imagine. See <a href="#transports">Transports</a> below for examples on how you can accomplish this.</p>
+				<p>See the included transports to get you going with common use cases. See <a href="#transports">Transports</a> below for examples on how you can accomplish this.</p>
 				<h2 id="typescript">TypeScript</h2>
-				<p>Logur is written using TypeScript. Everything is nicely typed which makes working with Logur in your typed project clear and obvious. We won&#39;t touch procjets without TypeScript these days. For anything large that needs to scale its imperative.</p>
+				<p>Logur is written using TypeScript. Everything is nicely typed which makes working with Logur in your Typescript project clear and obvious.</p>
 				<h2 id="platforms">Platforms</h2>
-				<p>Logur will work both in NodeJS and your Browser. Currently Logur does not ship with a single file build. You will need to use a module loader like RequireJS, SystemJS, or bundle with Webpack, Gulp, Browserify or Grunt. My guess is you&#39;ve got that covered.</p>
+				<p>Logur will work both in NodeJS and your Browser. Currently Logur does not ship with a single file build. You will need to use a module loader such as Webpack to compile it. My guess is you&#39;ve got that covered and are already using something similar.</p>
 				<h2 id="installing">Installing</h2>
 				<pre><code class="lang-sh">$ npm install logur <span class="hljs-_">-s</span>
 </code></pre>
 				<h2 id="importing">Importing</h2>
 				<p>There are two ways to import or use Logur. You can import the instance new it up then create your Instances and Transports and you&#39;re off. This is what you&#39;ll want to do to setup a logging environment with mutliple logging Instances and Transports.</p>
-				<p>But to get started let&#39;s just create a simple Logur.</p>
+				<p>But to get started let&#39;s just create a simple Logur using default log methods:</p>
 				<p><strong>ES6</strong></p>
-				<pre><code class="lang-js"><span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> logur <span class="hljs-keyword">from</span> <span class="hljs-string">'logur'</span>;
-<span class="hljs-keyword">const</span> log = logur.get();
+				<pre><code class="lang-ts"><span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> logur <span class="hljs-keyword">from</span> <span class="hljs-string">'logur'</span>;
+<span class="hljs-keyword">const</span> log = logur.get(<span class="hljs-comment">/* options here */</span>);
 </code></pre>
 				<p><strong>ES5</strong></p>
 				<pre><code class="lang-js"><span class="hljs-keyword">const</span> logur = <span class="hljs-built_in">require</span>(<span class="hljs-string">'logur'</span>);
-<span class="hljs-keyword">const</span> log = logur.get();
+<span class="hljs-keyword">const</span> log = logur.get(<span class="hljs-comment">/* options here */</span>);
 </code></pre>
 				<h2 id="usage">Usage</h2>
 				<p>Using Logur is as you&#39;d expect. By default Logur has the following log methods.
@@ -95,14 +102,17 @@
 					<li>warn      logs warning messages.</li>
 					<li>info      logs information messages. (default level)</li>
 					<li>verbose   logs verbose messages.</li>
-					<li><p>debug     logs debug messages and fires when in NodeJS debug mode.</p>
-					</li>
-					<li><p>write     skips all Logur processing and simply outputs via console.log.</p>
-					</li>
+					<li>debug     logs debug messages and fires when in NodeJS debug mode.</li>
+				</ul>
+				<p><strong>Extended Methods</strong></p>
+				<ul>
+					<li>using     when called before above method uses only the supplied transport.</li>
+					<li>wrap      wraps the logged message with the value you provide.</li>
+					<li>write     skips all Logur processing and simply outputs via console.log.</li>
 					<li>exit      using chaining .exit() can be called to log and then exit.</li>
 				</ul>
 				<p><strong>Logging a Message</strong></p>
-				<pre><code class="lang-js">
+				<pre><code class="lang-ts">
 <span class="hljs-comment">/* Log Message
 ****************************/</span>
 
@@ -111,50 +121,17 @@ log.info(<span class="hljs-string">'hey Logur is working!'</span>);
 <span class="hljs-comment">/* Log with Metadata
 ****************************/</span>
 
-log.info(<span class="hljs-string">'this is a person'</span>, { <span class="hljs-attr">name</span>: <span class="hljs-string">'Ramanujan'</span>, <span class="hljs-attr">discipline</span>: <span class="hljs-string">'mathematics'</span> });
+log.info(<span class="hljs-string">'this is a person'</span>, { name: <span class="hljs-string">'Ramanujan'</span>, discipline: <span class="hljs-string">'mathematics'</span> });
 
 <span class="hljs-comment">/* Logging with Callback
 ****************************/</span>
 
-log.warn(<span class="hljs-string">'some warning message'</span>, (output, done) =&gt; {
-
-  <span class="hljs-comment">// Example output below.</span>
-  output = {
-
-  };
-
-  <span class="hljs-comment">// Handing the output back off</span>
-  <span class="hljs-comment">// here will continue down the chain</span>
-  <span class="hljs-comment">// to your transports. Don't callback</span>
-  <span class="hljs-comment">// and just handle your output here!</span>
-  done(output);
-
+log.warn(<span class="hljs-string">'some warning message'</span>, <span class="hljs-function">(<span class="hljs-params">output</span>) =&gt;</span> {
+  <span class="hljs-comment">// see link below for output example.</span>
 });
-
-<span class="hljs-comment">/* Logging an Error
-****************************/</span>
-
-<span class="hljs-comment">// Logur will detect this as an error</span>
-<span class="hljs-comment">// and will parse out the stacktrace</span>
-<span class="hljs-comment">// for you automatically.</span>
-
-<span class="hljs-comment">// The built in Transports for Logur will</span>
-<span class="hljs-comment">// get the "message" from the error and</span>
-<span class="hljs-comment">// will display it as the message property</span>
-<span class="hljs-comment">// as shown above in the "output" example.</span>
-<span class="hljs-comment">// The error message will then be merged</span>
-<span class="hljs-comment">// into any metadata.</span>
-
-<span class="hljs-comment">// Again though it is important to remember</span>
-<span class="hljs-comment">// this is our preference. Don't like it?</span>
-<span class="hljs-comment">// Just extend the desired transport and</span>
-<span class="hljs-comment">// change the action method and you're done.</span>
-<span class="hljs-comment">// We'll get into Transports and action</span>
-<span class="hljs-comment">// methods below.</span>
-
-<span class="hljs-keyword">const</span> err = <span class="hljs-keyword">new</span> <span class="hljs-built_in">Error</span>(<span class="hljs-string">'some error'</span>);
-log.error(err);
-
+</code></pre>
+				<p>see: <a href="#logur-output">Logur Output</a> for example Logur Output object.</p>
+				<pre><code class="lang-ts">
 <span class="hljs-comment">/* Log then Exit
 ****************************/</span>
 
@@ -163,7 +140,12 @@ log.error(err);
 <span class="hljs-comment">// a full blown error but also want to</span>
 <span class="hljs-comment">// exit the application.</span>
 
-log.error(<span class="hljs-string">'some error message'</span>).exit();
+<span class="hljs-comment">// <span class="hljs-doctag">NOTE:</span> the below will wait for the log</span>
+<span class="hljs-comment">// buffer to clear before exiting. If you</span>
+<span class="hljs-comment">// want to exit immediately pass "true"</span>
+<span class="hljs-comment">// when calling exit.</span>
+
+log.info(<span class="hljs-string">'some message'</span>).exit();
 
 <span class="hljs-comment">/* Log Bypass
 ****************************/</span>
@@ -174,7 +156,529 @@ log.error(<span class="hljs-string">'some error message'</span>).exit();
 <span class="hljs-comment">// seriously that's just plain wrong ha ha.</span>
 
 log.write(<span class="hljs-string">'some direct to console message'</span>);
+
+<span class="hljs-comment">/* Wrapping
+*****************************/</span>
+
+<span class="hljs-comment">// The below would result in</span>
+<span class="hljs-comment">// - blank line</span>
+<span class="hljs-comment">// info   : 2017-05-30T04:29:48.410Z some wrapped message.</span>
+<span class="hljs-comment">// - blank line</span>
+
+log.wrap(<span class="hljs-string">'\n'</span>).info(<span class="hljs-string">'some wrapped message.'</span>);
+
+<span class="hljs-comment">/* Using
+*****************************/</span>
+
+<span class="hljs-comment">// The below would result in the message only logging</span>
+<span class="hljs-comment">// to the File Transport.</span>
+
+log.using(<span class="hljs-string">'file'</span>).info(<span class="hljs-string">'some message only logged to file transport.'</span>);
 </code></pre>
+				<h3 id="mapping">Mapping</h3>
+				<p>One of the nice things about Logur is that it allows you to map whatever
+					you like individually in each Transport. For example we personally like
+					our timestamps to be the first property when logging to file. Whereas
+					when logging to the console it is customary to have the log level
+					as the first property. Logur makes this pretty straight forward. By
+					default Transports take the mapping from the defaults in Logur Instance
+				but they can be overriden.</p>
+				<pre><code class="lang-ts">
+<span class="hljs-keyword">const</span> map = [<span class="hljs-string">'timestamp'</span>, <span class="hljs-string">'level'</span>, <span class="hljs-string">'message'</span>, <span class="hljs-string">'metadata'</span>];
+</code></pre>
+				<p>Each key in the map array corresponds with the properties in the <a href="#logur-output">Logour Output</a>
+					object. Keys may also be dot notated nested properties. For example lets say
+					while using Logur in Node you want log messages in the File Transport to
+				include the version of your app.</p>
+				<pre><code class="lang-ts">
+<span class="hljs-keyword">const</span> map = [<span class="hljs-string">'timestamp'</span>, <span class="hljs-string">'level'</span>, <span class="hljs-string">'pkg.version'</span>, <span class="hljs-string">'message'</span>, <span class="hljs-string">'metadata'</span>];
+</code></pre>
+				<p><strong>Mapped Result</strong></p>
+				<p>Once the above map is iterated multiple results are provided. First an array
+				of the mapped values, json an object and the raw original output object.</p>
+				<p>For example the following map outputs as follows:</p>
+				<pre><code class="lang-ts">
+<span class="hljs-comment">// Using this map:</span>
+<span class="hljs-keyword">const</span> map = [<span class="hljs-string">'timestamp'</span>, <span class="hljs-string">'level'</span>, <span class="hljs-string">'message'</span>, <span class="hljs-string">'metadata'</span>];
+
+<span class="hljs-comment">// If we logged the following:</span>
+log.info(<span class="hljs-string">'some log message'</span>, { name: <span class="hljs-string">'Bob'</span> });
+
+<span class="hljs-comment">// The mapped result would be once "toMapped" is</span>
+<span class="hljs-comment">// called internally within a transport.</span>
+<span class="hljs-keyword">const</span> result = {
+  array: [<span class="hljs-string">'2017-05-31T02:12:03.725Z'</span>, <span class="hljs-string">'info'</span>, <span class="hljs-string">'some log message'</span>, { name: <span class="hljs-string">'Bob'</span> }],
+  json: {
+    <span class="hljs-string">"timestamp"</span>: <span class="hljs-string">"2017-05-31T02:12:03.725Z"</span>,
+    <span class="hljs-string">"level"</span>: <span class="hljs-string">"info"</span>,
+    <span class="hljs-string">"message"</span>: <span class="hljs-string">"some log message"</span>,
+    <span class="hljs-string">"metadata"</span>: {
+      <span class="hljs-string">"name"</span>: <span class="hljs-string">"Bob"</span>
+    }
+  },
+  object: {
+    timestamp: <span class="hljs-string">"2017-05-31T02:12:03.725Z"</span>,
+    level: <span class="hljs-string">"info"</span>,
+    message: <span class="hljs-string">"some log message"</span>,
+    metadata: {
+      name: <span class="hljs-string">"Bob"</span>
+    }
+  },
+  raw: <span class="hljs-string">'the original Logur Output object would be here.'</span>
+};
+</code></pre>
+				<p><strong>String Formatting</strong></p>
+				<p>Internally Logur uses <a href="https://www.npmjs.com/package/sprintf-js">sprintf-js</a> for string formatting.
+				This works much like Nodes util.format but with serveral more features and also works in the browser.</p>
+				<p>List of specifier characters:</p>
+				<p>+% — yields a literal % character
+					+b — yields an integer as a binary number
+					+c — yields an integer as the character with that ASCII value
+					+d or i — yields an integer as a signed decimal number
+					+e — yields a float using scientific notation
+					+u — yields an integer as an unsigned decimal number
+					+f — yields a float as is; see notes on precision above
+					+g — yields a float as is; see notes on precision above
+					+o — yields an integer as an octal number
+					+s — yields a string as is
+					+t — yields true or false
+					+T — yields the type of the argument1
+					+v — yields the primitive value of the specified argument
+					+x — yields an integer as a hexadecimal number (lower-case)
+					+X — yields an integer as a hexadecimal number (upper-case)
+				+j — yields a JavaScript object or array as a JSON encoded string</p>
+				<p>see: <a href="https://www.npmjs.com/package/sprintf-js">https://www.npmjs.com/package/sprintf-js</a>.</p>
+				<h3 id="logur-output">Logur Output</h3>
+				<p>The output object contains a comprehensive group of properties
+					that are useful to logging. The object is consumed by the &quot;toMapped&quot;
+					method internally by Logur Tranports. This object is output on log
+				callbacks and emitted events.</p>
+				<pre><code class="lang-ts">
+<span class="hljs-comment">// Example Output</span>
+<span class="hljs-comment">// NOTE below is mixed with example values</span>
+<span class="hljs-comment">// and Typescript types just to give an</span>
+<span class="hljs-comment">// idea of what is output. Types have been</span>
+<span class="hljs-comment">// used instead of actual values as those</span>
+<span class="hljs-comment">// values would be too verbose. In those cases</span>
+<span class="hljs-comment">// see types in docs for better understanding.</span>
+
+  output = {
+
+    activeid: <span class="hljs-number">2</span>                             <span class="hljs-comment">// the default log level id.</span>
+    levelid: <span class="hljs-number">1</span>,                             <span class="hljs-comment">// the log level id of this message.</span>
+    levels: {
+      <span class="hljs-comment">// the default log levels or</span>
+      <span class="hljs-comment">// levels you supplied</span>
+      error: { level: <span class="hljs-number">0</span>, color: <span class="hljs-string">'red'</span> }
+    }
+    map: [<span class="hljs-string">'timestamp'</span>, <span class="hljs-string">'level'</span>, <span class="hljs-string">'message'</span>, <span class="hljs-string">'metadata'</span>]
+
+    <span class="hljs-comment">// Primary Fields</span>
+    timestamp: <span class="hljs-string">'2017-05-30T04:29:48.410Z'</span>,   <span class="hljs-comment">// the timestamp of the message.</span>
+    uuid: <span class="hljs-string">'1234-4567-8989-3456'</span>,             <span class="hljs-comment">// the uuid of the log event.</span>
+    level: <span class="hljs-string">'warn'</span>,                           <span class="hljs-comment">// the log level</span>
+    instance: <span class="hljs-string">'default'</span>,                     <span class="hljs-comment">// the Logur Instance.</span>
+    message: <span class="hljs-string">'some log message'</span>,             <span class="hljs-comment">// the message that was logged.</span>
+    untyped: [],                             <span class="hljs-comment">// untyped values not matching specific type.</span>
+    metadata: {},                            <span class="hljs-comment">// merged metadata objects from logged message.</span>
+    args: params,                            <span class="hljs-comment">// the original arguments loged.</span>
+    transports: [<span class="hljs-string">'console'</span>],                 <span class="hljs-comment">// array of transports message was logged to.</span>
+    serializers: {                           <span class="hljs-comment">// object of serializers tht should be applied.</span>
+      metadata: <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">value, output, options</span>) </span>{
+
+        <span class="hljs-comment">// value - the value for Logur Output key "metadata".</span>
+        <span class="hljs-comment">// output - the Logur Output object.</span>
+        <span class="hljs-comment">// options - the options passed for your instance.</span>
+
+        <span class="hljs-comment">// Do something with the value then return.</span>
+        <span class="hljs-keyword">return</span> value;
+
+      }
+    },
+
+    <span class="hljs-comment">// Stack</span>
+    stacktrace: [],                       <span class="hljs-comment">// stack trace of logged message.</span>
+
+    <span class="hljs-comment">// Environment Info</span>
+    env: {
+
+      <span class="hljs-comment">// Node Example</span>
+      <span class="hljs-comment">// see docs for complete list of</span>
+      <span class="hljs-comment">// properties in interfaces.</span>
+      process: IProcess;
+      os: IOS;
+
+      <span class="hljs-comment">// Browser Example</span>
+      <span class="hljs-comment">// see docs for complete list of</span>
+      <span class="hljs-comment">// properties in interfaces.</span>
+      ua: <span class="hljs-built_in">string</span>;
+      browser: IUABrowser;
+      device: IUADevice;
+      engine: IUAEngine;
+      os: IUAOS;
+      cpu: IUACPU;
+
+    },
+
+    <span class="hljs-comment">// Package.json Info</span>
+    <span class="hljs-comment">// You can set which keys to grab</span>
+    <span class="hljs-comment">// when initializing Logur Instance.</span>
+    pkg: {
+      <span class="hljs-comment">// example:</span>
+      ver: <span class="hljs-number">1.0</span><span class="hljs-number">.0</span>
+    }
+
+    <span class="hljs-comment">// Function for normalizing the object</span>
+    <span class="hljs-comment">// for transport. Not avail. within</span>
+    <span class="hljs-comment">// Transport.</span>
+    toMapped: <span class="hljs-function"><span class="hljs-keyword">function</span>(<span class="hljs-params">options</span>) </span>{
+
+      <span class="hljs-comment">// applies optional options to the LogurOutput object.</span>
+      <span class="hljs-comment">// this is what Logur uses internally within transports</span>
+      <span class="hljs-comment">// it is attached here for emitted events.</span>
+
+      <span class="hljs-comment">// A normalized object will be returned formatting</span>
+      <span class="hljs-comment">// the Logur Output object into the following formats.</span>
+      <span class="hljs-comment">// See docs for more information.</span>
+      <span class="hljs-keyword">return</span> {
+        array,
+        json,
+        object,
+        raw
+      }
+
+    }
+
+  };
+</code></pre>
+				<h2 id="advanced-usage">Advanced Usage</h2>
+				<p>The following are more advanced techniques for extending Logur Instances.</p>
+				<h3 id="instances">Instances</h3>
+				<p>When using the .get() method Logur will automatically create the default
+					Logur Instance. Alternatively you can create Logur Instances directly as well.
+					This is useful when you need multiple logurs for with differing transports
+				and settings.</p>
+				<pre><code class="lang-ts">
+<span class="hljs-keyword">import</span> { Logur, ILevelMethodsDefault, ConsoleTransport } <span class="hljs-keyword">from</span> <span class="hljs-string">'logur'</span>;
+
+<span class="hljs-comment">// Default log levels are error, warn, info, verbose, debug.</span>
+
+<span class="hljs-keyword">const</span> logur = <span class="hljs-keyword">new</span> Logur();
+<span class="hljs-keyword">const</span> log = logur.create&lt;ILevelMethodsDefault&gt;(<span class="hljs-string">'myInstance'</span>, {
+
+  <span class="hljs-comment">// Array of ILogurOptionsTransport that</span>
+  <span class="hljs-comment">// should be instantiated with the instance.</span>
+  transports: [{
+    name: <span class="hljs-string">'console'</span>,
+    options: {},
+    transport: ConsoleTransport
+  }]
+
+ });
+</code></pre>
+				<h3 id="custom-log-levels">Custom Log Levels</h3>
+				<pre><code class="lang-ts">
+<span class="hljs-keyword">import</span> { Logur, ILevelMethods, IInstanceMethodsExtended } <span class="hljs-keyword">from</span> <span class="hljs-string">'logur'</span>;
+
+<span class="hljs-comment">// Create the Logur container.</span>
+<span class="hljs-keyword">const</span> logur = <span class="hljs-keyword">new</span> Logur();
+
+<span class="hljs-comment">// Define the interface for your log levels.</span>
+<span class="hljs-keyword">interface</span> LogLevels <span class="hljs-keyword">extends</span> ILevelMethods {
+  emerg(...args: <span class="hljs-built_in">any</span>[]): IInstanceMethodsExtended;
+  alert(...args: <span class="hljs-built_in">any</span>[]): IInstanceMethodsExtended;
+  crit(...args: <span class="hljs-built_in">any</span>[]): IInstanceMethodsExtended;
+  err(...args: <span class="hljs-built_in">any</span>[]): IInstanceMethodsExtended;
+  warning(...args: <span class="hljs-built_in">any</span>[]): IInstanceMethodsExtended;
+  notice(...args: <span class="hljs-built_in">any</span>[]): IInstanceMethodsExtended;
+  info(...args: <span class="hljs-built_in">any</span>[]): IInstanceMethodsExtended;
+  debug(...args: <span class="hljs-built_in">any</span>[]): IInstanceMethodsExtended;
+}
+
+<span class="hljs-comment">// Define the above interface of levels in your options.</span>
+<span class="hljs-keyword">const</span> options = {
+  levels: {
+    emerg: { level: <span class="hljs-number">0</span>, color: <span class="hljs-string">'red'</span> },
+    alert: { level: <span class="hljs-number">1</span>, color: <span class="hljs-string">'red'</span> },
+    crit: { level: <span class="hljs-number">2</span>, color: <span class="hljs-string">'red'</span> },
+    err: { level: <span class="hljs-number">3</span>, color: <span class="hljs-string">'red'</span> },
+    warning: { level: <span class="hljs-number">4</span>, color: <span class="hljs-string">'yellow'</span> },
+    notice: { level: <span class="hljs-number">5</span>, color: <span class="hljs-string">'blue'</span> },
+    info: { level: <span class="hljs-number">6</span>, color: <span class="hljs-string">'green'</span> },
+    debug: { level: <span class="hljs-number">7</span>, color: <span class="hljs-string">'magenta'</span> }
+  }
+};
+
+<span class="hljs-comment">// <span class="hljs-doctag">NOTE:</span> your options.levels keys much match your interface.</span>
+<span class="hljs-comment">// When creating dynamic properties this is needed for</span>
+<span class="hljs-comment">// Typescript to know about your log levels.</span>
+
+<span class="hljs-keyword">const</span> log = logur.create&lt;LogLevels&gt;(<span class="hljs-string">'myInstance'</span>, options);
+</code></pre>
+				<h3 id="transports">Transports</h3>
+				<p>Adding existing Transports is very simple. Just provide the Transport type or
+				your own custom extended Transport along with its options to extend the instance.</p>
+				<p><strong>Adding, Getting &amp; Removing</strong></p>
+				<pre><code class="lang-ts">
+<span class="hljs-comment">// Import Logur</span>
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> logur <span class="hljs-keyword">from</span> <span class="hljs-string">'logur'</span>;
+
+<span class="hljs-comment">// Get the default Logur Instance.</span>
+<span class="hljs-keyword">const</span> log = logur.get({ catcherr: <span class="hljs-literal">true</span> });
+
+<span class="hljs-comment">// Add the Transport.</span>
+log.transports.add(<span class="hljs-string">'file'</span>, { json: <span class="hljs-literal">true</span> }, logur.FileTransport);
+
+<span class="hljs-comment">// Get</span>
+<span class="hljs-keyword">const</span> transport = log.transports.get&lt;ConsoleTransport&gt;(<span class="hljs-string">'transport_name'</span>);
+
+<span class="hljs-comment">// Remove</span>
+log.transports.remove(<span class="hljs-string">'transport_name'</span>);
+
+<span class="hljs-comment">// See docs for additional methods.</span>
+</code></pre>
+				<p><strong>Custom Transports</strong></p>
+				<p>Creating custom transports is relatively easy. You can make them as robust or simple as you needed.
+				Below is a basic example of what you might do.</p>
+				<pre><code class="lang-ts">
+<span class="hljs-keyword">import</span> { LogurTransport, ILogurOutput, ILogurInstanceOptions, ILogur } <span class="hljs-keyword">from</span> <span class="hljs-string">'logur'</span>;
+
+<span class="hljs-keyword">interface</span> IMyTransportOptions {
+  <span class="hljs-comment">// Your custom options here.</span>
+}
+
+<span class="hljs-keyword">class</span> MyTransport <span class="hljs-keyword">extends</span> LogurTransport {
+
+  <span class="hljs-keyword">constructor</span>(<span class="hljs-params">base: ILogurInstanceOptions, options: IMyTransportOptions, logur: ILogur</span>) {
+    <span class="hljs-keyword">super</span>(base, options, logur);
+  }
+
+  action(output: ILogurOutput, fn: <span class="hljs-built_in">Function</span>) {
+
+    <span class="hljs-comment">// Map the output based on our options.</span>
+    <span class="hljs-comment">// To mapped along with some other handy methods</span>
+    <span class="hljs-comment">// is defined in the base class.</span>
+    <span class="hljs-keyword">let</span> mapped = <span class="hljs-keyword">this</span>.toMapped(<span class="hljs-keyword">this</span>.options, output);
+
+    <span class="hljs-comment">// Do something with the mapped output.</span>
+    <span class="hljs-comment">// below we get an array if the strategy was</span>
+    <span class="hljs-comment">// an array.</span>
+    <span class="hljs-keyword">const</span> strategy = <span class="hljs-keyword">this</span>.options.strategy;
+    <span class="hljs-keyword">const</span> arr = mapped[strategy];
+
+    <span class="hljs-comment">// In this case we simply call apply and</span>
+    <span class="hljs-comment">// pass the mapped array of values to console.log.</span>
+    <span class="hljs-built_in">console</span>.log.apply(<span class="hljs-built_in">console</span>, arr);
+
+  }
+
+}
+</code></pre>
+				<p><strong>Base Transports Options</strong></p>
+				<pre><code class="lang-ts">
+<span class="hljs-comment">// Base options extend this Logur Transport Options</span>
+<span class="hljs-comment">// so that they are available from the Logur Instance in</span>
+<span class="hljs-comment">// your Transport.</span>
+
+<span class="hljs-comment">// <span class="hljs-doctag">NOTE:</span> base Transports below are overriden or forced</span>
+<span class="hljs-comment">// withing Transport. For example "pretty" and "prettystack"</span>
+<span class="hljs-comment">// aren't the best options for File Transport as they would</span>
+<span class="hljs-comment">// create unwated line returns.</span>
+
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> ILogurTransportOptions <span class="hljs-keyword">extends</span> ILogurBaseOptions {
+
+  active?: <span class="hljs-built_in">boolean</span>;             <span class="hljs-comment">// when NOT false is active.</span>
+  pretty?: <span class="hljs-built_in">boolean</span>;             <span class="hljs-comment">// when true objects are pretty printed.</span>
+  ministack?: <span class="hljs-built_in">boolean</span>;          <span class="hljs-comment">// When NOT false log append msgs w/ (file:line:col)</span>
+  prettystack?: <span class="hljs-built_in">boolean</span>;        <span class="hljs-comment">// when true error stack trace is pretty printed.</span>
+  exceptions?: <span class="hljs-built_in">boolean</span>;         <span class="hljs-comment">// whether the transport is fired on exceptions.</span>
+  queryable?: <span class="hljs-built_in">boolean</span>;          <span class="hljs-comment">// whether or not the transport supports queries.</span>
+  stripcolors?: <span class="hljs-built_in">boolean</span>;        <span class="hljs-comment">// when true strips any colors before output.</span>
+  strategy?: OutputStrategy;    <span class="hljs-comment">// storage strategy array, json, object or raw.</span>
+
+}
+</code></pre>
+				<p><strong>Console Transport Options</strong></p>
+				<pre><code class="lang-ts">
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> IConsoleTransportOptions <span class="hljs-keyword">extends</span> ILogurTransportOptions {
+  padding?: PadStrategy;        <span class="hljs-comment">// the strategy for pading levels.</span>
+  colorize?: <span class="hljs-built_in">boolean</span>;           <span class="hljs-comment">// when NOT false colorization is applied.</span>
+}
+</code></pre>
+				<p><strong>File Transport Options</strong></p>
+				<pre><code class="lang-ts">
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> IFileTransportOptions <span class="hljs-keyword">extends</span> ILogurTransportOptions {
+  filename: <span class="hljs-built_in">string</span>;             <span class="hljs-comment">// filename.</span>
+  options?: {
+    encoding?: <span class="hljs-built_in">string</span>;          <span class="hljs-comment">// defaults to 'utf8'.</span>
+    mode?: <span class="hljs-built_in">number</span>;              <span class="hljs-comment">// defaults to 0644.</span>
+    flags?: <span class="hljs-built_in">string</span>;             <span class="hljs-comment">// defaults to 'a'.</span>
+  };
+  size?: <span class="hljs-built_in">number</span>;                <span class="hljs-comment">// max size of a log file.</span>
+  max: <span class="hljs-built_in">number</span>;                  <span class="hljs-comment">// maximum number of backup files.</span>
+  interval: <span class="hljs-built_in">number</span>;             <span class="hljs-comment">// 0 to disable or milliseconds to check log roll at.</span>
+  delimiter: <span class="hljs-string">'\t'</span> | <span class="hljs-string">';'</span>;        <span class="hljs-comment">// delimiter to be used when json is set to false.</span>
+}
+</code></pre>
+				<p><strong>Memory Transport Options</strong></p>
+				<pre><code class="lang-ts">
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> IMemoryTransportOptions <span class="hljs-keyword">extends</span> ILogurTransportOptions {
+  max?: <span class="hljs-built_in">number</span>;                 <span class="hljs-comment">// maximum number of logs.</span>
+}
+</code></pre>
+				<p><strong>Http Transport Options</strong></p>
+				<pre><code class="lang-ts">
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> IHttpTransportOptions <span class="hljs-keyword">extends</span> ILogurTransportOptions {
+  path?: <span class="hljs-built_in">string</span>;
+  host?: <span class="hljs-built_in">string</span>;
+  port?: <span class="hljs-built_in">number</span>;
+  ssl?: <span class="hljs-built_in">boolean</span>;
+  encoding: <span class="hljs-built_in">string</span>;
+  headers?: IMetadata;
+  method?: <span class="hljs-string">'POST'</span> | <span class="hljs-string">'PUT'</span>;
+  auth?: IAuth;
+  params?: IMetadata;
+  agent?: <span class="hljs-built_in">boolean</span> | Agent;
+}
+</code></pre>
+				<p><strong>Stream Transport Options</strong></p>
+				<pre><code class="lang-ts">
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> IStreamTransportOptions <span class="hljs-keyword">extends</span> ILogurTransportOptions {
+  stream: NodeJS.WritableStream;  <span class="hljs-comment">// A writeable stream</span>
+  options?: {
+    encoding?: <span class="hljs-built_in">string</span>;            <span class="hljs-comment">// defaults to 'utf8'.</span>
+    mode?: <span class="hljs-built_in">number</span>;                <span class="hljs-comment">// defaults to undefined.</span>
+    flags?: <span class="hljs-built_in">string</span>;               <span class="hljs-comment">// defaults to undefined.</span>
+  };
+  padding?: PadStrategy;          <span class="hljs-comment">// the strategy for pading levels.</span>
+  colorize?: <span class="hljs-built_in">boolean</span>;             <span class="hljs-comment">// when NOT false colorization is applied.</span>
+}
+</code></pre>
+				<h3 id="filters">Filters</h3>
+				<p>Filters allow you to filter a log event for all transports or for only specific transports.</p>
+				<pre><code class="lang-ts">
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> logur <span class="hljs-keyword">from</span> <span class="hljs-string">'logur'</span>;
+
+<span class="hljs-keyword">const</span> log = logur.get();
+
+<span class="hljs-comment">// Where '*' indicates fire for all transports.</span>
+<span class="hljs-comment">// you can also pass an array of transport names.</span>
+
+log.filters.add(<span class="hljs-string">'filterName'</span>, <span class="hljs-string">'*'</span>, <span class="hljs-function">(<span class="hljs-params">output</span>) =&gt;</span> {
+
+  <span class="hljs-comment">// Where output is the constructed LogurOutput object.</span>
+  <span class="hljs-comment">// Return true if should filter the log event.</span>
+  <span class="hljs-keyword">if</span> (<span class="hljs-regexp">/some text/g</span>.test(output.message))
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+  <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+
+});
+</code></pre>
+				<h3 id="serializers">Serializers</h3>
+				<p>Serializers enable the ability to modify log event properties before transport.action is called.
+					For example if you have a date that you want to be in a specific format or a number to be fixed
+				to a specific decimal count serializers are what you&#39;re looking for.</p>
+				<pre><code class="lang-ts">
+<span class="hljs-comment">// Where 'message' below is a valid property in LogurOutput object.</span>
+
+log.serializers.add(<span class="hljs-string">'message'</span>, <span class="hljs-function">(<span class="hljs-params">value, output, options</span>) =&gt;</span> {
+
+  <span class="hljs-comment">// do something with value then return</span>
+  <span class="hljs-comment">// for example say our value is too long</span>
+  <span class="hljs-comment">// for logging we might truncate the value.</span>
+
+  <span class="hljs-keyword">return</span> someTruncateFunc(value, <span class="hljs-number">20</span>, <span class="hljs-string">'...'</span>);
+
+
+});
+</code></pre>
+				<h2 id="middleware">Middleware</h2>
+				<p>Logur has built in middleware for use with your Express/Connect app. This makes it very
+				easy to log request events for your Express app.</p>
+				<pre><code class="lang-ts">
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> express <span class="hljs-keyword">from</span> <span class="hljs-string">'express'</span>;
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> http <span class="hljs-keyword">from</span> <span class="hljs-string">'http'</span>;
+<span class="hljs-keyword">import</span> * <span class="hljs-keyword">as</span> logur <span class="hljs-keyword">from</span> <span class="hljs-string">'logur'</span>;
+
+<span class="hljs-keyword">const</span> app: express.Application = express();
+<span class="hljs-keyword">const</span> log = logur.get();
+<span class="hljs-keyword">let</span> server: http.Server;
+
+<span class="hljs-comment">// Inject Logur middleware into your app.</span>
+app.use(log.middleware().handler);
+
+app.get(<span class="hljs-string">'/'</span>, <span class="hljs-function">(<span class="hljs-params">req: express.Request, res: express.Response</span>) =&gt;</span> {
+  res.send(<span class="hljs-string">'ok'</span>);
+})
+
+
+server = http.createServer(app);
+server.listen(<span class="hljs-number">3000</span>, <span class="hljs-string">'127.0.0.1'</span>, <span class="hljs-function"><span class="hljs-params">()</span> =&gt;</span> {
+  <span class="hljs-keyword">const</span> host = server.address().address;
+  <span class="hljs-keyword">const</span> port = server.address().port;
+  log.write(<span class="hljs-string">'-- Spec server listening at %s:%s --\n'</span>, host, port);
+});
+</code></pre>
+				<p><strong>Middleware Options</strong></p>
+				<p>You can specify in options to only log to specific transports and can
+					map http status codes to your log levels. Middleware also allows you
+					to build an object of properties from tokens which you generate from
+				the Express Request and Response objects.</p>
+				<pre><code class="lang-ts">
+<span class="hljs-keyword">export</span> <span class="hljs-keyword">interface</span> IMiddlewareOptions {
+  map?: <span class="hljs-built_in">string</span>[];                         <span class="hljs-comment">// array of props for mapping from parsed obj.</span>
+  transports?: <span class="hljs-built_in">string</span> | <span class="hljs-built_in">string</span>[];         <span class="hljs-comment">// transport or array of transports</span>
+  levelmap?: {                            <span class="hljs-comment">// maps status code to Logur levels.</span>
+    [code: <span class="hljs-built_in">number</span>]: <span class="hljs-built_in">string</span>;
+    <span class="hljs-keyword">default</span>: <span class="hljs-built_in">string</span>;                      <span class="hljs-comment">// the default level to use if no match.</span>
+  };
+  tokens?: IMiddlewareTokens;             <span class="hljs-comment">// path or token callbacks.</span>
+  filters?: MiddlewareFilter[];           <span class="hljs-comment">// array of filters for filtering out log events.</span>
+  metadata?: <span class="hljs-built_in">boolean</span>;                     <span class="hljs-comment">// when true all tokens are logged as metadata.</span>
+}
+</code></pre>
+				<p><strong>Middleware Tokenss</strong></p>
+				<p>Tokens are simply functions that receive the Request and Response objects
+					from Express. Parse the objects or generate whatever you like and then
+				return the value.</p>
+				<p>Using the &quot;map&quot; property the key you provide can then be mapped to
+				the result and then subsequently logged.</p>
+				<p>For example if you create a token called &quot;account&quot; and then return
+					the account number from an Express param for example you can then
+				specify the &quot;account&quot; property in your map as shown below.</p>
+				<p>This works in the same manner that Logur does for typical log messages.</p>
+				<pre><code class="lang-ts">
+<span class="hljs-keyword">const</span> map = [<span class="hljs-string">'method'</span>, <span class="hljs-string">'url'</span>, <span class="hljs-string">'code'</span>, <span class="hljs-string">'account'</span>, <span class="hljs-string">'elapsed'</span>],
+</code></pre>
+				<pre><code class="lang-ts">
+<span class="hljs-keyword">const</span> tokens = {
+  method: <span class="hljs-string">'req.method'</span>,
+  protocol: <span class="hljs-string">'req.protocol'</span>,
+  url: <span class="hljs-function">(<span class="hljs-params">req, res</span>) =&gt;</span> { <span class="hljs-keyword">return</span> req.originalUrl || req.url; },
+  code: <span class="hljs-function">(<span class="hljs-params">req, res</span>) =&gt;</span> { <span class="hljs-keyword">return</span> res.statusCode; },
+  message: <span class="hljs-function">(<span class="hljs-params">req, res</span>) =&gt;</span> { <span class="hljs-keyword">return</span> res.statusMessage; },
+  address: <span class="hljs-function">(<span class="hljs-params">req, res</span>) =&gt;</span> {
+    <span class="hljs-keyword">return</span> req.ip || (req.connection &amp;&amp; req.connection.remoteAddress);
+  },
+  version: <span class="hljs-function">(<span class="hljs-params">req, res</span>) =&gt;</span> { <span class="hljs-keyword">return</span> req.httpVersionMajor + <span class="hljs-string">'.'</span> + req.httpVersionMinor; },
+  agent: <span class="hljs-function">(<span class="hljs-params">req, res</span>) =&gt;</span> { <span class="hljs-keyword">return</span> req.headers[<span class="hljs-string">'user-agent'</span>]; },
+  <span class="hljs-keyword">type</span>: <span class="hljs-function">(<span class="hljs-params">req, res</span>) =&gt;</span> {
+    <span class="hljs-keyword">const</span> <span class="hljs-keyword">type</span> = res.getHeader(<span class="hljs-string">'content-type'</span>);
+    <span class="hljs-keyword">const</span> split = <span class="hljs-keyword">type</span>.split(<span class="hljs-string">';'</span>);
+    <span class="hljs-keyword">return</span> split[<span class="hljs-number">0</span>];
+  },
+  length: <span class="hljs-function">(<span class="hljs-params">req, res</span>) =&gt;</span> { <span class="hljs-keyword">return</span> res.getHeader(<span class="hljs-string">'content-length'</span>); },
+  params: <span class="hljs-function">(<span class="hljs-params">req, res</span>) =&gt;</span> { <span class="hljs-keyword">return</span> req.params; },
+  query: <span class="hljs-function">(<span class="hljs-params">req, res</span>) =&gt;</span> { <span class="hljs-keyword">return</span> req.query; },
+  elapsed: <span class="hljs-function">(<span class="hljs-params">req, res</span>) =&gt;</span> {
+    <span class="hljs-keyword">const</span> elapsed: <span class="hljs-built_in">any</span> = res[<span class="hljs-string">'_elapsedTime'</span>] || <span class="hljs-number">0</span>;
+    <span class="hljs-keyword">return</span> elapsed.toFixed(<span class="hljs-number">2</span>);
+  }
+}
+</code></pre>
+				<p>**</p>
+				<h2 id="license">License</h2>
+				<p>See <a href="License.md">LICENSE.md</a></p>
 			</div>
 		</div>
 		<div class="col-4 col-menu menu-sticky-wrap menu-highlight">
@@ -200,6 +704,9 @@ log.write(<span class="hljs-string">'some direct to console message'</span>);
 					</li>
 					<li class=" tsd-kind-external-module">
 						<a href="modules/_logur_.html">"logur"</a>
+					</li>
+					<li class=" tsd-kind-external-module">
+						<a href="modules/_middleware_.html">"middleware"</a>
 					</li>
 					<li class=" tsd-kind-external-module">
 						<a href="modules/_notify_.html">"notify"</a>

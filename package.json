@@ -1,6 +1,6 @@
 {
   "name": "logur",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Extensible logging utility for Node and Browser written in TypeScript.",
   "main": "dist/index.js",
   "scripts": {
@@ -54,7 +54,9 @@
     "@types/supertest": "^2.0.0",
     "@types/ua-parser-js": "^0.7.30",
     "chai": "^3.5.0",
+    "del": "^2.2.2",
     "express": "^4.15.2",
+    "fs-extra": "^3.0.1",
     "mocha": "^3.2.0",
     "supertest": "^3.0.0",
     "ts-node": "^3.0.2",
