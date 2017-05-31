@@ -666,9 +666,9 @@ export interface IHttpTransportOptions extends ILogurTransportOptions {
 export interface IStreamTransportOptions extends ILogurTransportOptions {
   stream: NodeJS.WritableStream;  // A writeable stream
   options?: {
-    encoding?: string;          // defaults to 'utf8'.
-    mode?: number;              // defaults to undefined.
-    flags?: string;             // defaults to undefined.
+    encoding?: string;            // defaults to 'utf8'.
+    mode?: number;                // defaults to undefined.
+    flags?: string;               // defaults to undefined.
   };
   padding?: PadStrategy;          // the strategy for pading levels.
   colorize?: boolean;             // when NOT false colorization is applied.

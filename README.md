@@ -146,7 +146,14 @@ callbacks and emitted events.
 
 ```js
 
-// Example output below.
+// Example Output
+// NOTE below is mixed with example values
+// and Typescript types just to give an
+// idea of what is output. Types have been
+// used instead of actual values as those
+// values would be too verbose. In those cases
+// see types in docs for better understanding.
+
   output = {
 
     activeid: 2                             // the default log level id.
@@ -154,10 +161,9 @@ callbacks and emitted events.
     levels: {
       // the default log levels or
       // levels you supplied
-      // example:
       error: { level: 0, color: 'red' }
     }
-    map: []                                  // ['timestamp', 'level', 'message', 'metadata']
+    map: ['timestamp', 'level', 'message', 'metadata']
 
     // Primary Fields
     timestamp: '2017-05-30T04:29:48.410Z',   // the timestamp of the message.
@@ -169,7 +175,7 @@ callbacks and emitted events.
     metadata: {},                            // merged metadata objects from logged message.
     args: params,                            // the original arguments loged.
     transports: ['console'],                 // array of transports message was logged to.
-    serializers: {                           // list of serializers tht should be applied.
+    serializers: {                           // object of serializers tht should be applied.
       metadata: function(value, output, options) {
 
         // value - the value for Logur Output key "metadata".
@@ -183,7 +189,7 @@ callbacks and emitted events.
     },
 
     // Stack
-    stacktrace: stack,                       // stack trace of logged message.
+    stacktrace: [],                       // stack trace of logged message.
 
     // Environment Info
     env: {
@@ -389,13 +395,18 @@ class MyTransport extends LogurTransport {
 
 ```
 
-**Default Transports Options**
+**Base Transports Options**
 
 ```ts
 
 // Base options extend this Logur Transport Options
 // so that they are available from the Logur Instance in
 // your Transport.
+
+// NOTE: base Transports below are overriden or forced
+// withing Transport. For example "pretty" and "prettystack"
+// aren't the best options for File Transport as they would
+// create unwated line returns.
 
 export interface ILogurTransportOptions extends ILogurBaseOptions {
 
@@ -405,9 +416,85 @@ export interface ILogurTransportOptions extends ILogurBaseOptions {
   prettystack?: boolean;        // when true error stack trace is pretty printed.
   exceptions?: boolean;         // whether the transport is fired on exceptions.
   queryable?: boolean;          // whether or not the transport supports queries.
-  stripcolors?: boolean;         // when true strips any colors before output.
+  stripcolors?: boolean;        // when true strips any colors before output.
   strategy?: OutputStrategy;    // storage strategy array, json, object or raw.
 
+}
+
+```
+
+**Console Transport Options**
+
+```ts
+
+export interface IConsoleTransportOptions extends ILogurTransportOptions {
+  padding?: PadStrategy;        // the strategy for pading levels.
+  colorize?: boolean;           // when NOT false colorization is applied.
+}
+
+```
+
+**File Transport Options**
+
+```ts
+
+export interface IFileTransportOptions extends ILogurTransportOptions {
+  filename: string;             // filename.
+  options?: {
+    encoding?: string;          // defaults to 'utf8'.
+    mode?: number;              // defaults to 0644.
+    flags?: string;             // defaults to 'a'.
+  };
+  size?: number;                // max size of a log file.
+  max: number;                  // maximum number of backup files.
+  interval: number;             // 0 to disable or milliseconds to check log roll at.
+  delimiter: '\t' | ';';        // delimiter to be used when json is set to false.
+}
+
+```
+
+**Memory Transport Options**
+
+```ts
+
+export interface IMemoryTransportOptions extends ILogurTransportOptions {
+  max?: number;                 // maximum number of logs.
+}
+
+```
+
+**Http Transport Options**
+
+```ts
+
+export interface IHttpTransportOptions extends ILogurTransportOptions {
+  path?: string;
+  host?: string;
+  port?: number;
+  ssl?: boolean;
+  encoding: string;
+  headers?: IMetadata;
+  method?: 'POST' | 'PUT';
+  auth?: IAuth;
+  params?: IMetadata;
+  agent?: boolean | Agent;
+}
+
+```
+
+**Stream Transport Options**
+
+```ts
+
+export interface IStreamTransportOptions extends ILogurTransportOptions {
+  stream: NodeJS.WritableStream;  // A writeable stream
+  options?: {
+    encoding?: string;            // defaults to 'utf8'.
+    mode?: number;                // defaults to undefined.
+    flags?: string;               // defaults to undefined.
+  };
+  padding?: PadStrategy;          // the strategy for pading levels.
+  colorize?: boolean;             // when NOT false colorization is applied.
 }
 
 ```
@@ -460,6 +547,10 @@ log.serializers.add('message', (value, output, options) => {
 });
 
 ```
+
+## License
+
+See [LICENSE.md](License.md)
 
 
 
