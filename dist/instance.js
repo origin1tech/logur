@@ -24,7 +24,7 @@ if (!process.env.BROWSER) {
     pkg = require(resolve(process.cwd(), 'package.json'));
 }
 var defaults = {
-    level: 5,
+    level: undefined,
     cascade: true,
     map: ['timestamp', 'level', 'message', 'metadata'],
     // We don't define defaults here as user
@@ -89,6 +89,16 @@ var LogurInstance = (function (_super) {
         };
         // Initialize the instance log methods.
         _this.initLevels(_this.options.levels);
+        // set the active log level to the last level if not defined.
+        if (!u.isUndefined(_this.options.level)) {
+            if (u.isString(_this.options.level))
+                _this.options.level = _this.options.levels[_this.options.level].level;
+        }
+        else {
+            var lastLevelKey = u.keys(_this.options.levels).pop();
+            var lastLevel = _this.options.levels[lastLevelKey];
+            _this.options.level = lastLevel.level;
+        }
         // Lookup package.json props.
         if (pkg && _this.options.package && _this.options.package.length) {
             _this.options.package.forEach(function (k) {

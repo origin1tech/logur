@@ -471,7 +471,7 @@ export interface ILogurOutputMapped<T> {
     raw: ILogurOutput;
 }
 export interface ILogurBaseOptions {
-    level?: number;
+    level?: string | number;
     levels?: ILevels;
     map?: string[];
     uuid?: UUIDCallback;

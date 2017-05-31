@@ -29,7 +29,7 @@ server = createServer(app);
 server.listen(3000, '127.0.0.1', () => {
   const host = server.address().address;
   const port = server.address().port;
-  log.write().write('-- Spec server listening at %s:%s --\n', host, port);
+  log.write('-- Spec server listening at %s:%s --\n', host, port);
 });
 
 export {

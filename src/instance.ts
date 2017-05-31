@@ -20,7 +20,7 @@ if (!process.env.BROWSER) {
 
 const defaults: ILogurInstanceOptions = {
 
-  level: 5,
+  level: undefined, // we'll ensure a default in the constructor below.
   cascade: true,  // Dont' disable unless you're certain you need to.
   map: ['timestamp', 'level', 'message', 'metadata'],
 
@@ -112,6 +112,17 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
 
     // Initialize the instance log methods.
     this.initLevels(this.options.levels);
+
+    // set the active log level to the last level if not defined.
+    if (!u.isUndefined(this.options.level)) {
+      if (u.isString(this.options.level))
+        this.options.level = this.options.levels[this.options.level].level;
+    }
+    else {
+      const lastLevelKey = u.keys(this.options.levels).pop();
+      const lastLevel = this.options.levels[lastLevelKey];
+      this.options.level = lastLevel.level;
+    }
 
     // Lookup package.json props.
     if (pkg && this.options.package && this.options.package.length) {
@@ -974,7 +985,7 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
     const output: ILogurOutput = {
 
       // Level Info
-      activeid: this.options.level,
+      activeid: <number>this.options.level,
       levelid: levelId,
       levels: this.options.levels,
       map: this.options.map,

@@ -33,7 +33,7 @@ But to get started let's just create a simple Logur using default log methods:
 
 **ES6**
 
-```js
+```ts
 import * as logur from 'logur';
 const log = logur.get(/* options here */);
 ```
@@ -66,7 +66,7 @@ below.
 
 **Logging a Message**
 
-```js
+```ts
 
 /* Log Message
 ****************************/
@@ -89,7 +89,7 @@ log.warn('some warning message', (output) => {
 
 see: [Logur Output](#logur-output) for example Logur Output object.
 
-```js
+```ts
 
 /* Log then Exit
 ****************************/
@@ -137,6 +137,73 @@ log.using('file').info('some message only logged to file transport.');
 
 ```
 
+### Mapping
+
+One of the nice things about Logur is that it allows you to map whatever
+you like individually in each Transport. For example we personally like
+our timestamps to be the first property when logging to file. Whereas
+when logging to the console it is customary to have the log level
+as the first property. Logur makes this pretty straight forward. By
+default Transports take the mapping from the defaults in Logur Instance
+but they can be overriden.
+
+```ts
+
+const map = ['timestamp', 'level', 'message', 'metadata'];
+
+```
+
+Each key in the map array corresponds with the properties in the [Logour Output](#logur-output)
+object. Keys may also be dot notated nested properties. For example lets say
+while using Logur in Node you want log messages in the File Transport to
+include the version of your app.
+
+```ts
+
+const map = ['timestamp', 'level', 'pkg.version', 'message', 'metadata'];
+
+```
+
+**Mapped Result**
+
+Once the above map is iterated multiple results are provided. First an array
+of the mapped values, json an object and the raw original output object.
+
+For example the following map outputs as follows:
+
+```ts
+
+// Using this map:
+const map = ['timestamp', 'level', 'message', 'metadata'];
+
+// If we logged the following:
+log.info('some log message', { name: 'Bob' });
+
+// The mapped result would be once "toMapped" is
+// called internally within a transport.
+const result = {
+  array: ['2017-05-31T02:12:03.725Z', 'info', 'some log message', { name: 'Bob' }],
+  json: {
+    "timestamp": "2017-05-31T02:12:03.725Z",
+    "level": "info",
+    "message": "some log message",
+    "metadata": {
+      "name": "Bob"
+    }
+  },
+  object: {
+    timestamp: "2017-05-31T02:12:03.725Z",
+    level: "info",
+    message: "some log message",
+    metadata: {
+      name: "Bob"
+    }
+  },
+  raw: 'the original Logur Output object would be here.'
+};
+
+```
+
 ### Logur Output
 
 The output object contains a comprehensive group of properties
@@ -144,7 +211,7 @@ that are useful to logging. The object is consumed by the "toMapped"
 method internally by Logur Tranports. This object is output on log
 callbacks and emitted events.
 
-```js
+```ts
 
 // Example Output
 // NOTE below is mixed with example values
@@ -256,9 +323,7 @@ Logur Instance. Alternatively you can create Logur Instances directly as well.
 This is useful when you need multiple logurs for with differing transports
 and settings.
 
-**Default Log Levels**
-
-```js
+```ts
 
 import { Logur, ILevelMethodsDefault, ConsoleTransport } from 'logur';
 
@@ -280,9 +345,9 @@ const log = logur.create<ILevelMethodsDefault>('myInstance', {
 
 ```
 
-**Custom Log Levels**
+### Custom Log Levels
 
-```js
+```ts
 
 import { Logur, ILevelMethods, IInstanceMethodsExtended } from 'logur';
 
@@ -331,7 +396,7 @@ your own custom extended Transport along with its options to extend the instance
 
 **Adding, Getting & Removing**
 
-```js
+```ts
 
 // Import Logur
 import * as logur from 'logur';
@@ -357,7 +422,7 @@ log.transports.remove('transport_name');
 Creating custom transports is relatively easy. You can make them as robust or simple as you needed.
 Below is a basic example of what you might do.
 
-```js
+```ts
 
 import { LogurTransport, ILogurOutput, ILogurInstanceOptions, ILogur } from 'logur';
 
@@ -503,7 +568,7 @@ export interface IStreamTransportOptions extends ILogurTransportOptions {
 
 Filters allow you to filter a log event for all transports or for only specific transports.
 
-```js
+```ts
 
 import * as logur from 'logur';
 
@@ -531,7 +596,7 @@ Serializers enable the ability to modify log event properties before transport.a
 For example if you have a date that you want to be in a specific format or a number to be fixed
 to a specific decimal count serializers are what you're looking for.
 
-```js
+```ts
 
 // Where 'message' below is a valid property in LogurOutput object.
 
@@ -547,6 +612,115 @@ log.serializers.add('message', (value, output, options) => {
 });
 
 ```
+
+## Middleware
+
+Logur has built in middleware for use with your Express/Connect app. This makes it very
+easy to log request events for your Express app.
+
+```ts
+
+import * as express from 'express';
+import * as http from 'http';
+import * as logur from 'logur';
+
+const app: express.Application = express();
+const log = logur.get();
+let server: http.Server;
+
+// Inject Logur middleware into your app.
+app.use(log.middleware().handler);
+
+app.get('/', (req: express.Request, res: express.Response) => {
+  res.send('ok');
+})
+
+
+server = http.createServer(app);
+server.listen(3000, '127.0.0.1', () => {
+  const host = server.address().address;
+  const port = server.address().port;
+  log.write('-- Spec server listening at %s:%s --\n', host, port);
+});
+
+```
+
+**Middleware Options**
+
+You can specify in options to only log to specific transports and can
+map http status codes to your log levels. Middleware also allows you
+to build an object of properties from tokens which you generate from
+the Express Request and Response objects.
+
+```ts
+
+export interface IMiddlewareOptions {
+  map?: string[];                         // array of props for mapping from parsed obj.
+  transports?: string | string[];         // transport or array of transports
+  levelmap?: {                            // maps status code to Logur levels.
+    [code: number]: string;
+    default: string;                      // the default level to use if no match.
+  };
+  tokens?: IMiddlewareTokens;             // path or token callbacks.
+  filters?: MiddlewareFilter[];           // array of filters for filtering out log events.
+  metadata?: boolean;                     // when true all tokens are logged as metadata.
+}
+
+
+```
+
+**Middleware Tokenss**
+
+Tokens are simply functions that receive the Request and Response objects
+from Express. Parse the objects or generate whatever you like and then
+return the value.
+
+Using the "map" property the key you provide can then be mapped to
+the result and then subsequently logged.
+
+For example if you create a token called "account" and then return
+the account number from an Express param for example you can then
+specify the "account" property in your map as shown below.
+
+This works in the same manner that Logur does for typical log messages.
+
+```ts
+
+const map = ['method', 'url', 'code', 'account', 'elapsed'],
+
+```
+
+```ts
+
+const tokens = {
+  method: 'req.method',
+  protocol: 'req.protocol',
+  url: (req, res) => { return req.originalUrl || req.url; },
+  code: (req, res) => { return res.statusCode; },
+  message: (req, res) => { return res.statusMessage; },
+  address: (req, res) => {
+    return req.ip || (req.connection && req.connection.remoteAddress);
+  },
+  version: (req, res) => { return req.httpVersionMajor + '.' + req.httpVersionMinor; },
+  agent: (req, res) => { return req.headers['user-agent']; },
+  type: (req, res) => {
+    const type = res.getHeader('content-type');
+    const split = type.split(';');
+    return split[0];
+  },
+  length: (req, res) => { return res.getHeader('content-length'); },
+  params: (req, res) => { return req.params; },
+  query: (req, res) => { return req.query; },
+  elapsed: (req, res) => {
+    const elapsed: any = res['_elapsedTime'] || 0;
+    return elapsed.toFixed(2);
+  }
+}
+
+
+```
+
+**
 
 ## License
 

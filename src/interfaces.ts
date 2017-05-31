@@ -603,7 +603,7 @@ export interface ILogurOutputMapped<T> {
 
 export interface ILogurBaseOptions {
 
-  level?: number;               // the active log level.
+  level?: string | number;      // the active log level.
   levels?: ILevels;             // Log levels configuration.
   map?: string[];               // array of properties to map log output.
   uuid?: UUIDCallback;          // when has value callsback to get generated uuid.
