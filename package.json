@@ -1,6 +1,6 @@
 {
   "name": "logur",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Extensible logging utility for Node and Browser written in TypeScript.",
   "main": "dist/index.js",
   "scripts": {
