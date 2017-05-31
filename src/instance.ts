@@ -1,5 +1,5 @@
 
-import { ILogurInstance, ILogur, ILogurInstanceOptions, ILogurTransportOptions, ILogurTransport, ITransportMethods, ILogurTransports, ILogurInstances, IMetadata, ILevel, TimestampCallback, ILogurOutput, ILoad, MemoryUsage, IProcess, IOS, IEnvBrowser, IEnvNode, IEnv, IStacktrace, TransportConstructor, ILogurOptionsTransport, ILevels, ILevelMethodsDefault, ISerializers, ISerializerMethods, Serializer, IError, ILogurOutputMapped, IQuery, QueryResult, IInstanceMethodsExtended, ExecCallback, IInstanceMethodsExit, IInstanceMethodsWrap, IInstanceMethodsWrite, IMiddlewareOptions, IMiddleware, IFilterMethods, Filter, IFilter, IFilters } from './interfaces';
+import { ILogurInstance, ILogur, ILogurInstanceOptions, ILogurTransportOptions, ILogurTransport, ITransportMethods, ILogurTransports, ILogurInstances, IMetadata, ILevel, TimestampCallback, ILogurOutput, ILoad, MemoryUsage, IProcess, IOS, IEnvBrowser, IEnvNode, IEnv, IStacktrace, TransportConstructor, ILogurOptionsTransport, ILevels, ILevelMethodsDefault, ISerializers, ISerializerMethods, Serializer, IError, ILogurOutputMapped, IQuery, QueryResult, IInstanceMethodsExtended, ExecCallback, IInstanceMethodsExit, IInstanceMethodsWrap, IInstanceMethodsWrite, IMiddlewareOptions, IMiddleware, IFilterMethods, Filter, IFilter, IFilters, MiddlewareCallback } from './interfaces';
 import { Notify } from './notify';
 import * as middleware from './middleware';
 
@@ -158,7 +158,8 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
     // Extend class with log method handlers.
     u.keys(levels).forEach((k) => {
       this[k] = (...args: any[]) => {
-        this.exec(null, '*', k, ...args);
+        args = ['*', k].concat(args);
+        this.exec.apply(this, args);
         return {
           exit: this.exit.bind(this),
           write: this.write.bind(this)
@@ -203,7 +204,8 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
       else if (fn && u.contains(keys, k))
         return this[k].bind(this, fn);
       return (...args: any[]) => {
-        this.exec(fn, '*', k, ...args);
+        args = [fn, '*', k].concat(args);
+        this.exec.apply(this, args);
         return this.bindLevels(['exit', 'write'], true);
       };
     };
@@ -281,9 +283,9 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
     // Handle uncaught exceptions in brwoser.
     else if (u.isBrowser()) {
 
-      const browser = this.ua.getBrowser().name.toLowerCase();
-
       this._exceptionHandler = (message: string, url: string, line: number, column: number, err: IError) => {
+
+        const browser = this.ua.getBrowser().name.toLowerCase();
 
         // If not exceptions just return.
         if (!this._exceptions.length)
@@ -297,6 +299,7 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
         }
 
         // And these are the shitty ones...
+        // TODO: do more testing here.
         else {
 
           let stack = `Error: ${message}\ngetStack@${url}:${line}:${column}`;
@@ -323,7 +326,7 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
 
       };
 
-      window.onerror = this._exceptionHandler;
+      window.onerror = this._exceptionHandler.bind(this);
 
     }
 
@@ -509,7 +512,10 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
 
       name = name.toLowerCase();
 
-      delete this._transports[name];
+      if (!u.contains(this._transports, name))
+        return methods;
+
+      this._transports.splice(this._transports.indexOf(name), 1);
 
       return methods;
 
@@ -566,6 +572,8 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
     methods = {
       has,
       get,
+      getAll,
+      getList,
       add,
       extend,
       remove,
@@ -1167,7 +1175,8 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
 
     const fn = (trans: string | string[], type: string) => {
       return (...args: any[]) => {
-        this.exec(trans, type, args);
+        args = [trans, type].concat(args);
+        this.exec.apply(this, args);
         return this.bindLevels(['exit', 'write'], true);
       };
     };
@@ -1294,17 +1303,25 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
   query(transport: string, q: IQuery, fn: QueryResult) {
 
     // Loop until no buffer.
-    // if (this._buffer.length)
-    //   return u.tickThen(this, this.query, transport, q, fn);
+    if (this._buffer.length)
+      return u.tickThen(this, this.query, transport, q, fn);
 
     // Get the transport to query.
     const _transport = this.transports.get<ILogurTransport>(transport as string);
+
+    if (!_transport) {
+      this.log.warn(`cannot query using undefined transport ${transport}.`);
+      return;
+    }
 
     // Warn if not queryable.
     if (!_transport.query || !_transport.options.queryable) {
       this.log.warn(`attempted to query non-queryable transport ${transport}.`);
       return;
     }
+
+    // Normalize the query.
+    q = u.normalizeQuery(q);
 
     // Query the transport.
     _transport.query(q, fn);

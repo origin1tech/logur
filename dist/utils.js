@@ -423,6 +423,16 @@ function clone(obj) {
 }
 exports.clone = clone;
 /**
+ * Shallow Clone
+ * Clones object using JSON.
+ *
+ * @param obj the object to clone.
+ */
+function shallowClone(obj) {
+    return JSON.parse(JSON.stringify(obj));
+}
+exports.shallowClone = shallowClone;
+/**
  * First
  * Simple method to get first element just
  * a little less typing.
@@ -1015,10 +1025,20 @@ function normalizeQuery(q) {
     q.skip = q.skip || 0;
     q.take = q.take || 0;
     q.order = q.order || 'asc';
-    if (isString(q.from))
-        q.from = new Date(q.from);
-    if (isString(q.to))
-        q.to = new Date(q.to);
+    // Normalize and ensure dates.
+    try {
+        if (isNumber(q.from))
+            q.from = new Date(q.from);
+        else if (isString(q.from))
+            q.from = new Date(q.from);
+        if (isNumber(q.to))
+            q.to = new Date(q.to);
+        else if (isString(q.to))
+            q.to = new Date(q.to);
+    }
+    catch (ex) {
+        console.log(ex);
+    }
     return q;
 }
 exports.normalizeQuery = normalizeQuery;
@@ -1032,7 +1052,7 @@ exports.normalizeQuery = normalizeQuery;
 function parseLine(line, options) {
     options = options || {};
     // If JSON just parse and return.
-    if (options.json)
+    if (options.strategy === 'json')
         return JSON.parse(line);
     // If delimiter split string and map
     // back using options.map.

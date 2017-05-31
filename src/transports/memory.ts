@@ -64,8 +64,6 @@ export class MemoryTransport extends LogurTransport implements IMemoryTransport 
     if (!u.contains(this.options.map, 'timestamp'))
       return this.log.warn('cannot query logs, map missing "timestamp" property.');
 
-    q = u.normalizeQuery(q);
-
     let from: any = q.from ? (q.from as Date).getTime() : 0;
     let to: any = q.to ? (q.to as Date).getTime() : 0;
 

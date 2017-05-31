@@ -1,20 +1,29 @@
 import * as chai from 'chai';
 import * as mocha from 'mocha';
+import * as fs from 'fs';
 
 const expect = chai.expect;
 const should = chai.should;
 const assert = chai.assert;
 
-import { get, Logur, ILogur, LogurInstance, ConsoleTransport, ILogurTransport, MemoryTransport, ILevelMethodsDefault } from '../src';
+import { get, Logur, ILogur, LogurInstance, ConsoleTransport, ILogurTransport, MemoryTransport, ILevelMethodsDefault, FileTransport } from '../src';
 
 // Default Logur.
 let log = get();
 log.transports.add('memory', MemoryTransport);
+log.transports.add('file', { json: false, pretty: false, filename: 'logs/app.log' }, FileTransport);
 
 describe('Logur:Main', () => {
 
   before((done) => {
+
+    // Delete log and seed so we always have test
+    // log events with same dates for testing query etc.
+    fs.unlinkSync('./logs/app.log');
+    const seed = fs.readFileSync('./test/seed.log');
+    fs.writeFileSync('./logs/app.log', seed, { flag: 'a' });
     done();
+
   });
 
   it('should be an instance of Logur', () => {
@@ -102,6 +111,16 @@ describe('Logur:Main', () => {
     const transport = log.transports.get<ILogurTransport>('console');
     assert.equal(3, transport.options.level);
 
+  });
+
+  it('should query File Transport', (done) => {
+    // We'll just a use a known date that's in log file.
+    const from = new Date('2017-05-31T21:35:21.174Z');
+    let to = new Date('2017-05-31T21:39:05.043Z');
+    log.query('file', { from: from, to: to, take: 5, skip: 0 }, (results) => {
+      assert.equal(5, results.length);
+      done();
+    });
   });
 
 });

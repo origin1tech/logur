@@ -63,6 +63,12 @@ export type MiddlewareFilter = (parsed: IMetadata, req: Request, res: Response) 
 export type MiddlewareRequestHandler = (req: Request, res: Response, next: NextFunction) => void;
 
 /**
+ * Middleware Callback
+ * Optional callback after middleware has logged.
+ */
+export type MiddlewareCallback = (output: ILogurOutput) => void;
+
+/**
  * Middleware Error Handler
  * Callback handler for Express/Connect middleware errors.
  */
@@ -477,6 +483,7 @@ export interface IMiddlewareOptions {
   tokens?: IMiddlewareTokens;             // path or token callbacks.
   filters?: MiddlewareFilter[];
   metadata?: boolean;                     // when true all tokens are logged as metadata.
+  callback?: MiddlewareCallback;          // callback to be called after middleware logs.
 }
 
 export interface IMiddleware {
@@ -486,12 +493,13 @@ export interface IMiddleware {
 }
 
 export interface IQuery {
-  from: Date | string;
-  to: Date | string;
-  skip: number;
-  take: number;
-  order: 'asc' | 'desc';
-  fields: string[];
+  from?: Date | string | number;
+  to?: Date | string | number;
+  skip?: number;
+  take?: number;
+  order?: 'asc' | 'desc';
+  fields?: string[];
+  user?: IMetadata;        // user defined options.
 }
 
 export interface IQueryRange {

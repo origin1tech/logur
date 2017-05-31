@@ -62,7 +62,6 @@ var MemoryTransport = (function (_super) {
         // Cannot query without timestamps ensure in map.
         if (!u.contains(this.options.map, 'timestamp'))
             return this.log.warn('cannot query logs, map missing "timestamp" property.');
-        q = u.normalizeQuery(q);
         var from = q.from ? q.from.getTime() : 0;
         var to = q.to ? q.to.getTime() : 0;
         // const skip = ctr < q.skip;

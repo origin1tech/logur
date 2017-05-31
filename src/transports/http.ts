@@ -25,8 +25,8 @@ if (!process.env.BROWSER) {
 }
 
 const defaults: IHttpTransportOptions = {
-  host: 'localhost',
-  path: '/',
+  host: '127.0.0.1',
+  path: '/log',
   headers: { 'Content-Type': 'application/json' },
   method: 'POST',
   ssl: false,
@@ -98,7 +98,7 @@ export class HttpTransport extends LogurTransport implements IHttpTransport {
   request(options: RequestOptions, data: string | IMetadata | HttpTransportCallback, fn?: HttpTransportCallback): void {
 
     // Extend default request options with user defined.
-    u.extend(this._requestOptions, options);
+    options = u.extend({}, u.shallowClone(this._requestOptions), options);
 
     // Get response encoding.
     const encoding = this.options.encoding;
@@ -144,7 +144,10 @@ export class HttpTransport extends LogurTransport implements IHttpTransport {
     req.on('error', fn);
 
     // End request sending data/buffer.
-    req.end(new Buffer(<string>data), encoding);
+    if (data)
+      req.end(new Buffer(<string>data), encoding);
+    else
+      req.end(encoding);
 
   }
 
@@ -204,7 +207,14 @@ export class HttpTransport extends LogurTransport implements IHttpTransport {
     if (!u.contains(this.options.map, 'timestamp'))
       return this.log.warn('cannot query logs, map missing "timestamp" property.');
 
-    q = u.normalizeQuery(q);
+    // Convert date to epoch
+    if (u.isDate(q.from))
+      q.from = (q.from as Date).getTime();
+
+    if (u.isDate(q.to))
+      q.to = (q.to as Date).getTime();
+
+    q.fields.push('test');
 
     // Stringify the query object.
     const query = qs.stringify(q);

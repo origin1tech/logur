@@ -29,8 +29,8 @@ if (!process.env.BROWSER) {
     qs = require('querystring');
 }
 var defaults = {
-    host: 'localhost',
-    path: '/',
+    host: '127.0.0.1',
+    path: '/log',
     headers: { 'Content-Type': 'application/json' },
     method: 'POST',
     ssl: false,
@@ -87,7 +87,7 @@ var HttpTransport = (function (_super) {
      */
     HttpTransport.prototype.request = function (options, data, fn) {
         // Extend default request options with user defined.
-        u.extend(this._requestOptions, options);
+        options = u.extend({}, u.shallowClone(this._requestOptions), options);
         // Get response encoding.
         var encoding = this.options.encoding;
         if (u.isFunction(data)) {
@@ -120,7 +120,10 @@ var HttpTransport = (function (_super) {
         // Handle request error.
         req.on('error', fn);
         // End request sending data/buffer.
-        req.end(new Buffer(data), encoding);
+        if (data)
+            req.end(new Buffer(data), encoding);
+        else
+            req.end(encoding);
     };
     /**
      * Action
@@ -165,7 +168,12 @@ var HttpTransport = (function (_super) {
         // Cannot query without timestamps ensure in map.
         if (!u.contains(this.options.map, 'timestamp'))
             return this.log.warn('cannot query logs, map missing "timestamp" property.');
-        q = u.normalizeQuery(q);
+        // Convert date to epoch
+        if (u.isDate(q.from))
+            q.from = q.from.getTime();
+        if (u.isDate(q.to))
+            q.to = q.to.getTime();
+        q.fields.push('test');
         // Stringify the query object.
         var query = qs.stringify(q);
         var queryPath = this.options.path + '?' + query;

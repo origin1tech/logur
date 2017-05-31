@@ -204,6 +204,13 @@ export declare function flatten(args: any[]): any[];
  */
 export declare function clone<T>(obj: any): T;
 /**
+ * Shallow Clone
+ * Clones object using JSON.
+ *
+ * @param obj the object to clone.
+ */
+export declare function shallowClone<T>(obj: any): T;
+/**
  * First
  * Simple method to get first element just
  * a little less typing.

@@ -132,7 +132,8 @@ var LogurInstance = (function (_super) {
                 for (var _i = 0; _i < arguments.length; _i++) {
                     args[_i] = arguments[_i];
                 }
-                _this.exec.apply(_this, [null, '*', k].concat(args));
+                args = ['*', k].concat(args);
+                _this.exec.apply(_this, args);
                 return {
                     exit: _this.exit.bind(_this),
                     write: _this.write.bind(_this)
@@ -175,7 +176,8 @@ var LogurInstance = (function (_super) {
                 for (var _i = 0; _i < arguments.length; _i++) {
                     args[_i] = arguments[_i];
                 }
-                _this.exec.apply(_this, [fn, '*', k].concat(args));
+                args = [fn, '*', k].concat(args);
+                _this.exec.apply(_this, args);
                 return _this.bindLevels(['exit', 'write'], true);
             };
         };
@@ -234,8 +236,8 @@ var LogurInstance = (function (_super) {
             process.on('uncaughtException', this._exceptionHandler);
         }
         else if (u.isBrowser()) {
-            var browser_1 = this.ua.getBrowser().name.toLowerCase();
             this._exceptionHandler = function (message, url, line, column, err) {
+                var browser = _this.ua.getBrowser().name.toLowerCase();
                 // If not exceptions just return.
                 if (!_this._exceptions.length)
                     return;
@@ -245,7 +247,7 @@ var LogurInstance = (function (_super) {
                 }
                 else {
                     var stack = "Error: " + message + "\ngetStack@" + url + ":" + line + ":" + column;
-                    if (browser_1 === 'chrome' || browser_1 === 'opera')
+                    if (browser === 'chrome' || browser === 'opera')
                         stack = "Error: " + message + "\nat getStack (" + url + ":" + line + ":" + column + ")";
                     // We'll parse this in log method.
                     _this.exec(_this._exceptions, 'error', {
@@ -261,7 +263,7 @@ var LogurInstance = (function (_super) {
                     });
                 }
             };
-            window.onerror = this._exceptionHandler;
+            window.onerror = this._exceptionHandler.bind(this);
         }
     };
     /**
@@ -416,7 +418,9 @@ var LogurInstance = (function (_super) {
              */
             var remove = function (name) {
                 name = name.toLowerCase();
-                delete _this._transports[name];
+                if (!u.contains(_this._transports, name))
+                    return methods;
+                _this._transports.splice(_this._transports.indexOf(name), 1);
                 return methods;
             };
             /**
@@ -457,6 +461,8 @@ var LogurInstance = (function (_super) {
             methods = {
                 has: has,
                 get: get,
+                getAll: getAll,
+                getList: getList,
                 add: add,
                 extend: extend,
                 remove: remove,
@@ -944,7 +950,8 @@ var LogurInstance = (function (_super) {
                 for (var _i = 0; _i < arguments.length; _i++) {
                     args[_i] = arguments[_i];
                 }
-                _this.exec(trans, type, args);
+                args = [trans, type].concat(args);
+                _this.exec.apply(_this, args);
                 return _this.bindLevels(['exit', 'write'], true);
             };
         };
@@ -1055,15 +1062,21 @@ var LogurInstance = (function (_super) {
      */
     LogurInstance.prototype.query = function (transport, q, fn) {
         // Loop until no buffer.
-        // if (this._buffer.length)
-        //   return u.tickThen(this, this.query, transport, q, fn);
+        if (this._buffer.length)
+            return u.tickThen(this, this.query, transport, q, fn);
         // Get the transport to query.
         var _transport = this.transports.get(transport);
+        if (!_transport) {
+            this.log.warn("cannot query using undefined transport " + transport + ".");
+            return;
+        }
         // Warn if not queryable.
         if (!_transport.query || !_transport.options.queryable) {
             this.log.warn("attempted to query non-queryable transport " + transport + ".");
             return;
         }
+        // Normalize the query.
+        q = u.normalizeQuery(q);
         // Query the transport.
         _transport.query(q, fn);
     };

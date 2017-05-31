@@ -1,5 +1,5 @@
 
-import { IMiddlewareOptions, MiddlewareRequestHandler, ILevel, MiddlewareTokenCallback, ILogurInstance, IMiddlewareTokens, ILevels, IMetadata, IMiddleware, MiddlewareFilter } from './interfaces';
+import { IMiddlewareOptions, MiddlewareRequestHandler, ILevel, MiddlewareTokenCallback, ILogurInstance, IMiddlewareTokens, ILevels, IMetadata, IMiddleware, MiddlewareFilter, MiddlewareCallback } from './interfaces';
 import { Request, Response, NextFunction } from 'express';
 import * as u from './utils';
 
@@ -28,7 +28,7 @@ const statusToLevel = {
 
 // Default Options.
 const defaults: IMiddlewareOptions = {
-  map: ['method', 'url', 'code', 'address', 'agent', 'elapsed'],
+  map: ['method', 'url', 'code', 'address', 'elapsed'],
   transports: '*',
   tokens: {
     method: 'req.method',
@@ -107,6 +107,9 @@ export function init(options?: IMiddlewareOptions) {
     // Check if tokens should be added as metadata.
     if (options.metadata)
       mapped.push(parsed);
+
+    if (options.callback)
+      mapped.push(options.callback);
 
     self.exec.apply(self, mapped);
 

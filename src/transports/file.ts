@@ -73,7 +73,7 @@ export class FileTransport extends LogurTransport implements IFileTransport {
         this.options.filename = 'logs/app.log';
       }
     }
-
+    console.log(this.options.filename);
     // Don't allow comma for delimiter.
     if (this.options.delimiter !== ';' && this.options.delimiter !== '\t')
       this.options.delimiter = ';';
@@ -432,7 +432,7 @@ export class FileTransport extends LogurTransport implements IFileTransport {
         if (ctr === range.length) {
           if (q.order === 'desc')
             result.reverse();
-          fn(result.slice(q.skip, q.take + 1));
+          fn(result.slice(q.skip, q.take + q.skip));
         }
       });
 
@@ -581,8 +581,6 @@ export class FileTransport extends LogurTransport implements IFileTransport {
       return;
     }
 
-    q = u.normalizeQuery(q);
-
     // Get list of avail log files.
     this.glob((err, files) => {
 
@@ -592,10 +590,13 @@ export class FileTransport extends LogurTransport implements IFileTransport {
       // Find range of files to be queried.
       this.findRange(files, <Date>q.from, <Date>q.to, (range) => {
 
-        if (!range || !range.length)
-          return this.log.warn('query provided returned 0 files in selected range.');
-
-        this.queryRange(q, range, fn);
+        if (!range || !range.length) {
+          this.log.warn('query provided returned 0 files in selected range.');
+          return fn([]);
+        }
+        else {
+          this.queryRange(q, range, fn);
+        }
 
       });
 

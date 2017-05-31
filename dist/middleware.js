@@ -23,7 +23,7 @@ var statusToLevel = {
 };
 // Default Options.
 var defaults = {
-    map: ['method', 'url', 'code', 'address', 'agent', 'elapsed'],
+    map: ['method', 'url', 'code', 'address', 'elapsed'],
     transports: '*',
     tokens: {
         method: 'req.method',
@@ -88,6 +88,8 @@ function init(options) {
         // Check if tokens should be added as metadata.
         if (options.metadata)
             mapped.push(parsed);
+        if (options.callback)
+            mapped.push(options.callback);
         self.exec.apply(self, mapped);
     }
     /**

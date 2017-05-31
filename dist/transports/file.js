@@ -70,6 +70,7 @@ var FileTransport = (function (_super) {
                 _this.options.filename = 'logs/app.log';
             }
         }
+        console.log(_this.options.filename);
         // Don't allow comma for delimiter.
         if (_this.options.delimiter !== ';' && _this.options.delimiter !== '\t')
             _this.options.delimiter = ';';
@@ -337,7 +338,7 @@ var FileTransport = (function (_super) {
                 if (ctr === range.length) {
                     if (q.order === 'desc')
                         result.reverse();
-                    fn(result.slice(q.skip, q.take + 1));
+                    fn(result.slice(q.skip, q.take + q.skip));
                 }
             });
             rl.on('error', function (err) {
@@ -451,16 +452,19 @@ var FileTransport = (function (_super) {
             this.log.warn('cannot query logs, map missing "timestamp" property.');
             return;
         }
-        q = u.normalizeQuery(q);
         // Get list of avail log files.
         this.glob(function (err, files) {
             if (!files.length)
                 return _this.log.warn('cannot query logs using log files of undefined.');
             // Find range of files to be queried.
             _this.findRange(files, q.from, q.to, function (range) {
-                if (!range || !range.length)
-                    return _this.log.warn('query provided returned 0 files in selected range.');
-                _this.queryRange(q, range, fn);
+                if (!range || !range.length) {
+                    _this.log.warn('query provided returned 0 files in selected range.');
+                    return fn([]);
+                }
+                else {
+                    _this.queryRange(q, range, fn);
+                }
             });
         });
     };
