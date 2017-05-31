@@ -2,7 +2,6 @@
 <p align="left">
   <a href="http://github.com/origin1tech/logur"><img width="175" src="https://raw.githubusercontent.com/origin1tech/logur/master/assets/logo.png"></a>
 </p>
-<br/>
 
 ## Pre-Release
 
