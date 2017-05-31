@@ -247,7 +247,7 @@ export function isUnique(arr: any[], value: any): boolean {
  * Tests if is NodeJS.
  */
 export function isNode() {
-  if (typeof module !== 'undefined' && module.exports)
+  if (typeof module !== 'undefined' && module.exports && typeof window === 'undefined')
     return true;
   return false;
 }

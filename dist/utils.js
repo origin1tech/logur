@@ -224,7 +224,7 @@ exports.isUnique = isUnique;
  * Tests if is NodeJS.
  */
 function isNode() {
-    if (typeof module !== 'undefined' && module.exports)
+    if (typeof module !== 'undefined' && module.exports && typeof window === 'undefined')
         return true;
     return false;
 }

@@ -6,10 +6,7 @@ import { UAParser } from 'ua-parser-js';
 
 let stackTrace, os;
 
-if (process.env.BROWSER) {
-  stackTrace = require('stacktrace-js');
-}
-else {
+if (!process.env.BROWSER) {
   stackTrace = require('stack-trace');
   os = require('os');
 }

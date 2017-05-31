@@ -3,10 +3,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var u = require("./utils");
 var error_stack_parser_1 = require("error-stack-parser");
 var stackTrace, os;
-if (process.env.BROWSER) {
-    stackTrace = require('stacktrace-js');
-}
-else {
+if (!process.env.BROWSER) {
     stackTrace = require('stack-trace');
     os = require('os');
 }
