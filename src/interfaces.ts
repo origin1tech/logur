@@ -499,7 +499,6 @@ export interface IQuery {
   take?: number;
   order?: 'asc' | 'desc';
   fields?: string[];
-  user?: IMetadata;        // user defined options.
 }
 
 export interface IQueryRange {
@@ -634,6 +633,7 @@ export interface ILogurTransportOptions extends ILogurBaseOptions {
   stripcolors?: boolean;         // when true strips any colors before output.
   strategy?: OutputStrategy;    // storage strategy array, json, object or raw.
 
+
 }
 
 export interface IConsoleTransportOptions extends ILogurTransportOptions {
@@ -659,10 +659,10 @@ export interface IMemoryTransportOptions extends ILogurTransportOptions {
 }
 
 export interface IHttpTransportOptions extends ILogurTransportOptions {
-  path?: string;
   host?: string;
   port?: number;
   ssl?: boolean;
+  path?: string;
   encoding: string;
   headers?: IMetadata;
   method?: 'POST' | 'PUT';
@@ -680,6 +680,11 @@ export interface IStreamTransportOptions extends ILogurTransportOptions {
   };
   padding?: PadStrategy;          // the strategy for pading levels.
   colorize?: boolean;             // when NOT false colorization is applied.
+}
+
+export interface IXMLHttpTransportOptions extends ILogurTransportOptions {
+
+  headers?: IMetadata;
 }
 
 ////////////////////////
@@ -710,6 +715,13 @@ export interface IFileTransport extends ILogurTransport {
 export interface IHttpTransport extends ILogurTransport {
   options: IHttpTransportOptions;
   request(options: RequestOptions, data: string | IMetadata | HttpTransportCallback, fn: HttpTransportCallback): void;
+}
+
+/* XMLHttp
+*******************/
+
+export interface IXMLHttpTransport extends ILogurTransport {
+  options: IXMLHttpTransportOptions;
 }
 
 /* Memory

@@ -957,16 +957,15 @@ var LogurInstance = (function (_super) {
         };
         if (u.isString(transports))
             transports = [transports];
-        // Build transports excluding those provided.
-        if (exclude) {
-            var excluded_1 = transports.slice(0);
-            transports = this._transports.filter(function (t) {
-                return !u.contains(excluded_1, t);
-            });
-        }
+        // Strip missing or excluded Transports.
+        var excluded = exclude === true ? transports.slice(0) : [];
+        var avail = !exclude ? transports : this._transports;
+        var filtered = this._transports.filter(function (t) {
+            return !u.contains(excluded, t) && u.contains(avail, t);
+        });
         var obj = {};
         u.keys(this.options.levels).forEach(function (k) {
-            obj[k] = fn(transports, k).bind(_this);
+            obj[k] = fn(filtered, k).bind(_this);
         });
         return obj;
     };

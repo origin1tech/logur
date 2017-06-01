@@ -22,11 +22,16 @@ var Logur = (function () {
          */
         get: function () {
             // If log exists just return it.
-            //if (this._log)
+            if (this.instance)
+                return this.instance;
+            var instance;
+            // Try to get the default instance.
+            instance = this.get('default');
+            // If no instance create it.
+            if (!instance)
+                instance = this.create('default');
+            this.instance = instance;
             return this.instance;
-            // // Create the instance.
-            // let instance = this.create<ILevelMethodsDefault>('default');
-            // return this._log = instance;
         },
         enumerable: true,
         configurable: true

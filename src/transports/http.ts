@@ -4,7 +4,10 @@
  * This Transport uses ONLY native Node http(s) request.
  * Although it will work fine for simple requests it might be best
  * to create a custom Transport extending the base Transport "LogurTransport"
- * while using the "request" module for example
+ * while using the "request" module for example. Additionally this
+ * module makes some assumption in that the path for logging and querying
+ * is the same. ONLY the method is changed. If you have specific needs you
+ * do as described above or extend this class and override as needed.
  * @see https://www.npmjs.com/package/request
  *
  */

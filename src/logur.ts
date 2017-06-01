@@ -8,6 +8,7 @@ export class Logur implements ILogur {
 
   static instance: Logur;
 
+  // The default Logur Instance.
   instance: ILogurInstance<ILevelMethodsDefault> & ILevelMethodsDefault;
 
   instances: ILogurInstances = {};
@@ -33,13 +34,21 @@ export class Logur implements ILogur {
   get log(): ILogurInstance<ILevelMethodsDefault> & ILevelMethodsDefault {
 
     // If log exists just return it.
-    //if (this._log)
+    if (this.instance)
+      return this.instance;
+
+    let instance;
+
+    // Try to get the default instance.
+    instance = this.get('default');
+
+    // If no instance create it.
+    if (!instance)
+      instance = this.create<ILevelMethodsDefault>('default');
+
+    this.instance = instance;
+
     return this.instance;
-
-    // // Create the instance.
-    // let instance = this.create<ILevelMethodsDefault>('default');
-
-    // return this._log = instance;
 
   }
 

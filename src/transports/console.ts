@@ -32,6 +32,7 @@ export class ConsoleTransport extends LogurTransport implements IConsoleTranspor
     if (!u.isNode()) {
       this.options.colorize = false;
       this.options.prettystack = false;
+      this.options.padding = 'none';
     }
 
   }

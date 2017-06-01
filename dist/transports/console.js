@@ -36,6 +36,7 @@ var ConsoleTransport = (function (_super) {
         if (!u.isNode()) {
             _this.options.colorize = false;
             _this.options.prettystack = false;
+            _this.options.padding = 'none';
         }
         return _this;
     }

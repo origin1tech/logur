@@ -400,7 +400,6 @@ export interface IQuery {
     take?: number;
     order?: 'asc' | 'desc';
     fields?: string[];
-    user?: IMetadata;
 }
 export interface IQueryRange {
     index?: number;
@@ -518,10 +517,10 @@ export interface IMemoryTransportOptions extends ILogurTransportOptions {
     max?: number;
 }
 export interface IHttpTransportOptions extends ILogurTransportOptions {
-    path?: string;
     host?: string;
     port?: number;
     ssl?: boolean;
+    path?: string;
     encoding: string;
     headers?: IMetadata;
     method?: 'POST' | 'PUT';
@@ -539,6 +538,9 @@ export interface IStreamTransportOptions extends ILogurTransportOptions {
     padding?: PadStrategy;
     colorize?: boolean;
 }
+export interface IXMLHttpTransportOptions extends ILogurTransportOptions {
+    headers?: IMetadata;
+}
 export interface IConsoleTransport extends ILogurTransport {
     options: IConsoleTransportOptions;
 }
@@ -554,6 +556,9 @@ export interface IFileTransport extends ILogurTransport {
 export interface IHttpTransport extends ILogurTransport {
     options: IHttpTransportOptions;
     request(options: RequestOptions, data: string | IMetadata | HttpTransportCallback, fn: HttpTransportCallback): void;
+}
+export interface IXMLHttpTransport extends ILogurTransport {
+    options: IXMLHttpTransportOptions;
 }
 export interface IMemoryTransport extends ILogurTransport {
     logs: any[];

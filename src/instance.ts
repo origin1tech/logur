@@ -1184,18 +1184,18 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
     if (u.isString(transports))
       transports = <string[]>[transports];
 
-    // Build transports excluding those provided.
-    if (exclude) {
-      const excluded: string[] = <string[]>transports.slice(0);
-      transports = this._transports.filter((t) => {
-        return !u.contains(excluded, t);
-      });
-    }
+
+    // Strip missing or excluded Transports.
+    const excluded: string[] = exclude === true ? <string[]>transports.slice(0) : [];
+    const avail: string[] = !exclude ? <string[]>transports : this._transports;
+    const filtered = this._transports.filter((t) => {
+      return !u.contains(excluded, t) && u.contains(<string[]>avail, t);
+    });
 
     let obj: any = {};
 
     u.keys(this.options.levels).forEach((k) => {
-      obj[k] = fn(transports, k).bind(this);
+      obj[k] = fn(filtered, k).bind(this);
     });
 
     return obj as T;
