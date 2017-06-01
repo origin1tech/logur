@@ -70,7 +70,6 @@ var FileTransport = (function (_super) {
                 _this.options.filename = 'logs/app.log';
             }
         }
-        console.log(_this.options.filename);
         // Don't allow comma for delimiter.
         if (_this.options.delimiter !== ';' && _this.options.delimiter !== '\t')
             _this.options.delimiter = ';';

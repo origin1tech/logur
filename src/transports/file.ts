@@ -73,7 +73,7 @@ export class FileTransport extends LogurTransport implements IFileTransport {
         this.options.filename = 'logs/app.log';
       }
     }
-    console.log(this.options.filename);
+
     // Don't allow comma for delimiter.
     if (this.options.delimiter !== ';' && this.options.delimiter !== '\t')
       this.options.delimiter = ';';

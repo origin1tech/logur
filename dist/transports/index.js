@@ -9,4 +9,5 @@ __export(require("./memory"));
 __export(require("./file"));
 __export(require("./http"));
 __export(require("./stream"));
+__export(require("./xmlhttp"));
 //# sourceMappingURL=index.js.map

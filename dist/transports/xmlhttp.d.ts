@@ -20,7 +20,7 @@ export declare class XMLHttpTransport extends LogurTransport implements IXMLHttp
      * Tries to get browser compatible XMLHttp Request.
      */
     private getXMLHttpRequest();
-    request(options: any): void;
+    request(options: IXMLHttpTransportOptions): void;
     /**
      * Action
      * The transport action to be called when messages are logged.

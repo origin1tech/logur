@@ -87,7 +87,7 @@ export class XMLHttpTransport extends LogurTransport implements IXMLHttpTranspor
 
   }
 
-  request(options: any) {
+  request(options: IXMLHttpTransportOptions) {
 
     // Extend options with defaults.
     options = u.extend({}, u.shallowClone(this.options), options);
@@ -95,9 +95,15 @@ export class XMLHttpTransport extends LogurTransport implements IXMLHttpTranspor
     // Get the XMLHttp Request Client.
     let xhr: XMLHttpRequest = this.getXMLHttpRequest();
 
+    let data = null;
+
+    // Checking for data.
+    if (options.data) {
+    }
+
     const onready = () => {
       if (xhr.readyState === 4 && xhr.status === 200) {
-
+        console.log(xhr.responseText);
       }
     };
 
@@ -115,9 +121,30 @@ export class XMLHttpTransport extends LogurTransport implements IXMLHttpTranspor
     xhr.onprogress = onprogress;
     xhr.onerror = onerror;
 
+    // Set request headers.
+    u.keys(options.headers).forEach((k) => {
+      xhr.setRequestHeader(k, options.headers[k]);
+    });
+
+    // Check for basic auth.
+    if (options.auth && options.auth.username && options.auth.password) {
+      xhr.setRequestHeader('Authorization', 'Basic ' + btoa(`${options.auth.username}:${options.auth.password}`));
+      xhr.withCredentials = true;
+    }
+
+    // Check if sending data.
+    if (options.data) {
+      if (u.isPlainObject(options.data))
+        data = JSON.stringify(data);
+      else if (u.isString(options.data))
+        data = options.data;
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.setRequestHeader('Content-Length', data.length);
+    }
+
     // Open the connection and send.
-    xhr.open(options.method, options.url, options.async, options.user, options.password);
-    xhr.send(null);
+    xhr.open(options.method, options.url, options.async);
+    xhr.send(data);
 
   }
 

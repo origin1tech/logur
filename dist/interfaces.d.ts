@@ -523,7 +523,7 @@ export interface IHttpTransportOptions extends ILogurTransportOptions {
     path?: string;
     encoding: string;
     headers?: IMetadata;
-    method?: 'POST' | 'PUT';
+    method?: string;
     auth?: IAuth;
     params?: IMetadata;
     agent?: boolean | Agent;
@@ -539,7 +539,12 @@ export interface IStreamTransportOptions extends ILogurTransportOptions {
     colorize?: boolean;
 }
 export interface IXMLHttpTransportOptions extends ILogurTransportOptions {
+    url?: string;
+    method?: string;
+    async?: boolean;
+    auth?: IAuth;
     headers?: IMetadata;
+    data?: string | IMetadata;
 }
 export interface IConsoleTransport extends ILogurTransport {
     options: IConsoleTransportOptions;
