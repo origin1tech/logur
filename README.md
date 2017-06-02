@@ -8,6 +8,13 @@
 This is a bit of a pre-release. Not production ready just yet. Probably safe for new projects. Need to write more
 tests, check for leaks test in Browser more.
 
+A few TODOs as well:
+
++ Breakout Transports into own modules to limit footprint.
++ Headless browser tests.
++ More examples and docs
++ Debugging & general testing.
+
 ## Description
 
 Extensible logging library. Logur can be a simple or as advanced as required. It makes few opinons and merely does some of the heavy before handing off the normalized data for logging.
@@ -48,7 +55,10 @@ const log = logur.get(/* options here */);
 ```js
 const logur = require('logur');
 const log = logur.get(/* options here */);
+
 ```
+
+See [Building with Webpack](#building-with-webpack) for examples on importing and building for the browser.
 
 ## Usage
 
@@ -751,7 +761,47 @@ const tokens = {
 
 ```
 
-**
+## Building for Browser
+
+There is no single file build for Logur. In today's world it is somewhat rare to not have some sort of
+compiling tool in your project. As such no single file build is provided. Going into how these workflows
+work is beyond the scope of this document, however it is important to note when building for the browser
+you must provide the following node variable:
+
+**process.env.BROWSER**
+
+This is required as it tells Logur whether to build for Node or the Browser. There are several ways to accomplish this this is how we do it.
+
+In your package.json you just pass in the variable in a script. Please note the below is just an example. Your project's build needs may differ slightly but this should put you in the right direction.
+
+```json
+
+"scripts: {
+  "dev": "NODE_ENV=development BROWSER=true node ./node_modules/webpack-dev-server/bin/webpack-dev-server -d --hot --colors --watch --progress --profile"
+}
+
+```
+
+### Building with Webpack
+
+After supplying the above BROWSER=true env flag you'll need to consume this in your Webpack build. This is accomplished by defining a plugin as follows:
+
+```js
+
+  plugins = [
+
+    new webpack.DefinePlugin({
+      'process.env': {
+        NODE_ENV: JSON.stringify(options.env),
+        BROWSER: options.browser
+      }
+    }
+
+  ]
+
+```
+
+In the above we're defining access to both the NODE_ENV var and the BROWSER var which our Webpack build uses.
 
 ## License
 

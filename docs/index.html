@@ -71,6 +71,13 @@
 				<h2 id="pre-release">Pre-Release</h2>
 				<p>This is a bit of a pre-release. Not production ready just yet. Probably safe for new projects. Need to write more
 				tests, check for leaks test in Browser more.</p>
+				<p>A few TODOs as well:</p>
+				<ul>
+					<li>Breakout Transports into own modules to limit footprint.</li>
+					<li>Headless browser tests.</li>
+					<li>More examples and docs</li>
+					<li>Debugging &amp; general testing.</li>
+				</ul>
 				<h2 id="description">Description</h2>
 				<p>Extensible logging library. Logur can be a simple or as advanced as required. It makes few opinons and merely does some of the heavy before handing off the normalized data for logging.</p>
 				<p>Logur gives you a nice object containing information not only about the logged message but also your environment as well as a handy stack trace on every logged message.</p>
@@ -93,6 +100,7 @@
 				<pre><code class="lang-js"><span class="hljs-keyword">const</span> logur = <span class="hljs-built_in">require</span>(<span class="hljs-string">'logur'</span>);
 <span class="hljs-keyword">const</span> log = logur.get(<span class="hljs-comment">/* options here */</span>);
 </code></pre>
+				<p>See <a href="#building-with-webpack">Building with Webpack</a> for examples on importing and building for the browser.</p>
 				<h2 id="usage">Usage</h2>
 				<p>Using Logur is as you&#39;d expect. By default Logur has the following log methods.
 					You can extend these methods, change log levels and so on but we&#39;ll get to that
@@ -676,7 +684,34 @@ server.listen(<span class="hljs-number">3000</span>, <span class="hljs-string">'
   }
 }
 </code></pre>
-				<p>**</p>
+				<h2 id="building-for-browser">Building for Browser</h2>
+				<p>There is no single file build for Logur. In today&#39;s world it is somewhat rare to not have some sort of
+					compiling tool in your project. As such no single file build is provided. Going into how these workflows
+					work is beyond the scope of this document, however it is important to note when building for the browser
+				you must provide the following node variable:</p>
+				<p><strong>process.env.BROWSER</strong></p>
+				<p>This is required as it tells Logur whether to build for Node or the Browser. There are several ways to accomplish this this is how we do it.</p>
+				<p>In your package.json you just pass in the variable in a script. Please note the below is just an example. Your project&#39;s build needs may differ slightly but this should put you in the right direction.</p>
+				<pre><code class="lang-json">
+&quot;scripts: {
+  &quot;dev&quot;: &quot;NODE_ENV=development BROWSER=true node ./node_modules/webpack-dev-server/bin/webpack-dev-server -d --hot --colors --watch --progress --profile&quot;
+}
+</code></pre>
+				<h3 id="building-with-webpack">Building with Webpack</h3>
+				<p>After supplying the above BROWSER=true env flag you&#39;ll need to consume this in your Webpack build. This is accomplished by defining a plugin as follows:</p>
+				<pre><code class="lang-js">
+  plugins = [
+
+    <span class="hljs-keyword">new</span> webpack.DefinePlugin({
+      <span class="hljs-string">'process.env'</span>: {
+        <span class="hljs-attr">NODE_ENV</span>: <span class="hljs-built_in">JSON</span>.stringify(options.env),
+        <span class="hljs-attr">BROWSER</span>: options.browser
+      }
+    }
+
+  ]
+</code></pre>
+				<p>In the above we&#39;re defining access to both the NODE_ENV var and the BROWSER var which our Webpack build uses.</p>
 				<h2 id="license">License</h2>
 				<p>See <a href="License.md">LICENSE.md</a></p>
 			</div>

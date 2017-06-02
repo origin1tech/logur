@@ -196,8 +196,6 @@ var XMLHttpTransport = (function (_super) {
             _this.handleError(err);
             _this.handleStatus(xhr);
             var result = xhr.responseText;
-            if (!result || !result.length)
-                return fn([]);
             if (u.isString(result))
                 try {
                     result = JSON.parse(result);
@@ -207,7 +205,7 @@ var XMLHttpTransport = (function (_super) {
                 }
             // don't block callback just log above
             // events to inform user.
-            fn(result);
+            fn(result || []);
         };
         this.request(reqOpts, handleResponse);
     };

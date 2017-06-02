@@ -250,9 +250,6 @@ export class XMLHttpTransport extends LogurTransport implements IXMLHttpTranspor
 
       let result: any = xhr.responseText;
 
-      if (!result || !result.length)
-        return fn([]);
-
       if (u.isString(result))
         try {
           result = JSON.parse(result);
@@ -263,7 +260,7 @@ export class XMLHttpTransport extends LogurTransport implements IXMLHttpTranspor
 
       // don't block callback just log above
       // events to inform user.
-      fn(result);
+      fn(result || []);
 
     };
 
