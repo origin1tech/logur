@@ -12,6 +12,7 @@ export declare type Constructor<T> = new (...args: any[]) => T;
  */
 export declare type TransportConstructor<T> = new (base: ILogurInstanceOptions, options: ILogurTransportOptions, logur: ILogur) => T;
 export declare type ExecCallback = (output: ILogurOutput) => void;
+export declare type XMLHttpRequestCallback = (err: ErrorEvent, xhr?: XMLHttpRequest) => void;
 /**
  * Timestamp Callback
  * Type constraint for Timestamp callback.
@@ -541,10 +542,9 @@ export interface IStreamTransportOptions extends ILogurTransportOptions {
 export interface IXMLHttpTransportOptions extends ILogurTransportOptions {
     url?: string;
     method?: string;
-    async?: boolean;
     auth?: IAuth;
     headers?: IMetadata;
-    data?: string | IMetadata;
+    params?: IMetadata;
 }
 export interface IConsoleTransport extends ILogurTransport {
     options: IConsoleTransportOptions;
@@ -658,7 +658,7 @@ export interface ILogurInstance<T> extends INotify {
 }
 export interface ILogurOptionsTransport {
     name: string;
-    options?: ILogurTransportOptions;
+    options?: IMetadata;
     transport: any;
 }
 export interface ILogur {

@@ -1,4 +1,4 @@
-import { ILogur, IXMLHttpTransportOptions, IXMLHttpTransport, ILogurOutput, TransportActionCallback, ILogurInstanceOptions, IQuery, QueryResult, IInstanceMethodsExtended } from '../interfaces';
+import { ILogur, IXMLHttpTransportOptions, IXMLHttpTransport, ILogurOutput, TransportActionCallback, ILogurInstanceOptions, IQuery, QueryResult, IInstanceMethodsExtended, IMetadata, XMLHttpRequestCallback } from '../interfaces';
 import { LogurTransport } from './base';
 export declare class XMLHttpTransport extends LogurTransport implements IXMLHttpTransport {
     options: IXMLHttpTransportOptions;
@@ -20,7 +20,28 @@ export declare class XMLHttpTransport extends LogurTransport implements IXMLHttp
      * Tries to get browser compatible XMLHttp Request.
      */
     private getXMLHttpRequest();
-    request(options: IXMLHttpTransportOptions): void;
+    /**
+     * Handle Error
+     * Handles error throw by request.
+     *
+     * @param err the XMLHttp Error.
+     */
+    private handleError(err);
+    /**
+     * Handle Status
+     * Handles status warnings when 200 and 201 are not returned.
+     *
+     * @param xhr the XMLHttpRequest object.
+     */
+    private handleStatus(xhr);
+    /**
+     * Request
+     * Makes XMLHttpRequest.
+     *
+     * @param options the options for the xmlhttp request.
+     * @param data data object for posts.
+     */
+    request(options: IXMLHttpTransportOptions, data?: string | IMetadata, fn?: XMLHttpRequestCallback): void;
     /**
      * Action
      * The transport action to be called when messages are logged.

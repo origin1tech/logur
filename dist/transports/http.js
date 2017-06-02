@@ -75,11 +75,23 @@ var HttpTransport = (function (_super) {
         };
         return _this;
     }
+    /**
+     * Handle Error
+     *
+     * @param err the Error to log.
+     */
     HttpTransport.prototype.handleError = function (err) {
-        console.log(err);
+        if (err)
+            this.log.using(this.name, true).error(err);
     };
+    /**
+     * Handle Status
+     * Handles error status messages.
+     * @param res the Response object.
+     */
     HttpTransport.prototype.hanldeStatus = function (res) {
-        console.log(new Error(res.statusCode + ": " + (res.statusMessage || 'Unknown error')));
+        if (res && !u.contains([200, 201], res.statusCode))
+            this.log.using(this.name, true).warn(res.statusCode + ": " + (res.statusMessage || 'Unknown error'));
     };
     /**
      * Request
@@ -146,10 +158,10 @@ var HttpTransport = (function (_super) {
             result = u.stripColors(result);
         // Handles the response from server.
         var handleResponse = function (err, res, body) {
-            if (err)
-                return _this.handleError(err);
-            if (res && res.statusCode !== 200)
-                return _this.hanldeStatus(res);
+            _this.handleError(err);
+            _this.hanldeStatus(res);
+            // don't block callback just log above
+            // events to inform user.
             fn();
         };
         if (this.options.strategy === 'json')
@@ -169,8 +181,10 @@ var HttpTransport = (function (_super) {
     HttpTransport.prototype.query = function (q, fn) {
         var _this = this;
         // Cannot query without timestamps ensure in map.
-        if (!u.contains(this.options.map, 'timestamp'))
-            return this.log.warn('cannot query logs, map missing "timestamp" property.');
+        if (!u.contains(this.options.map, 'timestamp')) {
+            this.log.warn('cannot query logs, map missing "timestamp" property.');
+            return;
+        }
         // Convert date to epoch
         if (u.isDate(q.from))
             q.from = q.from.getTime();
@@ -187,10 +201,8 @@ var HttpTransport = (function (_super) {
         };
         // Handles query response from server.
         var handleResponse = function (err, res, body) {
-            if (err)
-                return _this.handleError(err);
-            if (res && res.statusCode !== 200)
-                return _this.hanldeStatus(res);
+            _this.handleError(err);
+            _this.hanldeStatus(res);
             if (u.isString(body))
                 try {
                     body = JSON.parse(body);
@@ -198,7 +210,9 @@ var HttpTransport = (function (_super) {
                 catch (ex) {
                     _this.handleError(err);
                 }
-            fn(body);
+            // don't block callback just log above
+            // events to inform user.
+            fn(body || []);
         };
         this.request(reqOpts, handleResponse);
     };

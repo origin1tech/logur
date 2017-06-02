@@ -1,4 +1,4 @@
-import { ITimestamps, Constructor, PadStrategy, IParsedPath, ILogurOutput, ILogurOutputMapped, IQuery } from './interfaces';
+import { ITimestamps, IMetadata, Constructor, PadStrategy, IParsedPath, ILogurOutput, ILogurOutputMapped, IQuery } from './interfaces';
 /**
  * EOL
  * Line ending constant.
@@ -326,6 +326,21 @@ export declare function getType(obj: any, stringToDate?: boolean | string, unkno
  * @param str the string to attempt parsing on.
  */
 export declare function tryParseDate(str: string): string | number;
+/**
+ * To Query String
+ *
+ * Converts object of params to query string.
+ * @param obj the object to be be serialized to query string.
+ * @param prefix prefix to be aded to serialized data.
+ */
+export declare function toQueryString(obj: IMetadata, prefix?: string): string;
+/**
+ * Consol
+ * Simply normalizes the console func to be called.
+ *
+ * @param type the type of console func to return.
+ */
+export declare function consol(type?: string, ...args: any[]): void;
 /**
  * Parse Path
  * Universal method to parse a file path or url.

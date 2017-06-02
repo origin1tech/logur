@@ -1,4 +1,4 @@
-import { ILogurTransport, ILogur, IXMLHttpTransportOptions, IXMLHttpTransport, ILogurOutput, TransportActionCallback, ILogurInstanceOptions, IQuery, QueryResult, IInstanceMethodsExtended } from '../interfaces';
+import { ILogurTransport, ILogur, IXMLHttpTransportOptions, IXMLHttpTransport, ILogurOutput, TransportActionCallback, ILogurInstanceOptions, IQuery, QueryResult, IInstanceMethodsExtended, IMetadata, XMLHttpRequestCallback } from '../interfaces';
 import { LogurTransport } from './base';
 import * as u from '../utils';
 
@@ -8,8 +8,11 @@ const defaults: IXMLHttpTransportOptions = {
 
   map: ['timestamp', 'level', 'message', 'metadata'],
   strategy: 'json',
+  url: '/log',
+  method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-  queryable: true
+  queryable: true,
+  stripcolors: true
 
 };
 
@@ -87,7 +90,45 @@ export class XMLHttpTransport extends LogurTransport implements IXMLHttpTranspor
 
   }
 
-  request(options: IXMLHttpTransportOptions) {
+  /**
+   * Handle Error
+   * Handles error throw by request.
+   *
+   * @param err the XMLHttp Error.
+   */
+  private handleError(err: ErrorEvent) {
+    if (err)
+      this.log.using(this.name, true).error(err);
+  }
+
+  /**
+   * Handle Status
+   * Handles status warnings when 200 and 201 are not returned.
+   *
+   * @param xhr the XMLHttpRequest object.
+   */
+  private handleStatus(xhr) {
+
+    if (xhr.status === 0 || xhr.readyState !== 4)
+      return;
+
+    if (!u.contains([200, 201], xhr.status))
+      this.log.using(this.name, true).warn(`${xhr.status}: ${xhr.responseText || 'Unknown error .'}`);
+  }
+
+  /**
+   * Request
+   * Makes XMLHttpRequest.
+   *
+   * @param options the options for the xmlhttp request.
+   * @param data data object for posts.
+   */
+  request(options: IXMLHttpTransportOptions, data?: string | IMetadata, fn?: XMLHttpRequestCallback) {
+
+    if (u.isFunction(data)) {
+      fn = <XMLHttpRequestCallback>data;
+      data = undefined;
+    }
 
     // Extend options with defaults.
     options = u.extend({}, u.shallowClone(this.options), options);
@@ -95,36 +136,29 @@ export class XMLHttpTransport extends LogurTransport implements IXMLHttpTranspor
     // Get the XMLHttp Request Client.
     let xhr: XMLHttpRequest = this.getXMLHttpRequest();
 
-    let data = null;
+    let params: string, url: string;
 
-    // Checking for data.
-    if (options.data) {
-    }
-
-    const onready = () => {
-      if (xhr.readyState === 4 && xhr.status === 200) {
-        console.log(xhr.responseText);
-      }
-    };
-
-    const onprogress = (e) => {
-      // Placeholder.
-    };
-
-    const onerror = (e) => {
-      // Log only to the console.
-      this.log.using('console').error(e);
-    };
+    // Checking for params for gets.
+    // Build query string for params to
+    // be added to url.
+    if (options.params)
+      params = u.toQueryString(options.params);
 
     // Setup listeners.
-    xhr.onreadystatechange = onready;
-    xhr.onprogress = onprogress;
-    xhr.onerror = onerror;
+    xhr.onreadystatechange = () => {
+      if (xhr.readyState !== 4)
+        return;
+      fn(null, xhr);
+    };
+    xhr.onerror = fn;
 
-    // Set request headers.
-    u.keys(options.headers).forEach((k) => {
-      xhr.setRequestHeader(k, options.headers[k]);
-    });
+    url = options.url;
+
+    if (params)
+      url += '?' + params;
+
+    // Open the connection and send.
+    xhr.open(options.method, url, true);
 
     // Check for basic auth.
     if (options.auth && options.auth.username && options.auth.password) {
@@ -132,18 +166,16 @@ export class XMLHttpTransport extends LogurTransport implements IXMLHttpTranspor
       xhr.withCredentials = true;
     }
 
-    // Check if sending data.
-    if (options.data) {
-      if (u.isPlainObject(options.data))
-        data = JSON.stringify(data);
-      else if (u.isString(options.data))
-        data = options.data;
-      xhr.setRequestHeader('Content-Type', 'application/json');
-      xhr.setRequestHeader('Content-Length', data.length);
-    }
+    // Set request headers.
+    u.keys(options.headers).forEach((k) => {
+      xhr.setRequestHeader(k, options.headers[k]);
+    });
 
-    // Open the connection and send.
-    xhr.open(options.method, options.url, options.async);
+    // Check if sending data.
+    if (data && u.isPlainObject(data))
+      data = JSON.stringify(data);
+
+    // Send the request.
     xhr.send(data);
 
   }
@@ -163,8 +195,20 @@ export class XMLHttpTransport extends LogurTransport implements IXMLHttpTranspor
     // Get the mapped result by strategy.
     let result = mapped[this.options.strategy];
 
+    const handleRequest = (err: ErrorEvent, xhr: XMLHttpRequest) => {
 
-    fn();
+      this.handleError(err);
+
+      this.handleStatus(xhr);
+
+      // don't block callback just log above
+      // events to inform user.
+      fn();
+
+    };
+
+    // Make the request.
+    this.request(null, result, handleRequest);
 
   }
 
@@ -180,6 +224,50 @@ export class XMLHttpTransport extends LogurTransport implements IXMLHttpTranspor
     // Cannot query without timestamps ensure in map.
     if (!u.contains(this.options.map, 'timestamp'))
       return this.log.warn('cannot query logs, map missing "timestamp" property.');
+
+    // Convert date to epoch
+    if (u.isDate(q.from))
+      q.from = (q.from as Date).getTime();
+
+    if (u.isDate(q.to))
+      q.to = (q.to as Date).getTime();
+
+    // Stringify the query object.
+    const query = u.toQueryString(q);
+    const queryPath = this.options.url + '?' + query;
+
+    // Define request options for request.
+    const reqOpts: IXMLHttpTransportOptions = {
+      method: 'GET',
+      url: queryPath
+    };
+
+    // Handles query response from server.
+    const handleResponse = (err: ErrorEvent, xhr: XMLHttpRequest) => {
+
+      this.handleError(err);
+      this.handleStatus(xhr);
+
+      let result: any = xhr.responseText;
+
+      if (!result || !result.length)
+        return fn([]);
+
+      if (u.isString(result))
+        try {
+          result = JSON.parse(result);
+        }
+        catch (ex) {
+          this.handleError(err);
+        }
+
+      // don't block callback just log above
+      // events to inform user.
+      fn(result);
+
+    };
+
+    this.request(reqOpts, handleResponse);
 
   }
 

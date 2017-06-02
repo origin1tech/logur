@@ -12,7 +12,7 @@
  * @see https://www.npmjs.com/package/request
  *
  */
-import { ILogur, IHttpTransportOptions, IHttpTransport, ILogurOutput, ILogurInstanceOptions, TransportActionCallback, HttpTransportCallback, IMetadata, IQuery, QueryResult, IInstanceMethodsExtended } from '../interfaces';
+import { ILogur, IHttpTransportOptions, IHttpTransport, ILogurOutput, ILogurInstanceOptions, TransportActionCallback, HttpTransportCallback, IMetadata, IQuery, QueryResult } from '../interfaces';
 import { LogurTransport } from './base';
 import { RequestOptions } from 'http';
 export declare class HttpTransport extends LogurTransport implements IHttpTransport {
@@ -26,7 +26,17 @@ export declare class HttpTransport extends LogurTransport implements IHttpTransp
      * @param logur the common Logur instance.
      */
     constructor(base: ILogurInstanceOptions, options: IHttpTransportOptions, logur: ILogur);
+    /**
+     * Handle Error
+     *
+     * @param err the Error to log.
+     */
     private handleError(err);
+    /**
+     * Handle Status
+     * Handles error status messages.
+     * @param res the Response object.
+     */
     private hanldeStatus(res);
     /**
      * Request
@@ -51,5 +61,5 @@ export declare class HttpTransport extends LogurTransport implements IHttpTransp
      * @param q the query options.
      * @param fn the query result callback.
      */
-    query(q: IQuery, fn: QueryResult): IInstanceMethodsExtended;
+    query(q: IQuery, fn: QueryResult): void;
 }

@@ -903,9 +903,49 @@ export function tryParseDate(str: string): string | number {
   }
 }
 
+/**
+ * To Query String
+ *
+ * Converts object of params to query string.
+ * @param obj the object to be be serialized to query string.
+ * @param prefix prefix to be aded to serialized data.
+ */
+export function toQueryString(obj: IMetadata, prefix?: string) {
+
+  let str = [], p;
+
+  for (p in obj) {
+
+    if (obj.hasOwnProperty(p)) {
+
+      let k = prefix ? prefix + '[' + p + ']' : p, v = obj[p];
+
+      str.push((v !== null && typeof v === 'object') ?
+        toQueryString(v, k) :
+        encodeURIComponent(k) + '=' + encodeURIComponent(v));
+
+    }
+
+  }
+
+  return str.join('&');
+
+}
+
 ///////////////////////////////
 // LIBRARY UTILS
 ///////////////////////////////
+
+/**
+ * Consol
+ * Simply normalizes the console func to be called.
+ *
+ * @param type the type of console func to return.
+ */
+export function consol(type?: string, ...args: any[]) {
+  const _console = console[type] || console.log;
+  _console.apply(console, args);
+}
 
 /**
  * Parse Path

@@ -83,12 +83,24 @@ export class HttpTransport extends LogurTransport implements IHttpTransport {
 
   }
 
+  /**
+   * Handle Error
+   *
+   * @param err the Error to log.
+   */
   private handleError(err: Error) {
-    console.log(err);
+    if (err)
+      this.log.using(this.name, true).error(err);
   }
 
+  /**
+   * Handle Status
+   * Handles error status messages.
+   * @param res the Response object.
+   */
   private hanldeStatus(res: IncomingMessage) {
-    console.log(new Error(`${res.statusCode}: ${res.statusMessage || 'Unknown error'}`));
+    if (res && !u.contains([200, 201], res.statusCode))
+      this.log.using(this.name, true).warn(`${res.statusCode}: ${res.statusMessage || 'Unknown error'}`);
   }
 
   /**
@@ -176,12 +188,11 @@ export class HttpTransport extends LogurTransport implements IHttpTransport {
     // Handles the response from server.
     const handleResponse = (err: Error, res: IncomingMessage, body: any) => {
 
-      if (err)
-        return this.handleError(err);
+      this.handleError(err);
+      this.hanldeStatus(res);
 
-      if (res && res.statusCode !== 200)
-        return this.hanldeStatus(res);
-
+      // don't block callback just log above
+      // events to inform user.
       fn();
 
     };
@@ -207,8 +218,10 @@ export class HttpTransport extends LogurTransport implements IHttpTransport {
   query(q: IQuery, fn: QueryResult) {
 
     // Cannot query without timestamps ensure in map.
-    if (!u.contains(this.options.map, 'timestamp'))
-      return this.log.warn('cannot query logs, map missing "timestamp" property.');
+    if (!u.contains(this.options.map, 'timestamp')) {
+      this.log.warn('cannot query logs, map missing "timestamp" property.');
+      return;
+    }
 
     // Convert date to epoch
     if (u.isDate(q.from))
@@ -232,11 +245,8 @@ export class HttpTransport extends LogurTransport implements IHttpTransport {
     // Handles query response from server.
     const handleResponse = (err: Error, res: IncomingMessage, body: any) => {
 
-      if (err)
-        return this.handleError(err);
-
-      if (res && res.statusCode !== 200)
-        return this.hanldeStatus(res);
+      this.handleError(err);
+      this.hanldeStatus(res);
 
       if (u.isString(body))
         try {
@@ -246,7 +256,9 @@ export class HttpTransport extends LogurTransport implements IHttpTransport {
           this.handleError(err);
         }
 
-      fn(body);
+      // don't block callback just log above
+      // events to inform user.
+      fn(body || []);
 
     };
 
