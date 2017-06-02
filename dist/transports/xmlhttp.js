@@ -163,6 +163,8 @@ var XMLHttpTransport = (function (_super) {
             // events to inform user.
             fn();
         };
+        if (this.options.stripcolors)
+            result = u.stripColors(result);
         // Make the request.
         this.request(null, result, handleRequest);
     };

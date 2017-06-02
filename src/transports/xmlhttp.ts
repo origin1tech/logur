@@ -207,6 +207,9 @@ export class XMLHttpTransport extends LogurTransport implements IXMLHttpTranspor
 
     };
 
+    if (this.options.stripcolors)
+      result = u.stripColors(result);
+
     // Make the request.
     this.request(null, result, handleRequest);
 

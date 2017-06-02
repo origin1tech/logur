@@ -100,7 +100,7 @@
 				<pre><code class="lang-js"><span class="hljs-keyword">const</span> logur = <span class="hljs-built_in">require</span>(<span class="hljs-string">'logur'</span>);
 <span class="hljs-keyword">const</span> log = logur.get(<span class="hljs-comment">/* options here */</span>);
 </code></pre>
-				<p>See <a href="#building-with-webpack">Building with Webpack</a> for examples on importing and building for the browser.</p>
+				<p>See <a href="#building-for-browser">Building for Browser</a> for examples on importing and building for the browser.</p>
 				<h2 id="usage">Usage</h2>
 				<p>Using Logur is as you&#39;d expect. By default Logur has the following log methods.
 					You can extend these methods, change log levels and so on but we&#39;ll get to that
@@ -179,9 +179,13 @@ log.wrap(<span class="hljs-string">'\n'</span>).info(<span class="hljs-string">'
 *****************************/</span>
 
 <span class="hljs-comment">// The below would result in the message only logging</span>
-<span class="hljs-comment">// to the File Transport.</span>
+<span class="hljs-comment">// to the File Transport. Accepts string name of Transport</span>
+<span class="hljs-comment">// or array of Transport names.</span>
 
 log.using(<span class="hljs-string">'file'</span>).info(<span class="hljs-string">'some message only logged to file transport.'</span>);
+
+<span class="hljs-comment">// You can also exclude the provided value(s)</span>
+log.using(<span class="hljs-string">'http'</span>, <span class="hljs-literal">true</span>).info(<span class="hljs-string">'some message logged to transports NOT named "http".'</span>);
 </code></pre>
 				<h3 id="mapping">Mapping</h3>
 				<p>One of the nice things about Logur is that it allows you to map whatever

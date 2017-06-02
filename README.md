@@ -58,7 +58,7 @@ const log = logur.get(/* options here */);
 
 ```
 
-See [Building with Webpack](#building-with-webpack) for examples on importing and building for the browser.
+See [Building for Browser](#building-for-browser) for examples on importing and building for the browser.
 
 ## Usage
 
@@ -145,10 +145,13 @@ log.wrap('\n').info('some wrapped message.');
 *****************************/
 
 // The below would result in the message only logging
-// to the File Transport.
+// to the File Transport. Accepts string name of Transport
+// or array of Transport names.
 
 log.using('file').info('some message only logged to file transport.');
 
+// You can also exclude the provided value(s)
+log.using('http', true).info('some message logged to transports NOT named "http".');
 
 ```
 
