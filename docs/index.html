@@ -81,15 +81,18 @@
 				<h2 id="description">Description</h2>
 				<p>Extensible logging library. Logur can be a simple or as advanced as required. It makes few opinons and merely does some of the heavy before handing off the normalized data for logging.</p>
 				<p>Logur gives you a nice object containing information not only about the logged message but also your environment as well as a handy stack trace on every logged message.</p>
-				<p>See the included transports to get you going with common use cases. See <a href="#transports">Transports</a> below for examples on how you can accomplish this.</p>
+				<p>See <a href="#transports">Transports</a> below for examples on how you can consume the included Transports.</p>
 				<h2 id="typescript">TypeScript</h2>
 				<p>Logur is written using TypeScript. Everything is nicely typed which makes working with Logur in your Typescript project clear and obvious.</p>
 				<h2 id="platforms">Platforms</h2>
 				<p>Logur will work both in NodeJS and your Browser. Currently Logur does not ship with a single file build. You will need to use a module loader such as Webpack to compile it. My guess is you&#39;ve got that covered and are already using something similar.</p>
-				<h2 id="installing">Installing</h2>
+				<p>See <a href="#building-for-browser">Building for Browser</a> for examples on importing and building for the browser.</p>
+				<h2 id="quick-start">Quick Start</h2>
+				<p>Getting Logur going is nor more than two lines. Import and then call logur.get() which returns the default Logur Instance configuration.</p>
+				<h3 id="installing">Installing</h3>
 				<pre><code class="lang-sh">$ npm install logur <span class="hljs-_">-s</span>
 </code></pre>
-				<h2 id="importing">Importing</h2>
+				<h3 id="importing">Importing</h3>
 				<p>There are two ways to import or use Logur. You can import the instance new it up then create your Instances and Transports and you&#39;re off. This is what you&#39;ll want to do to setup a logging environment with mutliple logging Instances and Transports.</p>
 				<p>But to get started let&#39;s just create a simple Logur using default log methods:</p>
 				<p><strong>ES6</strong></p>
@@ -100,8 +103,9 @@
 				<pre><code class="lang-js"><span class="hljs-keyword">const</span> logur = <span class="hljs-built_in">require</span>(<span class="hljs-string">'logur'</span>);
 <span class="hljs-keyword">const</span> log = logur.get(<span class="hljs-comment">/* options here */</span>);
 </code></pre>
+				<p>Thats it from there you can</p>
 				<p>See <a href="#building-for-browser">Building for Browser</a> for examples on importing and building for the browser.</p>
-				<h2 id="usage">Usage</h2>
+				<h3 id="default-methods">Default Methods</h3>
 				<p>Using Logur is as you&#39;d expect. By default Logur has the following log methods.
 					You can extend these methods, change log levels and so on but we&#39;ll get to that
 				below.</p>
@@ -430,6 +434,18 @@ log.info(<span class="hljs-string">'some log message'</span>, { name: <span clas
 				<h3 id="transports">Transports</h3>
 				<p>Adding existing Transports is very simple. Just provide the Transport type or
 				your own custom extended Transport along with its options to extend the instance.</p>
+				<p><strong>Included Transports</strong></p>
+				<p>NOTE: With the exception of the ConsoleTransport all of the below will eventually
+				be migrated to own module to limit the footrpint of the core module.</p>
+				<ul>
+					<li>LogurTransport          - base class all Transport inherit from.</li>
+					<li>ConsoleTransport        - logs to node or browser console.</li>
+					<li>FileTransport           - Node only Transport which logs to file.</li>
+					<li>MemoryTransport         - In memory transport, useful for testing or profiling.</li>
+					<li>StreamTransport         - Node only writeable stream Transport, defaults to process.stdout.</li>
+					<li>HttpTransport           - handles Node based Http requests.</li>
+					<li>XMLHttpTransport        - handles XMLHttpRequests (Ajax) logging.</li>
+				</ul>
 				<p><strong>Adding, Getting &amp; Removing</strong></p>
 				<pre><code class="lang-ts">
 <span class="hljs-comment">// Import Logur</span>

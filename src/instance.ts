@@ -75,6 +75,7 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
   protected _exceptions: string[] = [];
   protected _filters: IFilters = {};
   protected _serializers: ISerializers = {};
+
   private _buffer: { [key: string]: ILogurOutput } = {};
 
   // Filter cache.

@@ -21,7 +21,7 @@ Extensible logging library. Logur can be a simple or as advanced as required. It
 
 Logur gives you a nice object containing information not only about the logged message but also your environment as well as a handy stack trace on every logged message.
 
-See the included transports to get you going with common use cases. See <a href="#transports">Transports</a> below for examples on how you can accomplish this.
+See <a href="#transports">Transports</a> below for examples on how you can consume the included Transports.
 
 ## TypeScript
 
@@ -31,13 +31,20 @@ Logur is written using TypeScript. Everything is nicely typed which makes workin
 
 Logur will work both in NodeJS and your Browser. Currently Logur does not ship with a single file build. You will need to use a module loader such as Webpack to compile it. My guess is you've got that covered and are already using something similar.
 
-## Installing
+See [Building for Browser](#building-for-browser) for examples on importing and building for the browser.
+
+## Quick Start
+
+Getting Logur going is nor more than two lines. Import and then call logur.get() which returns the default Logur Instance configuration.
+
+
+### Installing
 
 ```sh
 $ npm install logur -s
 ```
 
-## Importing
+### Importing
 
 There are two ways to import or use Logur. You can import the instance new it up then create your Instances and Transports and you're off. This is what you'll want to do to setup a logging environment with mutliple logging Instances and Transports.
 
@@ -55,12 +62,13 @@ const log = logur.get(/* options here */);
 ```js
 const logur = require('logur');
 const log = logur.get(/* options here */);
-
 ```
+
+Thats it from there you can
 
 See [Building for Browser](#building-for-browser) for examples on importing and building for the browser.
 
-## Usage
+### Default Methods
 
 Using Logur is as you'd expect. By default Logur has the following log methods.
 You can extend these methods, change log levels and so on but we'll get to that
@@ -437,6 +445,19 @@ const log = logur.create<LogLevels>('myInstance', options);
 
 Adding existing Transports is very simple. Just provide the Transport type or
 your own custom extended Transport along with its options to extend the instance.
+
+**Included Transports**
+
+NOTE: With the exception of the ConsoleTransport all of the below will eventually
+be migrated to own module to limit the footrpint of the core module.
+
++ LogurTransport          - base class all Transport inherit from.
++ ConsoleTransport        - logs to node or browser console.
++ FileTransport           - Node only Transport which logs to file.
++ MemoryTransport         - In memory transport, useful for testing or profiling.
++ StreamTransport         - Node only writeable stream Transport, defaults to process.stdout.
++ HttpTransport           - handles Node based Http requests.
++ XMLHttpTransport        - handles XMLHttpRequests (Ajax) logging.
 
 **Adding, Getting & Removing**
 

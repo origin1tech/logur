@@ -16,8 +16,8 @@ const pkg = require('../package.json');
 const fs = require('fs');
 
 const argv = process.argv;
-const maxPatch = 999;
-const maxMinor = 99;
+const maxPatch = 9;
+const maxMinor = 9;
 const maxMajor = 0;
 
 // Get current version string.
