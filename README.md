@@ -14,6 +14,7 @@ A few TODOs as well:
 + Headless browser tests.
 + More examples and docs
 + Debugging & general testing.
++ Colorization for Browser console (btw u can do this now just pass css styles using built in string formatting.)
 
 ## Description
 
@@ -63,8 +64,6 @@ const log = logur.get(/* options here */);
 const logur = require('logur');
 const log = logur.get(/* options here */);
 ```
-
-Thats it from there you can
 
 See [Building for Browser](#building-for-browser) for examples on importing and building for the browser.
 
@@ -734,7 +733,7 @@ export interface IMiddlewareOptions {
 
 ```
 
-**Middleware Tokenss**
+**Middleware Tokens**
 
 Tokens are simply functions that receive the Request and Response objects
 from Express. Parse the objects or generate whatever you like and then

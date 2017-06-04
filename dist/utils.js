@@ -454,48 +454,6 @@ function last(arr) {
 }
 exports.last = last;
 /**
- * Tick Then
- * Wraps function with process.nextTick or setTimeout
- * then immediately calls function after tick.
- */
-function tickThen(ctx, fn) {
-    var args = [];
-    for (var _i = 2; _i < arguments.length; _i++) {
-        args[_i - 2] = arguments[_i];
-    }
-    var ticker = isNode() ? process.nextTick : setTimeout;
-    if (isFunction(ctx)) {
-        fn = ctx;
-        ctx = null;
-    }
-    ticker(function () {
-        fn.apply(ctx, args);
-    });
-}
-exports.tickThen = tickThen;
-function tickUntil(ctx, until, done, progress) {
-    var ticker = isNode() ? process.nextTick : setTimeout;
-    if (isFunction(ctx)) {
-        progress = done;
-        done = until;
-        until = ctx;
-        ctx = null;
-    }
-    var tick = function () {
-        if (progress)
-            progress();
-        if (!until())
-            done();
-        else
-            ticker(tick);
-    };
-    // Bind the context.
-    tick.bind(ctx);
-    // Start the ticker.
-    tick();
-}
-exports.tickUntil = tickUntil;
-/**
  * Match Index
  *
  * @param prop the property to match.
@@ -807,6 +765,48 @@ exports.toQueryString = toQueryString;
 ///////////////////////////////
 // LIBRARY UTILS
 ///////////////////////////////
+/**
+ * Tick Then
+ * Wraps function with process.nextTick or setTimeout
+ * then immediately calls function after tick.
+ */
+function tickThen(ctx, fn) {
+    var args = [];
+    for (var _i = 2; _i < arguments.length; _i++) {
+        args[_i - 2] = arguments[_i];
+    }
+    var ticker = isNode() ? process.nextTick : setTimeout;
+    if (isFunction(ctx)) {
+        fn = ctx;
+        ctx = null;
+    }
+    ticker(function () {
+        fn.apply(ctx, args);
+    });
+}
+exports.tickThen = tickThen;
+function tickUntil(ctx, until, done, progress) {
+    var ticker = isNode() ? process.nextTick : setTimeout;
+    if (isFunction(ctx)) {
+        progress = done;
+        done = until;
+        until = ctx;
+        ctx = null;
+    }
+    var tick = function () {
+        if (progress)
+            progress();
+        if (!until())
+            done();
+        else
+            ticker(tick);
+    };
+    // Bind the context.
+    tick.bind(ctx);
+    // Start the ticker.
+    tick();
+}
+exports.tickUntil = tickUntil;
 /**
  * Consol
  * Simply normalizes the console func to be called.

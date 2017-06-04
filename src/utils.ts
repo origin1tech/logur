@@ -499,54 +499,6 @@ export function last(arr: any[]): any {
 }
 
 /**
- * Tick Then
- * Wraps function with process.nextTick or setTimeout
- * then immediately calls function after tick.
- */
-export function tickThen(ctx: Object | Function, fn: Function, ...args: any[]): void {
-
-  const ticker = isNode() ? process.nextTick : setTimeout;
-
-  if (isFunction(ctx)) {
-    fn = <Function>ctx;
-    ctx = null;
-  }
-
-  ticker(() => {
-    fn.apply(ctx, args);
-  });
-
-}
-
-export function tickUntil(ctx: Object | Function, until: Function, done: Function, progress: Function): void {
-
-  const ticker = isNode() ? process.nextTick : setTimeout;
-
-  if (isFunction(ctx)) {
-    progress = done;
-    done = until;
-    until = <Function>ctx;
-    ctx = null;
-  }
-
-  const tick = () => {
-    if (progress)
-      progress();
-    if (!until())
-      done();
-    else
-      ticker(tick);
-  };
-
-  // Bind the context.
-  tick.bind(ctx);
-
-  // Start the ticker.
-  tick();
-
-}
-
-/**
  * Match Index
  *
  * @param prop the property to match.
@@ -935,6 +887,54 @@ export function toQueryString(obj: IMetadata, prefix?: string) {
 ///////////////////////////////
 // LIBRARY UTILS
 ///////////////////////////////
+
+/**
+ * Tick Then
+ * Wraps function with process.nextTick or setTimeout
+ * then immediately calls function after tick.
+ */
+export function tickThen(ctx: Object | Function, fn: Function, ...args: any[]): void {
+
+  const ticker = isNode() ? process.nextTick : setTimeout;
+
+  if (isFunction(ctx)) {
+    fn = <Function>ctx;
+    ctx = null;
+  }
+
+  ticker(() => {
+    fn.apply(ctx, args);
+  });
+
+}
+
+export function tickUntil(ctx: Object | Function, until: Function, done: Function, progress: Function): void {
+
+  const ticker = isNode() ? process.nextTick : setTimeout;
+
+  if (isFunction(ctx)) {
+    progress = done;
+    done = until;
+    until = <Function>ctx;
+    ctx = null;
+  }
+
+  const tick = () => {
+    if (progress)
+      progress();
+    if (!until())
+      done();
+    else
+      ticker(tick);
+  };
+
+  // Bind the context.
+  tick.bind(ctx);
+
+  // Start the ticker.
+  tick();
+
+}
 
 /**
  * Consol

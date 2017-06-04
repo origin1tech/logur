@@ -77,6 +77,7 @@
 					<li>Headless browser tests.</li>
 					<li>More examples and docs</li>
 					<li>Debugging &amp; general testing.</li>
+					<li>Colorization for Browser console (btw u can do this now just pass css styles using built in string formatting.)</li>
 				</ul>
 				<h2 id="description">Description</h2>
 				<p>Extensible logging library. Logur can be a simple or as advanced as required. It makes few opinons and merely does some of the heavy before handing off the normalized data for logging.</p>
@@ -103,7 +104,6 @@
 				<pre><code class="lang-js"><span class="hljs-keyword">const</span> logur = <span class="hljs-built_in">require</span>(<span class="hljs-string">'logur'</span>);
 <span class="hljs-keyword">const</span> log = logur.get(<span class="hljs-comment">/* options here */</span>);
 </code></pre>
-				<p>Thats it from there you can</p>
 				<p>See <a href="#building-for-browser">Building for Browser</a> for examples on importing and building for the browser.</p>
 				<h3 id="default-methods">Default Methods</h3>
 				<p>Using Logur is as you&#39;d expect. By default Logur has the following log methods.
@@ -665,7 +665,7 @@ server.listen(<span class="hljs-number">3000</span>, <span class="hljs-string">'
   metadata?: <span class="hljs-built_in">boolean</span>;                     <span class="hljs-comment">// when true all tokens are logged as metadata.</span>
 }
 </code></pre>
-				<p><strong>Middleware Tokenss</strong></p>
+				<p><strong>Middleware Tokens</strong></p>
 				<p>Tokens are simply functions that receive the Request and Response objects
 					from Express. Parse the objects or generate whatever you like and then
 				return the value.</p>

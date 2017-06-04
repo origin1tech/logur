@@ -243,7 +243,10 @@ var LogurInstance = (function (_super) {
                     return;
                 // Ahh the good browsers
                 if (err) {
-                    _this.exec(_this._exceptions, 'error', err);
+                    _this.exec(_this._exceptions, 'error', err, function () {
+                        if (_this.options.emiterr)
+                            _this.emit('error', err, _this._exceptions);
+                    });
                 }
                 else {
                     var stack = "Error: " + message + "\ngetStack@" + url + ":" + line + ":" + column;
@@ -260,6 +263,9 @@ var LogurInstance = (function (_super) {
                                 column: column
                             }],
                         __generated__: true
+                    }, function () {
+                        if (_this.options.emiterr)
+                            _this.emit('error', err, _this._exceptions);
                     });
                 }
             };

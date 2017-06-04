@@ -226,13 +226,6 @@ export declare function first(arr: any[]): any;
  */
 export declare function last(arr: any[]): any;
 /**
- * Tick Then
- * Wraps function with process.nextTick or setTimeout
- * then immediately calls function after tick.
- */
-export declare function tickThen(ctx: Object | Function, fn: Function, ...args: any[]): void;
-export declare function tickUntil(ctx: Object | Function, until: Function, done: Function, progress: Function): void;
-/**
  * Match Index
  *
  * @param prop the property to match.
@@ -334,6 +327,13 @@ export declare function tryParseDate(str: string): string | number;
  * @param prefix prefix to be aded to serialized data.
  */
 export declare function toQueryString(obj: IMetadata, prefix?: string): string;
+/**
+ * Tick Then
+ * Wraps function with process.nextTick or setTimeout
+ * then immediately calls function after tick.
+ */
+export declare function tickThen(ctx: Object | Function, fn: Function, ...args: any[]): void;
+export declare function tickUntil(ctx: Object | Function, until: Function, done: Function, progress: Function): void;
 /**
  * Consol
  * Simply normalizes the console func to be called.

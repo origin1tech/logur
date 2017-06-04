@@ -295,7 +295,10 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
         // Ahh the good browsers
         if (err) {
 
-          this.exec(this._exceptions, 'error', err);
+          this.exec(this._exceptions, 'error', err, () => {
+            if (this.options.emiterr)
+              this.emit('error', err, this._exceptions);
+          });
 
         }
 
@@ -321,6 +324,9 @@ export class LogurInstance<T> extends Notify implements ILogurInstance<T> {
             }],
             __generated__: true
 
+          }, () => {
+            if (this.options.emiterr)
+              this.emit('error', err, this._exceptions);
           });
 
         }
