@@ -247,22 +247,24 @@ log.info(<span class="hljs-string">'some log message'</span>, { name: <span clas
 				<p>Internally Logur uses <a href="https://www.npmjs.com/package/sprintf-js">sprintf-js</a> for string formatting.
 				This works much like Nodes util.format but with serveral more features and also works in the browser.</p>
 				<p>List of specifier characters:</p>
-				<p>+% — yields a literal % character
-					+b — yields an integer as a binary number
-					+c — yields an integer as the character with that ASCII value
-					+d or i — yields an integer as a signed decimal number
-					+e — yields a float using scientific notation
-					+u — yields an integer as an unsigned decimal number
-					+f — yields a float as is; see notes on precision above
-					+g — yields a float as is; see notes on precision above
-					+o — yields an integer as an octal number
-					+s — yields a string as is
-					+t — yields true or false
-					+T — yields the type of the argument1
-					+v — yields the primitive value of the specified argument
-					+x — yields an integer as a hexadecimal number (lower-case)
-					+X — yields an integer as a hexadecimal number (upper-case)
-				+j — yields a JavaScript object or array as a JSON encoded string</p>
+				<ul>
+					<li>% — yields a literal % character</li>
+					<li>b — yields an integer as a binary number</li>
+					<li>c — yields an integer as the character with that ASCII value</li>
+					<li>d or i — yields an integer as a signed decimal number</li>
+					<li>e — yields a float using scientific notation</li>
+					<li>u — yields an integer as an unsigned decimal number</li>
+					<li>f — yields a float as is; see notes on precision above</li>
+					<li>g — yields a float as is; see notes on precision above</li>
+					<li>o — yields an integer as an octal number</li>
+					<li>s — yields a string as is</li>
+					<li>t — yields true or false</li>
+					<li>T — yields the type of the argument1</li>
+					<li>v — yields the primitive value of the specified argument</li>
+					<li>x — yields an integer as a hexadecimal number (lower-case)</li>
+					<li>X — yields an integer as a hexadecimal number (upper-case)</li>
+					<li>j — yields a JavaScript object or array as a JSON encoded string</li>
+				</ul>
 				<p>see: <a href="https://www.npmjs.com/package/sprintf-js">https://www.npmjs.com/package/sprintf-js</a>.</p>
 				<h3 id="logur-output">Logur Output</h3>
 				<p>The output object contains a comprehensive group of properties

@@ -236,22 +236,22 @@ This works much like Nodes util.format but with serveral more features and also 
 
 List of specifier characters:
 
-+% — yields a literal % character
-+b — yields an integer as a binary number
-+c — yields an integer as the character with that ASCII value
-+d or i — yields an integer as a signed decimal number
-+e — yields a float using scientific notation
-+u — yields an integer as an unsigned decimal number
-+f — yields a float as is; see notes on precision above
-+g — yields a float as is; see notes on precision above
-+o — yields an integer as an octal number
-+s — yields a string as is
-+t — yields true or false
-+T — yields the type of the argument1
-+v — yields the primitive value of the specified argument
-+x — yields an integer as a hexadecimal number (lower-case)
-+X — yields an integer as a hexadecimal number (upper-case)
-+j — yields a JavaScript object or array as a JSON encoded string
++ % — yields a literal % character
++ b — yields an integer as a binary number
++ c — yields an integer as the character with that ASCII value
++ d or i — yields an integer as a signed decimal number
++ e — yields a float using scientific notation
++ u — yields an integer as an unsigned decimal number
++ f — yields a float as is; see notes on precision above
++ g — yields a float as is; see notes on precision above
++ o — yields an integer as an octal number
++ s — yields a string as is
++ t — yields true or false
++ T — yields the type of the argument1
++ v — yields the primitive value of the specified argument
++ x — yields an integer as a hexadecimal number (lower-case)
++ X — yields an integer as a hexadecimal number (upper-case)
++ j — yields a JavaScript object or array as a JSON encoded string
 
 see: https://www.npmjs.com/package/sprintf-js.
 
